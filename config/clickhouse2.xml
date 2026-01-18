@@ -1,0 +1,51 @@
+<yandex>
+    <logger>
+        <level>warning</level>
+        <console>true</console>
+    </logger>
+
+    <listen_host>0.0.0.0</listen_host>
+    <http_port>8123</http_port>
+    <tcp_port>9000</tcp_port>
+    <interserver_http_port>9010</interserver_http_port>
+
+    <!-- Cluster configuration -->
+    <remote_servers>
+        <treasurycluster>
+            <shard>
+                <internal_replication>true</internal_replication>
+                <replica>
+                    <host>clickhouse1</host>
+                    <port>9000</port>
+                </replica>
+                <replica>
+                    <host>clickhouse2</host>
+                    <port>9000</port>
+                </replica>
+            </shard>
+        </treasurycluster>
+    </remote_servers>
+
+    <!-- ZooKeeper replacement using ClickHouse Keeper -->
+    <zookeeper>
+        <node>
+            <host>keeper1</host>
+            <port>9181</port>
+        </node>
+        <node>
+            <host>keeper2</host>
+            <port>9181</port>
+        </node>
+        <node>
+            <host>keeper3</host>
+            <port>9181</port>
+        </node>
+    </zookeeper>
+
+    <!-- Macros for replication (different for each replica) -->
+    <macros>
+        <shard>1</shard>
+        <replica>2</replica>
+    </macros>
+
+</yandex>

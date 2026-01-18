@@ -1,0 +1,5 @@
+<yandex>
+    <!-- Disable user check for Docker environment -->
+    <path>/var/lib/clickhouse/</path>
+    <users_config>/etc/clickhouse-server/users.xml</users_config>
+</yandex>
