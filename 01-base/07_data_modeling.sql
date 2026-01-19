@@ -3,6 +3,11 @@
 -- ========================================
 -- 说明：ClickHouse 的数据建模与传统关系数据库有很大不同
 -- 本文件涵盖宽表、星型模型、雪花模型、时序数据等场景
+--
+-- ⚠️ 重要提示：生产环境必须使用复制引擎 + ON CLUSTER
+--    - 使用 ReplicatedMergeTree 系列引擎
+--    - 添加 ON CLUSTER 'treasurycluster'
+--    - 这保证 2 个副本都有数据，实现高可用
 -- ========================================
 
 -- ========================================
@@ -12,8 +17,8 @@
 -- 场景：用户行为分析，将多个指标存储在同一行
 CREATE DATABASE IF NOT EXISTS modeling_examples;
 
--- 宽表：用户行为事件表
-CREATE TABLE IF NOT EXISTS modeling_examples.user_events_wide (
+-- 宽表：用户行为事件表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.user_events_wide ON CLUSTER 'treasurycluster' (
     event_id UInt64,
     user_id UInt64,
     session_id String,
@@ -46,7 +51,7 @@ CREATE TABLE IF NOT EXISTS modeling_examples.user_events_wide (
     -- 元数据
     created_at DateTime DEFAULT now(),
     data_version UInt64 DEFAULT 1
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (user_id, event_time, event_id)
 SETTINGS index_granularity = 8192;
@@ -94,8 +99,8 @@ LIMIT 10;
 -- 2. 星型模型（Star Schema）- 传统 OLAP 方案
 -- ========================================
 
--- 事实表：订单事实表
-CREATE TABLE IF NOT EXISTS modeling_examples.orders_fact (
+-- 事实表：订单事实表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.orders_fact ON CLUSTER 'treasurycluster' (
     order_id UInt64,
     user_id UInt64,
     product_id UInt64,
@@ -113,13 +118,13 @@ CREATE TABLE IF NOT EXISTS modeling_examples.orders_fact (
     promotion_id UInt64,
     
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(order_date)
 ORDER BY (order_id, order_date)
 SETTINGS index_granularity = 8192;
 
--- 维度表：用户维度
-CREATE TABLE IF NOT EXISTS modeling_examples.users_dim (
+-- 维度表：用户维度（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.users_dim ON CLUSTER 'treasurycluster' (
     user_id UInt64,
     user_name String,
     email String,
@@ -132,11 +137,11 @@ CREATE TABLE IF NOT EXISTS modeling_examples.users_dim (
     last_login_date Date,
     
     updated_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY user_id;
 
--- 维度表：产品维度
-CREATE TABLE IF NOT EXISTS modeling_examples.products_dim (
+-- 维度表：产品维度（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.products_dim ON CLUSTER 'treasurycluster' (
     product_id UInt64,
     product_name String,
     category String,
@@ -149,11 +154,11 @@ CREATE TABLE IF NOT EXISTS modeling_examples.products_dim (
     
     created_at DateTime DEFAULT now(),
     updated_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY product_id;
 
--- 维度表：商店维度
-CREATE TABLE IF NOT EXISTS modeling_examples.stores_dim (
+-- 维度表：商店维度（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.stores_dim ON CLUSTER 'treasurycluster' (
     store_id UInt16,
     store_name String,
     country_code String,
@@ -163,7 +168,7 @@ CREATE TABLE IF NOT EXISTS modeling_examples.stores_dim (
     open_date Date,
     
     updated_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY store_id;
 
 -- 插入维度数据
@@ -220,22 +225,22 @@ LIMIT 10;
 -- 3. 雪花模型（Snowflake Schema）
 -- ========================================
 
--- 维度表：产品类别
-CREATE TABLE IF NOT EXISTS modeling_examples.product_categories_dim (
+-- 维度表：产品类别（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.product_categories_dim ON CLUSTER 'treasurycluster' (
     category_id UInt32,
     category_name String,
     department String,  -- Electronics, Furniture, Clothing
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY category_id;
 
--- 维度表：产品子类别
-CREATE TABLE IF NOT EXISTS modeling_examples.product_subcategories_dim (
+-- 维度表：产品子类别（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.product_subcategories_dim ON CLUSTER 'treasurycluster' (
     subcategory_id UInt32,
     subcategory_name String,
     category_id UInt32,
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY subcategory_id;
 
 -- 插入维度数据
@@ -279,8 +284,8 @@ LIMIT 10;
 -- 4. 时序数据模型（Time Series）
 -- ========================================
 
--- 场景：IoT 传感器数据
-CREATE TABLE IF NOT EXISTS modeling_examples.sensor_readings (
+-- 场景：IoT 传感器数据（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.sensor_readings ON CLUSTER 'treasurycluster' (
     sensor_id UInt64,
     sensor_name String,
     sensor_type String,  -- temperature, humidity, pressure
@@ -302,7 +307,7 @@ CREATE TABLE IF NOT EXISTS modeling_examples.sensor_readings (
     firmware_version String,
     
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMMDD(reading_time)  -- 按天分区
 ORDER BY (sensor_id, reading_time)
 TTL reading_time + INTERVAL 180 DAY  -- 180 天后自动删除
@@ -344,8 +349,8 @@ ORDER BY minute, sensor_id;
 -- 5. 日志数据模型（Log Data）
 -- ========================================
 
--- 场景：应用日志分析
-CREATE TABLE IF NOT EXISTS modeling_examples.application_logs (
+-- 场景：应用日志分析（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.application_logs ON CLUSTER 'treasurycluster' (
     -- 基础标识
     log_id UInt64,
     application_name String,
@@ -379,7 +384,7 @@ CREATE TABLE IF NOT EXISTS modeling_examples.application_logs (
     tags String,
     
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(log_time)
 ORDER BY (application_name, service_name, log_time, log_id)
 SETTINGS index_granularity = 8192,
@@ -443,8 +448,8 @@ LIMIT 10;
 -- 6. 用户行为分析模型（User Behavior）
 -- ========================================
 
--- 事实表：用户行为事件
-CREATE TABLE IF NOT EXISTS modeling_examples.user_behavior_events (
+-- 事实表：用户行为事件（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.user_behavior_events ON CLUSTER 'treasurycluster' (
     event_id UInt64,
     user_id UInt64,
     session_id String,
@@ -477,14 +482,14 @@ CREATE TABLE IF NOT EXISTS modeling_examples.user_behavior_events (
     experiment_variant String,
     
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (user_id, event_time, event_id)
 SETTINGS index_granularity = 8192;
 
--- 物化视图：用户每日统计
-CREATE MATERIALIZED VIEW IF NOT EXISTS modeling_examples.user_daily_stats
-ENGINE = SummingMergeTree()
+-- 物化视图：用户每日统计（生产环境：使用复制聚合引擎 + ON CLUSTER）
+CREATE MATERIALIZED VIEW IF NOT EXISTS modeling_examples.user_daily_stats ON CLUSTER 'treasurycluster'
+ENGINE = ReplicatedSummingMergeTree
 ORDER BY (user_id, event_date)
 AS SELECT
     user_id,
@@ -544,39 +549,39 @@ ORDER BY event_date;
 -- 7. 主键和排序键设计原则
 -- ========================================
 
--- 场景 1：高基数查询
-CREATE TABLE IF NOT EXISTS modeling_examples.table_high_cardinality (
+-- 场景 1：高基数查询（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.table_high_cardinality ON CLUSTER 'treasurycluster' (
     -- 主键：高基数列在前
     user_id UInt64,
     event_time DateTime,
     event_type String,
     event_id UInt64,
     data String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (user_id, event_time, event_id)
 -- 原则：高基数列在前，时间列在后
 
--- 场景 2：范围查询
-CREATE TABLE IF NOT EXISTS modeling_examples.table_range_query (
+-- 场景 2：范围查询（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.table_range_query ON CLUSTER 'treasurycluster' (
     sensor_id UInt64,
     reading_time DateTime,
     value Float64,
     reading_id UInt64
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMMDD(reading_time)
 ORDER BY (sensor_id, reading_time)
 -- 原则：时间范围查询，时间列必须在前或第二个位置
 
--- 场景 3：多条件查询
-CREATE TABLE IF NOT EXISTS modeling_examples.table_multi_condition (
+-- 场景 3：多条件查询（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.table_multi_condition ON CLUSTER 'treasurycluster' (
     user_id UInt64,
     product_id UInt64,
     order_date Date,
     order_time DateTime,
     order_id UInt64,
     amount Decimal(10, 2)
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(order_date)
 ORDER BY (user_id, order_date, order_time, order_id)
 -- 原则：最常用的过滤条件在前
@@ -589,45 +594,45 @@ ORDER BY (user_id, order_date, order_time, order_id)
 -- 8. 分区键设计策略
 -- ========================================
 
--- 策略 1：按月分区（适合数据量大的场景）
-CREATE TABLE IF NOT EXISTS modeling_examples.partition_by_month (
+-- 策略 1：按月分区（适合数据量大的场景，生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.partition_by_month ON CLUSTER 'treasurycluster' (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
     data String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (event_time, event_id);
 
--- 策略 2：按日分区（适合高频查询场景）
-CREATE TABLE IF NOT EXISTS modeling_examples.partition_by_day (
+-- 策略 2：按日分区（适合高频查询场景，生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.partition_by_day ON CLUSTER 'treasurycluster' (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
     data String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMMDD(event_time)
 ORDER BY (event_time, event_id);
 
--- 策略 3：按业务维度+时间分区（适合多维度查询）
-CREATE TABLE IF NOT EXISTS modeling_examples.partition_by_business (
+-- 策略 3：按业务维度+时间分区（适合多维度查询，生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.partition_by_business ON CLUSTER 'treasurycluster' (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
     event_type String,
     data String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY (event_type, toYYYYMM(event_time))
 ORDER BY (event_time, event_id);
 
--- 策略 4：自定义分区（适合特定业务需求）
-CREATE TABLE IF NOT EXISTS modeling_examples.partition_custom (
+-- 策略 4：自定义分区（适合特定业务需求，生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.partition_custom ON CLUSTER 'treasurycluster' (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
     region String,
     data String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY (region, toYYYYMM(event_time))
 ORDER BY (event_time, event_id);
 
@@ -660,8 +665,8 @@ ALTER TABLE modeling_examples.partition_by_month DROP PARTITION '202301';
 -- 9. 数据类型选择优化
 -- ========================================
 
--- 场景 1：数值类型优化
-CREATE TABLE IF NOT EXISTS modeling_examples.optimized_numeric_types (
+-- 场景 1：数值类型优化（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.optimized_numeric_types ON CLUSTER 'treasurycluster' (
     -- 整数类型：根据范围选择
     tiny_int UInt8,        -- 0-255
     small_int UInt16,       -- 0-65535
@@ -681,11 +686,11 @@ CREATE TABLE IF NOT EXISTS modeling_examples.optimized_numeric_types (
     
     id UInt64,
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY id;
 
--- 场景 2：字符串类型优化
-CREATE TABLE IF NOT EXISTS modeling_examples.optimized_string_types (
+-- 场景 2：字符串类型优化（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.optimized_string_types ON CLUSTER 'treasurycluster' (
     -- String 类型
     short_text String,
     long_text String,
@@ -704,7 +709,7 @@ CREATE TABLE IF NOT EXISTS modeling_examples.optimized_string_types (
     
     id UInt64,
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY id;
 
 -- 插入测试数据
@@ -728,8 +733,8 @@ INSERT INTO modeling_examples.optimized_string_types VALUES
 -- 10. 物化视图在数据建模中的应用
 -- ========================================
 
--- 原始事实表：销售数据
-CREATE TABLE IF NOT EXISTS modeling_examples.sales_raw (
+-- 原始事实表：销售数据（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.sales_raw ON CLUSTER 'treasurycluster' (
     sale_id UInt64,
     product_id UInt64,
     user_id UInt64,
@@ -740,13 +745,13 @@ CREATE TABLE IF NOT EXISTS modeling_examples.sales_raw (
     store_id UInt16,
     region String,
     category String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(sale_date)
 ORDER BY (sale_date, product_id, sale_id);
 
--- 物化视图 1：按产品汇总
-CREATE MATERIALIZED VIEW IF NOT EXISTS modeling_examples.sales_by_product
-ENGINE = SummingMergeTree()
+-- 物化视图 1：按产品汇总（生产环境：使用复制聚合引擎 + ON CLUSTER）
+CREATE MATERIALIZED VIEW IF NOT EXISTS modeling_examples.sales_by_product ON CLUSTER 'treasurycluster'
+ENGINE = ReplicatedSummingMergeTree
 ORDER BY (product_id, sale_date)
 AS SELECT
     product_id,
@@ -757,9 +762,9 @@ AS SELECT
 FROM modeling_examples.sales_raw
 GROUP BY product_id, sale_date;
 
--- 物化视图 2：按地区汇总
-CREATE MATERIALIZED VIEW IF NOT EXISTS modeling_examples.sales_by_region
-ENGINE = SummingMergeTree()
+-- 物化视图 2：按地区汇总（生产环境：使用复制聚合引擎 + ON CLUSTER）
+CREATE MATERIALIZED VIEW IF NOT EXISTS modeling_examples.sales_by_region ON CLUSTER 'treasurycluster'
+ENGINE = ReplicatedSummingMergeTree
 ORDER BY (region, sale_date)
 AS SELECT
     region,
@@ -770,9 +775,9 @@ AS SELECT
 FROM modeling_examples.sales_raw
 GROUP BY region, sale_date;
 
--- 物化视图 3：按类别汇总
-CREATE MATERIALIZED VIEW IF NOT EXISTS modeling_examples.sales_by_category
-ENGINE = SummingMergeTree()
+-- 物化视图 3：按类别汇总（生产环境：使用复制聚合引擎 + ON CLUSTER）
+CREATE MATERIALIZED VIEW IF NOT EXISTS modeling_examples.sales_by_category ON CLUSTER 'treasurycluster'
+ENGINE = ReplicatedSummingMergeTree
 ORDER BY (category, sale_date)
 AS SELECT
     category,
@@ -814,8 +819,8 @@ ORDER BY sale_date DESC, total_revenue DESC;
 -- 11. 布隆索引和跳数索引
 -- ========================================
 
--- 创建带跳数索引的表
-CREATE TABLE IF NOT EXISTS modeling_examples.table_with_skip_index (
+-- 创建带跳数索引的表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.table_with_skip_index ON CLUSTER 'treasurycluster' (
     user_id UInt64,
     session_id String,
     event_time DateTime,
@@ -824,7 +829,7 @@ CREATE TABLE IF NOT EXISTS modeling_examples.table_with_skip_index (
     user_agent String,
     tags String,
     event_id UInt64
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (event_time, event_id)
 
@@ -891,13 +896,13 @@ WHERE database = 'modeling_examples'
 -- 创建分层存储配置（需要在服务器配置中定义存储策略）
 -- 这里展示表级别的 TTL 分层
 
-CREATE TABLE IF NOT EXISTS modeling_examples.tiered_storage (
+CREATE TABLE IF NOT EXISTS modeling_examples.tiered_storage ON CLUSTER 'treasurycluster' (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
     data String,
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (event_time, event_id)
 
@@ -933,37 +938,37 @@ ORDER BY event_time;
 -- 13. 去规范化 vs 规范化
 -- ========================================
 
--- 规范化模型：多个关联表
-CREATE TABLE IF NOT EXISTS modeling_examples.normalized_users (
+-- 规范化模型：多个关联表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.normalized_users ON CLUSTER 'treasurycluster' (
     user_id UInt64,
     user_name String,
     email String,
     updated_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY user_id;
 
-CREATE TABLE IF NOT EXISTS modeling_examples.normalized_orders (
+CREATE TABLE IF NOT EXISTS modeling_examples.normalized_orders ON CLUSTER 'treasurycluster' (
     order_id UInt64,
     user_id UInt64,
     product_id UInt64,
     quantity UInt32,
     order_date Date,
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(order_date)
 ORDER BY order_id;
 
-CREATE TABLE IF NOT EXISTS modeling_examples.normalized_products (
+CREATE TABLE IF NOT EXISTS modeling_examples.normalized_products ON CLUSTER 'treasurycluster' (
     product_id UInt64,
     product_name String,
     category String,
     price Decimal(10, 2),
     updated_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY product_id;
 
--- 去规范化模型：宽表
-CREATE TABLE IF NOT EXISTS modeling_examples.denormalized_orders (
+-- 去规范化模型：宽表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.denormalized_orders ON CLUSTER 'treasurycluster' (
     order_id UInt64,
     user_id UInt64,
     user_name String,
@@ -976,7 +981,7 @@ CREATE TABLE IF NOT EXISTS modeling_examples.denormalized_orders (
     total_amount Decimal(10, 2),
     order_date Date,
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(order_date)
 ORDER BY order_id;
 
@@ -1013,19 +1018,19 @@ ORDER BY order_id;
 -- 14. 实时数据流模型（Real-time Data Pipeline）
 -- ========================================
 
--- 原始事件流
-CREATE TABLE IF NOT EXISTS modeling_examples.event_stream (
+-- 原始事件流（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS modeling_examples.event_stream ON CLUSTER 'treasurycluster' (
     event_id UInt64,
     event_type String,
     user_id UInt64,
     payload String,
     event_time DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY (event_time, event_id);
 
--- 实时聚合视图：5分钟窗口
-CREATE MATERIALIZED VIEW IF NOT EXISTS modeling_examples.realtime_5min_stats
-ENGINE = SummingMergeTree()
+-- 实时聚合视图：5分钟窗口（生产环境：使用复制聚合引擎 + ON CLUSTER）
+CREATE MATERIALIZED VIEW IF NOT EXISTS modeling_examples.realtime_5min_stats ON CLUSTER 'treasurycluster'
+ENGINE = ReplicatedSummingMergeTree
 ORDER BY (toStartOfFiveMinutes(event_time), event_type)
 AS SELECT
     toStartOfFiveMinutes(event_time) as time_bucket,
@@ -1035,9 +1040,9 @@ AS SELECT
 FROM modeling_examples.event_stream
 GROUP BY time_bucket, event_type;
 
--- 实时聚合视图：1小时窗口
-CREATE MATERIALIZED VIEW IF NOT EXISTS modeling_examples.realtime_1hour_stats
-ENGINE = SummingMergeTree()
+-- 实时聚合视图：1小时窗口（生产环境：使用复制聚合引擎 + ON CLUSTER）
+CREATE MATERIALIZED VIEW IF NOT EXISTS modeling_examples.realtime_1hour_stats ON CLUSTER 'treasurycluster'
+ENGINE = ReplicatedSummingMergeTree
 ORDER BY (toStartOfHour(event_time), event_type)
 AS SELECT
     toStartOfHour(event_time) as time_bucket,
@@ -1124,41 +1129,41 @@ ClickHouse 数据建模核心原则：
 */
 
 -- ========================================
--- 16. 清理测试数据
+-- 16. 清理测试数据（生产环境：使用 ON CLUSTER SYNC 确保集群范围删除）
 -- ========================================
 
-DROP TABLE IF EXISTS modeling_examples.user_events_wide;
-DROP TABLE IF EXISTS modeling_examples.orders_fact;
-DROP TABLE IF EXISTS modeling_examples.users_dim;
-DROP TABLE IF EXISTS modeling_examples.products_dim;
-DROP TABLE IF EXISTS modeling_examples.stores_dim;
-DROP TABLE IF EXISTS modeling_examples.product_categories_dim;
-DROP TABLE IF EXISTS modeling_examples.product_subcategories_dim;
-DROP TABLE IF EXISTS modeling_examples.sensor_readings;
-DROP TABLE IF EXISTS modeling_examples.application_logs;
-DROP TABLE IF EXISTS modeling_examples.user_behavior_events;
-DROP TABLE IF EXISTS modeling_examples.user_daily_stats;
-DROP TABLE IF EXISTS modeling_examples.table_high_cardinality;
-DROP TABLE IF EXISTS modeling_examples.table_range_query;
-DROP TABLE IF EXISTS modeling_examples.table_multi_condition;
-DROP TABLE IF EXISTS modeling_examples.partition_by_month;
-DROP TABLE IF EXISTS modeling_examples.partition_by_day;
-DROP TABLE IF EXISTS modeling_examples.partition_by_business;
-DROP TABLE IF EXISTS modeling_examples.partition_custom;
-DROP TABLE IF EXISTS modeling_examples.optimized_numeric_types;
-DROP TABLE IF EXISTS modeling_examples.optimized_string_types;
-DROP TABLE IF EXISTS modeling_examples.sales_raw;
-DROP TABLE IF EXISTS modeling_examples.sales_by_product;
-DROP TABLE IF EXISTS modeling_examples.sales_by_region;
-DROP TABLE IF EXISTS modeling_examples.sales_by_category;
-DROP TABLE IF EXISTS modeling_examples.table_with_skip_index;
-DROP TABLE IF EXISTS modeling_examples.tiered_storage;
-DROP TABLE IF EXISTS modeling_examples.normalized_users;
-DROP TABLE IF EXISTS modeling_examples.normalized_orders;
-DROP TABLE IF EXISTS modeling_examples.normalized_products;
-DROP TABLE IF EXISTS modeling_examples.denormalized_orders;
-DROP TABLE IF EXISTS modeling_examples.event_stream;
-DROP TABLE IF EXISTS modeling_examples.realtime_5min_stats;
-DROP TABLE IF EXISTS modeling_examples.realtime_1hour_stats;
+DROP TABLE IF EXISTS modeling_examples.user_events_wide ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.orders_fact ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.users_dim ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.products_dim ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.stores_dim ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.product_categories_dim ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.product_subcategories_dim ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.sensor_readings ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.application_logs ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.user_behavior_events ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.user_daily_stats ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.table_high_cardinality ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.table_range_query ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.table_multi_condition ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.partition_by_month ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.partition_by_day ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.partition_by_business ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.partition_custom ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.optimized_numeric_types ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.optimized_string_types ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.sales_raw ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.sales_by_product ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.sales_by_region ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.sales_by_category ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.table_with_skip_index ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.tiered_storage ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.normalized_users ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.normalized_orders ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.normalized_products ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.denormalized_orders ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.event_stream ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.realtime_5min_stats ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS modeling_examples.realtime_1hour_stats ON CLUSTER 'treasurycluster' SYNC;
 
-DROP DATABASE IF EXISTS modeling_examples;
+DROP DATABASE IF EXISTS modeling_examples ON CLUSTER 'treasurycluster' SYNC;

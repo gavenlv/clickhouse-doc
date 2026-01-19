@@ -61,8 +61,8 @@ SETTINGS
     -- kafka_sasl_username = 'username',
     -- kafka_sasl_password = 'password';
 
--- 创建目标表（存储消费的数据）
-CREATE TABLE IF NOT EXISTS realtime_examples.events (
+-- 创建目标表（存储消费的数据，生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS realtime_examples.events ON CLUSTER 'treasurycluster' (
     event_id String,
     event_type String,
     event_time DateTime,
@@ -78,14 +78,14 @@ CREATE TABLE IF NOT EXISTS realtime_examples.events (
     duration_sec UInt32,
     scroll_depth Float32,
     interaction_count UInt16
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (event_time, user_id, event_id)
 SETTINGS index_granularity = 8192;
 
--- 创建物化视图，自动从 Kafka 消费数据到目标表
-CREATE MATERIALIZED VIEW IF NOT EXISTS realtime_examples.events_consumer
-ENGINE = MergeTree()
+-- 创建物化视图，自动从 Kafka 消费数据到目标表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE MATERIALIZED VIEW IF NOT EXISTS realtime_examples.events_consumer ON CLUSTER 'treasurycluster'
+ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (event_time, user_id, event_id)
 AS SELECT
@@ -158,8 +158,8 @@ SETTINGS
     kafka_format = 'JSONEachRow',
     kafka_num_consumers = 2;
 
--- 创建目标表（订单数据）
-CREATE TABLE IF NOT EXISTS realtime_examples.orders (
+-- 创建目标表（订单数据，生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS realtime_examples.orders ON CLUSTER 'treasurycluster' (
     order_id String,
     user_id UInt64,
     product_id UInt64,
@@ -168,14 +168,14 @@ CREATE TABLE IF NOT EXISTS realtime_examples.orders (
     total_amount Decimal(10, 2),
     order_date Date,
     created_at DateTime
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(order_date)
 ORDER BY (order_id, order_date)
 SETTINGS index_granularity = 8192;
 
--- 使用物化视图处理 JSON 数据并插入目标表
-CREATE MATERIALIZED VIEW IF NOT EXISTS realtime_examples.orders_consumer
-ENGINE = MergeTree()
+-- 使用物化视图处理 JSON 数据并插入目标表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE MATERIALIZED VIEW IF NOT EXISTS realtime_examples.orders_consumer ON CLUSTER 'treasurycluster'
+ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(order_date)
 ORDER BY (order_id, order_date)
 AS SELECT
@@ -234,8 +234,8 @@ WHERE database = 'realtime_examples'
 -- 4. Flink 集成 - 通过 HTTP 接口
 -- ========================================
 
--- 创建 Flink 写入的目标表
-CREATE TABLE IF NOT EXISTS realtime_examples.flink_sink_table (
+-- 创建 Flink 写入的目标表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS realtime_examples.flink_sink_table ON CLUSTER 'treasurycluster' (
     -- 主键和时间
     event_id UInt64,
     event_time DateTime,
@@ -261,7 +261,7 @@ CREATE TABLE IF NOT EXISTS realtime_examples.flink_sink_table (
     -- 元数据
     flink_job_id String,
     flink_timestamp DateTime
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (event_time, user_id, event_id)
 SETTINGS 
@@ -312,8 +312,8 @@ public class ClickHouseSink implements SinkFunction<RowData> {
 -- 5. Flink 集成 - 通过 JDBC 接口
 -- ========================================
 
--- 创建适合 Flink JDBC 写入的表
-CREATE TABLE IF NOT EXISTS realtime_examples.flink_jdbc_sink (
+-- 创建适合 Flink JDBC 写入的表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS realtime_examples.flink_jdbc_sink ON CLUSTER 'treasurycluster' (
     -- 主键
     id UInt64,
     
@@ -330,7 +330,7 @@ CREATE TABLE IF NOT EXISTS realtime_examples.flink_jdbc_sink (
     -- Flink 元数据
     flink_task_name String,
     flink_subtask_index UInt32
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(created_at)
 ORDER BY (id, created_at)
 SETTINGS 
@@ -397,8 +397,8 @@ FROM flink_source;
 -- 6. 实时数据写入性能优化
 -- ========================================
 
--- 创建高性能实时写入表
-CREATE TABLE IF NOT EXISTS realtime_examples.high_performance_stream (
+-- 创建高性能实时写入表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS realtime_examples.high_performance_stream ON CLUSTER 'treasurycluster' (
     -- 主键
     stream_id UInt64,
     user_id UInt64,
@@ -421,7 +421,7 @@ CREATE TABLE IF NOT EXISTS realtime_examples.high_performance_stream (
     -- 元数据
     source_system String,
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (event_time, user_id, stream_id)
 SETTINGS 
@@ -486,15 +486,15 @@ LIMIT 20;
 -- 7. Buffer 表 - 写入缓冲
 -- ========================================
 
--- 创建 Buffer 表作为写入缓冲
-CREATE TABLE IF NOT EXISTS realtime_examples.buffer_target (
+-- 创建 Buffer 表作为写入缓冲（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS realtime_examples.buffer_target ON CLUSTER 'treasurycluster' (
     id UInt64,
     user_id UInt64,
     event_type String,
     event_data String,
     event_time DateTime,
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (event_time, user_id, id);
 
@@ -549,8 +549,8 @@ SELECT * FROM realtime_examples.buffer_target ORDER BY event_time DESC;
 -- 8. 实时数据质量检查
 -- ========================================
 
--- 创建数据质量检查表
-CREATE TABLE IF NOT EXISTS realtime_examples.data_quality_checks (
+-- 创建数据质量检查表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS realtime_examples.data_quality_checks ON CLUSTER 'treasurycluster' (
     check_id UInt64,
     check_type String,          -- null_check, duplicate_check, schema_check
     table_name String,
@@ -560,7 +560,7 @@ CREATE TABLE IF NOT EXISTS realtime_examples.data_quality_checks (
     error_rate Float64,
     check_time DateTime DEFAULT now(),
     status String               -- passed, failed, warning
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY (check_time, check_id);
 
 -- 示例 1：检查 NULL 值
@@ -608,15 +608,15 @@ ORDER BY check_time DESC;
 -- 9. 实时数据监控和告警
 -- ========================================
 
--- 创建写入延迟监控表
-CREATE TABLE IF NOT EXISTS realtime_examples.write_latency (
+-- 创建写入延迟监控表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS realtime_examples.write_latency ON CLUSTER 'treasurycluster' (
     event_time DateTime,
     source_system String,
     table_name String,
     write_duration_ms UInt32,
     batch_size UInt32,
     status String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (event_time, source_system);
 
@@ -837,25 +837,25 @@ ORDER BY event_time DESC
 LIMIT 10;
 
 -- ========================================
--- 14. 清理测试数据
+-- 14. 清理测试数据（生产环境：使用 ON CLUSTER SYNC 确保集群范围删除）
 -- ========================================
 
-DROP TABLE IF EXISTS realtime_examples.kafka_events;
-DROP TABLE IF EXISTS realtime_examples.events;
-DROP TABLE IF EXISTS realtime_examples.events_consumer;
-DROP TABLE IF EXISTS realtime_examples.kafka_orders;
-DROP TABLE IF EXISTS realtime_examples.orders;
-DROP TABLE IF EXISTS realtime_examples.orders_consumer;
-DROP TABLE IF EXISTS realtime_examples.kafka_multi_topics;
-DROP TABLE IF EXISTS realtime_examples.flink_sink_table;
-DROP TABLE IF EXISTS realtime_examples.flink_jdbc_sink;
-DROP TABLE IF EXISTS realtime_examples.high_performance_stream;
-DROP TABLE IF EXISTS realtime_examples.buffer_target;
-DROP TABLE IF EXISTS realtime_examples.buffer_table;
-DROP TABLE IF EXISTS realtime_examples.data_quality_checks;
-DROP TABLE IF EXISTS realtime_examples.write_latency;
-DROP TABLE IF EXISTS realtime_examples.events_local;
-DROP TABLE IF EXISTS realtime_examples.events_distributed;
+DROP TABLE IF EXISTS realtime_examples.kafka_events ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS realtime_examples.events ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS realtime_examples.events_consumer ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS realtime_examples.kafka_orders ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS realtime_examples.orders ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS realtime_examples.orders_consumer ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS realtime_examples.kafka_multi_topics ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS realtime_examples.flink_sink_table ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS realtime_examples.flink_jdbc_sink ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS realtime_examples.high_performance_stream ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS realtime_examples.buffer_target ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS realtime_examples.buffer_table ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS realtime_examples.data_quality_checks ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS realtime_examples.write_latency ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS realtime_examples.events_local ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS realtime_examples.events_distributed ON CLUSTER 'treasurycluster' SYNC;
 
 DROP DATABASE IF EXISTS realtime_examples;
 

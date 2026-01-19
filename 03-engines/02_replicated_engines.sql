@@ -7,14 +7,14 @@
 -- 1. ReplicatedMergeTree（复制基础引擎）
 -- ========================================
 
--- 创建 ReplicatedMergeTree 表（使用默认路径配置）
-CREATE TABLE IF NOT EXISTS engine_test.replicated_events (
+-- 创建 ReplicatedMergeTree 表（使用默认路径配置，生产环境：使用 ON CLUSTER）
+CREATE TABLE IF NOT EXISTS engine_test.replicated_events ON CLUSTER 'treasurycluster' (
     event_id UInt64,
     user_id UInt64,
     event_type String,
     event_data String,
     timestamp DateTime
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (user_id, event_type, timestamp);
 
@@ -68,8 +68,8 @@ LIMIT 20;
 -- 2. ReplicatedReplacingMergeTree（复制去重引擎）
 -- ========================================
 
--- 创建 ReplicatedReplacingMergeTree 表
-CREATE TABLE IF NOT EXISTS engine_test.replicated_user_state (
+-- 创建 ReplicatedReplacingMergeTree 表（生产环境：使用 ON CLUSTER）
+CREATE TABLE IF NOT EXISTS engine_test.replicated_user_state ON CLUSTER 'treasurycluster' (
     user_id UInt64,
     state String,
     last_updated DateTime,
@@ -106,14 +106,14 @@ WHERE table = 'replicated_user_state';
 -- 3. ReplicatedSummingMergeTree（复制求和引擎）
 -- ========================================
 
--- 创建 ReplicatedSummingMergeTree 表
-CREATE TABLE IF NOT EXISTS engine_test.replicated_daily_sales (
+-- 创建 ReplicatedSummingMergeTree 表（生产环境：使用 ON CLUSTER）
+CREATE TABLE IF NOT EXISTS engine_test.replicated_daily_sales ON CLUSTER 'treasurycluster' (
     date Date,
     product_id UInt32,
     country String,
     amount Decimal(10, 2),
     order_count UInt32
-) ENGINE = ReplicatedSummingMergeTree()
+) ENGINE = ReplicatedSummingMergeTree
 PARTITION BY toYYYYMM(date)
 ORDER BY (date, product_id, country);
 
@@ -142,14 +142,14 @@ ORDER BY date, product_id;
 -- 4. ReplicatedAggregatingMergeTree（复制高级聚合引擎）
 -- ========================================
 
--- 创建 ReplicatedAggregatingMergeTree 表
-CREATE TABLE IF NOT EXISTS engine_test.replicated_user_metrics (
+-- 创建 ReplicatedAggregatingMergeTree 表（生产环境：使用 ON CLUSTER）
+CREATE TABLE IF NOT EXISTS engine_test.replicated_user_metrics ON CLUSTER 'treasurycluster' (
     user_id UInt64,
     event_date Date,
     page_views AggregateFunction(count),
     distinct_pages AggregateFunction(uniq, String),
     total_time AggregateFunction(sum, UInt64)
-) ENGINE = ReplicatedAggregatingMergeTree()
+) ENGINE = ReplicatedAggregatingMergeTree
 PARTITION BY toYYYYMM(event_date)
 ORDER BY (user_id, event_date);
 
@@ -179,8 +179,8 @@ ORDER BY user_id, event_date;
 -- 5. ReplicatedCollapsingMergeTree（复制折叠引擎）
 -- ========================================
 
--- 创建 ReplicatedCollapsingMergeTree 表
-CREATE TABLE IF NOT EXISTS engine_test.replicated_inventory (
+-- 创建 ReplicatedCollapsingMergeTree 表（生产环境：使用 ON CLUSTER）
+CREATE TABLE IF NOT EXISTS engine_test.replicated_inventory ON CLUSTER 'treasurycluster' (
     product_id UInt64,
     quantity_change Int32,
     sign Int8,
@@ -217,8 +217,8 @@ ORDER BY product_id;
 -- 6. ReplicatedVersionedCollapsingMergeTree（复制版本折叠引擎）
 -- ========================================
 
--- 创建 ReplicatedVersionedCollapsingMergeTree 表
-CREATE TABLE IF NOT EXISTS engine_test.replicated_user_scores (
+-- 创建 ReplicatedVersionedCollapsingMergeTree 表（生产环境：使用 ON CLUSTER）
+CREATE TABLE IF NOT EXISTS engine_test.replicated_user_scores ON CLUSTER 'treasurycluster' (
     user_id UInt64,
     score_change Int32,
     sign Int8,
@@ -352,14 +352,14 @@ ORDER BY table;
 -- 9. 复制性能测试
 -- ========================================
 
--- 创建大表进行复制性能测试
-CREATE TABLE IF NOT EXISTS engine_test.rmt_performance (
+-- 创建大表进行复制性能测试（生产环境：使用 ON CLUSTER）
+CREATE TABLE IF NOT EXISTS engine_test.rmt_performance ON CLUSTER 'treasurycluster' (
     id UInt64,
     user_id UInt64,
     event_type String,
     event_value Float64,
     timestamp DateTime
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (user_id, timestamp);
 
@@ -419,17 +419,17 @@ ORDER BY table, partition;
 -- ALTER TABLE engine_test.replicated_events DROP PARTITION '202401';
 
 -- ========================================
--- 11. 清理测试表
+-- 11. 清理测试表（生产环境：使用 ON CLUSTER SYNC 确保集群范围删除）
 -- ========================================
-DROP TABLE IF EXISTS engine_test.replicated_events;
-DROP TABLE IF EXISTS engine_test.replicated_user_state;
-DROP TABLE IF EXISTS engine_test.replicated_daily_sales;
-DROP TABLE IF EXISTS engine_test.replicated_user_metrics;
-DROP TABLE IF EXISTS engine_test.replicated_inventory;
-DROP TABLE IF EXISTS engine_test.replicated_user_scores;
-DROP TABLE IF EXISTS engine_test.mt_compare;
-DROP TABLE IF EXISTS engine_test.rmt_compare;
-DROP TABLE IF EXISTS engine_test.rmt_performance;
+DROP TABLE IF EXISTS engine_test.replicated_events ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.replicated_user_state ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.replicated_daily_sales ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.replicated_user_metrics ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.replicated_inventory ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.replicated_user_scores ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.mt_compare ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.rmt_compare ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.rmt_performance ON CLUSTER 'treasurycluster' SYNC;
 
 -- ========================================
 -- 12. ReplicatedMergeTree 引擎最佳实践总结

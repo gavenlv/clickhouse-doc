@@ -18,18 +18,18 @@ WHERE cluster = 'treasurycluster'
 ORDER BY shard_num, replica_num;
 
 -- ========================================
--- 2. 创建复制表（本地表）
+-- 2. 创建复制表（本地表，生产环境：使用复制引擎 + ON CLUSTER）
 -- ========================================
 -- 注意：先在每个节点上创建本地表
 
-CREATE TABLE IF NOT EXISTS test_local_orders (
+CREATE TABLE IF NOT EXISTS test_local_orders ON CLUSTER 'treasurycluster' (
     order_id UInt64,
     user_id UInt64,
     product_id UInt32,
     amount Decimal(10, 2),
     status String,
     order_date DateTime DEFAULT now()
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(order_date)
 ORDER BY (user_id, order_id);
 
@@ -150,13 +150,13 @@ ORDER BY order_day;
 -- ========================================
 -- 9. 测试 JOIN 操作
 -- ========================================
--- 创建用户表
-CREATE TABLE IF NOT EXISTS test_local_users (
+-- 创建用户表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS test_local_users ON CLUSTER 'treasurycluster' (
     user_id UInt64,
     name String,
     email String,
     register_date DateTime
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY user_id;
 
 -- 创建分布式用户表
@@ -313,13 +313,13 @@ FROM test_distributed_orders
 GROUP BY status;
 
 -- ========================================
--- 15. 清理测试表
+-- 15. 清理测试表（生产环境：使用 ON CLUSTER SYNC 确保集群范围删除）
 -- ========================================
 -- 注意：先删除分布式表，再删除本地表
-DROP TABLE IF EXISTS test_distributed_orders;
-DROP TABLE IF EXISTS test_distributed_users;
-DROP TABLE IF EXISTS test_local_orders;
-DROP TABLE IF EXISTS test_local_users;
+DROP TABLE IF EXISTS test_distributed_orders ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_distributed_users ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_local_orders ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_local_users ON CLUSTER 'treasurycluster' SYNC;
 
 -- ========================================
 -- 16. 验证清理

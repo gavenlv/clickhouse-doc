@@ -296,14 +296,14 @@ WHERE table IN ('test_replicated_events', 'test_replicated_logs')
 ORDER BY table, replica_name, position;
 
 -- ========================================
--- 13. 清理测试表
+-- 13. 清理测试表（生产环境：使用 ON CLUSTER SYNC 确保集群范围删除）
 -- ========================================
 -- 注意：需要在所有副本上执行 DROP，或者只在一个副本上执行
-DROP TABLE IF EXISTS test_replicated_events;
-DROP TABLE IF EXISTS test_replicated_logs;
-DROP TABLE IF EXISTS test_replicated_metrics;
-DROP TABLE IF EXISTS test_replicated_user_state;
-DROP TABLE IF EXISTS test_replicated_inventory;
+DROP TABLE IF EXISTS test_replicated_events ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_replicated_logs ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_replicated_metrics ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_replicated_user_state ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_replicated_inventory ON CLUSTER 'treasurycluster' SYNC;
 
 -- ========================================
 -- 14. 验证清理
