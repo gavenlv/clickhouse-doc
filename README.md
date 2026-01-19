@@ -312,6 +312,8 @@ rm -rf ./data/
 - [系统查询](./01-base/README.md#04_system_queriessql) - 集群监控
 - [高级特性](./01-base/README.md#05_advanced_featuressql) - 物化视图、TTL
 - [数据更新](./01-base/README.md#06_data_updatessql) - 实时更新和 Mutation
+- [数据建模](./01-base/README.md#07_data_modeling) - 宽表、星型模型、时序数据
+- [实时写入](./01-base/README.md#08_realtime_writes) - Kafka、Flink 集成
 
 ### 进阶提升（02-advance/）
 深入生产环境最佳实践：

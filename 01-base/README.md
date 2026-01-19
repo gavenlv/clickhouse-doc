@@ -51,6 +51,38 @@
 - 窗口函数分析
 - 批量插入优化
 
+### 07_data_modeling.sql
+数据建模最佳实践示例：
+- 宽表模型（Wide Table）
+- 星型模型（Star Schema）
+- 雪花模型（Snowflake Schema）
+- 时序数据模型（Time Series）
+- 日志数据模型（Log Data）
+- 用户行为分析模型
+- 主键和排序键设计
+- 分区键设计策略
+- 数据类型选择优化
+- 物化视图在数据建模中的应用
+- 布隆索引和跳数索引
+- 分层存储策略
+- 去规范化 vs 规范化
+- 实时数据流模型
+
+### 08_realtime_writes.sql
+实时数据写入和集成示例：
+- Kafka 集成 - Kafka 表引擎
+- Kafka 复杂 JSON 数据处理
+- Kafka 多主题消费
+- Flink HTTP 接口集成
+- Flink JDBC 接口集成
+- 实时数据写入性能优化
+- Buffer 表写入缓冲
+- 实时数据质量检查
+- 实时数据监控和告警
+- 分布式表实时写入
+- 最佳实践总结
+- 故障排查和监控
+
 ## 如何使用
 
 ### 方法 1: 使用 Play UI（推荐）
@@ -120,6 +152,7 @@ ORDER BY id;
 3. **执行顺序**：建议按文件编号顺序执行，避免依赖问题
 4. **分布式表依赖**：03_distributed_tables.sql 需要先执行 02_replicated_tables.sql
 5. **数据更新特性**：ClickHouse 不支持传统的 UPDATE 操作，06_data_updates.sql 展示了多种替代方案
+6. **数据建模差异**：ClickHouse 的数据建模与传统关系数据库有很大不同，推荐使用宽表模型，详见 07_data_modeling.sql
 
 ## 数据更新策略
 
