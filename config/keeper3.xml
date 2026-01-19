@@ -1,8 +1,13 @@
 <yandex>
+    <!-- Skip user check for Docker/K8s environment -->
+    <skip_user_check>true</skip_user_check>
+
     <logger>
-        <level>trace</level>
+        <level>warning</level>
         <console>true</console>
     </logger>
+
+    <listen_host>0.0.0.0</listen_host>
 
     <keeper_server>
         <tcp_port>9181</tcp_port>
@@ -11,25 +16,25 @@
         <snapshot_storage_path>/var/lib/clickhouse/coordination/snapshots</snapshot_storage_path>
 
         <coordination_settings>
-            <operation_timeout_ms>10000</operation_timeout_ms>
-            <session_timeout_ms>30000</session_timeout_ms>
-            <raft_logs_level>trace</raft_logs_level>
+            <operation_timeout_ms>30000</operation_timeout_ms>
+            <session_timeout_ms>60000</session_timeout_ms>
+            <raft_logs_level>info</raft_logs_level>
         </coordination_settings>
 
         <raft_configuration>
             <server>
                 <id>1</id>
-                <hostname>keeper1</hostname>
+                <host>keeper1</host>
                 <port>9444</port>
             </server>
             <server>
                 <id>2</id>
-                <hostname>keeper2</hostname>
+                <host>keeper2</host>
                 <port>9444</port>
             </server>
             <server>
                 <id>3</id>
-                <hostname>keeper3</hostname>
+                <host>keeper3</host>
                 <port>9444</port>
             </server>
         </raft_configuration>

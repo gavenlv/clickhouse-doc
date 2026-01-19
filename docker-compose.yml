@@ -10,45 +10,39 @@ services:
     image: zlsmshoqvwt6q1.xuanyuan.run/clickhouse/clickhouse-keeper:latest
     container_name: clickhouse-keeper-1
     hostname: keeper1
-    user: "1000:1000"
     networks:
       - clickhouse_net
     volumes:
       - ./data/keeper1:/var/lib/clickhouse
       - ./config/keeper1.xml:/etc/clickhouse-server/config.d/keeper.xml
-    environment:
-      - CLICKHOUSE_KEEPER_STANDALONE=0
-    command: /usr/bin/clickhouse-keeper --config /etc/clickhouse-server/config.d/keeper.xml
+    entrypoint: []
+    command: ["/usr/bin/clickhouse-keeper", "--config", "/etc/clickhouse-server/config.d/keeper.xml"]
     restart: unless-stopped
 
   keeper2:
     image: zlsmshoqvwt6q1.xuanyuan.run/clickhouse/clickhouse-keeper:latest
     container_name: clickhouse-keeper-2
     hostname: keeper2
-    user: "1000:1000"
     networks:
       - clickhouse_net
     volumes:
       - ./data/keeper2:/var/lib/clickhouse
       - ./config/keeper2.xml:/etc/clickhouse-server/config.d/keeper.xml
-    environment:
-      - CLICKHOUSE_KEEPER_STANDALONE=0
-    command: /usr/bin/clickhouse-keeper --config /etc/clickhouse-server/config.d/keeper.xml
+    entrypoint: []
+    command: ["/usr/bin/clickhouse-keeper", "--config", "/etc/clickhouse-server/config.d/keeper.xml"]
     restart: unless-stopped
 
   keeper3:
     image: zlsmshoqvwt6q1.xuanyuan.run/clickhouse/clickhouse-keeper:latest
     container_name: clickhouse-keeper-3
     hostname: keeper3
-    user: "1000:1000"
     networks:
       - clickhouse_net
     volumes:
       - ./data/keeper3:/var/lib/clickhouse
       - ./config/keeper3.xml:/etc/clickhouse-server/config.d/keeper.xml
-    environment:
-      - CLICKHOUSE_KEEPER_STANDALONE=0
-    command: /usr/bin/clickhouse-keeper --config /etc/clickhouse-server/config.d/keeper.xml
+    entrypoint: []
+    command: ["/usr/bin/clickhouse-keeper", "--config", "/etc/clickhouse-server/config.d/keeper.xml"]
     restart: unless-stopped
 
   # ClickHouse server instances (2 replicas)
@@ -56,16 +50,12 @@ services:
     image: zlsmshoqvwt6q1.xuanyuan.run/clickhouse/clickhouse-server:latest
     container_name: clickhouse-server-1
     hostname: clickhouse1
-    user: "1000:1000"
     networks:
       - clickhouse_net
     volumes:
       - ./data/clickhouse1:/var/lib/clickhouse
       - ./config/clickhouse1.xml:/etc/clickhouse-server/config.d/cluster.xml
-    environment:
-      - CLICKHOUSE_USER=default
-      - CLICKHOUSE_PASSWORD=password
-      - CLICKHOUSE_DB=default
+      - ./config/users.xml:/etc/clickhouse-server/users.d/users.xml
     depends_on:
       - keeper1
       - keeper2
@@ -79,16 +69,12 @@ services:
     image: zlsmshoqvwt6q1.xuanyuan.run/clickhouse/clickhouse-server:latest
     container_name: clickhouse-server-2
     hostname: clickhouse2
-    user: "1000:1000"
     networks:
       - clickhouse_net
     volumes:
       - ./data/clickhouse2:/var/lib/clickhouse
       - ./config/clickhouse2.xml:/etc/clickhouse-server/config.d/cluster.xml
-    environment:
-      - CLICKHOUSE_USER=default
-      - CLICKHOUSE_PASSWORD=password
-      - CLICKHOUSE_DB=default
+      - ./config/users.xml:/etc/clickhouse-server/users.d/users.xml
     depends_on:
       - keeper1
       - keeper2

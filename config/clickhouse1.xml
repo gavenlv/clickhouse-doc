@@ -1,4 +1,7 @@
 <yandex>
+    <!-- Skip user check for Docker/K8s environment -->
+    <skip_user_check>true</skip_user_check>
+
     <logger>
         <level>warning</level>
         <console>true</console>
@@ -8,6 +11,12 @@
     <http_port>8123</http_port>
     <tcp_port>9000</tcp_port>
     <interserver_http_port>9009</interserver_http_port>
+    <interserver_http_host>0.0.0.0</interserver_http_host>
+
+    <enable_play_ui>1</enable_play_ui>
+    <http_server_default_headers>
+        <Enable-CORS>true</Enable-CORS>
+    </http_server_default_headers>
 
     <!-- Cluster configuration -->
     <remote_servers>
