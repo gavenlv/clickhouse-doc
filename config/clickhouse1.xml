@@ -51,10 +51,22 @@
         </node>
     </zookeeper>
 
+    <!-- Default replication path configuration -->
+    <default_replica_path>/clickhouse/tables/{shard}/{table}</default_replica_path>
+    <default_replica_name>{replica}</default_replica_name>
+
     <!-- Macros for replication (different for each replica) -->
     <macros>
+        <!-- Cluster identification -->
+        <cluster>treasurycluster</cluster>
+        <layer>1</layer>
+
+        <!-- Shard and replica -->
         <shard>1</shard>
         <replica>1</replica>
+
+        <!-- Table path prefix for ZooKeeper -->
+        <table_prefix>tables</table_prefix>
     </macros>
 
 </yandex>

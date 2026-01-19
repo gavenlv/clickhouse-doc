@@ -108,22 +108,73 @@ Keeper 使用 Raft 协议，端口 9444 用于内部通信，9181 用于客户�
 curl "http://localhost:8123/?query=SELECT%20*%20FROM%20system.clusters"
 ```
 
-### 创建复制表
-连接到 clickhouse1 并创建复制表：
+### 创建复制表（使用默认路径）
 
+本集群已配置默认复制路径，可以使用最简方式创建表：
+
+**最简方式**（推荐 - 使用默认路径）：
+```sql
+CREATE TABLE test_replicated (
+    id UInt64,
+    data String,
+    created_at DateTime DEFAULT now()
+) ENGINE = ReplicatedMergeTree
+ORDER BY id;
+```
+
+**简化方式**（只指定表名）：
 ```sql
 CREATE TABLE test_replicated (
     id UInt64,
     data String
-) ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/test_replicated', '{replica}')
+) ENGINE = ReplicatedMergeTree
+PARTITION BY toYYYYMM(created_at)
 ORDER BY id;
 ```
 
-在两个副本上数据会自动同步。
+**完整方式**（自定义路径）：
+```sql
+CREATE TABLE test_replicated (
+    id UInt64,
+    data String
+) ENGINE = ReplicatedMergeTree('/custom/path/{table}', '{replica}')
+ORDER BY id;
+```
+
+**可用的 Macros**：
+- `{cluster}` - 集群名称 (treasurycluster)
+- `{layer}` - 层级 (1)
+- `{shard}` - 分片号 (1)
+- `{replica}` - 副本号 (1 或 2)
+- `{table_prefix}` - 表前缀 (tables)
+- `{table}` - 表名
+- `{database}` - 数据库名
+
+**默认配置**：
+- `default_replica_path`: `/clickhouse/tables/{shard}/{table}`
+- `default_replica_name`: `{replica}`
+
+**分布式表**：
+```sql
+CREATE TABLE test_replicated_all AS test_replicated
+ENGINE = Distributed(treasurycluster, default, test_replicated);
+```
 
 ### 插入数据
 ```sql
 INSERT INTO test_replicated VALUES (1, 'data1'), (2, 'data2');
+```
+
+### 查询数据
+```sql
+-- 查询本地表（只在当前副本）
+SELECT * FROM test_replicated;
+
+-- 查询分布式表（自动路由到所有副本）
+SELECT * FROM test_replicated_all;
+
+-- 查询副本信息
+SELECT * FROM system.replicas WHERE table = 'test_replicated';
 ```
 
 ## 故障排除
