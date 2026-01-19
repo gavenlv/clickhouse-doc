@@ -36,11 +36,11 @@ Permission denied: /var/lib/clickhouse/coordination/log
 ```
 
 需要在以下文件中添加：
-- `config/clickhouse1.xml`
-- `config/clickhouse2.xml`
-- `config/keeper1.xml`
-- `config/keeper2.xml`
-- `config/keeper3.xml`
+- `00-infra/config/clickhouse1.xml`
+- `00-infra/config/clickhouse2.xml`
+- `00-infra/config/keeper1.xml`
+- `00-infra/config/keeper2.xml`
+- `00-infra/config/keeper3.xml`
 
 2. **移除 docker-compose.yml 中的 UID 配置**
 
@@ -50,13 +50,14 @@ Permission denied: /var/lib/clickhouse/coordination/log
 
 ```bash
 # 停止并删除所有容器
-docker-compose down -v
+cd 00-infra
+docker compose down -v
 
 # 删除数据目录
 rm -rf ./data/
 
 # 重新启动
-docker-compose up -d
+docker compose up -d
 ```
 
 **参考：** [GitHub Issue #39547 - K8s volume permissions](https://github.com/ClickHouse/ClickHouse/issues/39547)
@@ -290,14 +291,15 @@ OutOfMemory
 
 ```bash
 # 查看所有服务日志
-docker-compose logs -f
+cd 00-infra
+docker compose logs -f
 
 # 查看特定服务日志
-docker-compose logs -f clickhouse1
-docker-compose logs -f keeper1
+docker compose logs -f clickhouse1
+docker compose logs -f keeper1
 
 # 查看最近的日志
-docker-compose logs --tail=100
+docker compose logs --tail=100
 ```
 
 ### 进入容器
@@ -335,13 +337,14 @@ docker exec -it clickhouse-keeper-1 clickhouse-keeper-client --host localhost --
 
 ```bash
 # 停止并删除容器、网络、卷
-docker-compose down -v
+cd 00-infra
+docker compose down -v
 
 # 删除数据目录
 rm -rf ./data/
 
 # 重启
-docker-compose up -d
+docker compose up -d
 ```
 
 ---
