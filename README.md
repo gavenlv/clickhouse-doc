@@ -7,25 +7,114 @@
 ```
 clickhouse-doc/
 ├── 00-infra/                   # 基础设施文件
-│   ├── docker-compose.yml     # Docker Compose 配置
-│   ├── config/                # ClickHouse 和 Keeper 配置
-│   ├── data/                  # 数据持久化目录
-│   ├── healthcheck/           # 健康检查脚本
-│   ├── scripts/               # 辅助脚本
-│   ├── troubleshooting.md     # 故障排查指南
+│   ├── docker-compose.yml            # Docker Compose 配置
+│   ├── config/                   # ClickHouse 和 Keeper 配置
+│   ├── data/                     # 数据持久化目录
+│   ├── healthcheck/              # 健康检查脚本
+│   ├── scripts/                  # 辅助脚本
+│   ├── troubleshooting.md        # 故障排查指南（旧版）
+│   ├── HIGH_AVAILABILITY_GUIDE.md      # 高可用配置指南
+│   ├── DATA_DEDUP_GUIDE.md           # 数据去重与幂等性指南
+│   ├── REALTIME_PERFORMANCE_GUIDE.md  # 实时性能优化指南
+│   ├── ALL_REPLICATED_TABLES.md      # 复制表总结
 │   └── play.html / play2.html / test.html / test2.html
 │
 ├── 01-base/                    # 基础使用
 │   ├── README.md
-│   └── *.sql                   # 基础操作示例
+│   ├── 01_basic_operations.sql    # 基础操作示例
+│   ├── 02_replicated_tables.sql  # 复制表示例
+│   ├── 03_distributed_tables.sql # 分布式表示例
+│   ├── 04_system_queries.sql    # 系统表查询
+│   ├── 05_advanced_features.sql # 高级特性
+│   ├── 06_data_updates.sql     # 数据更新和删除
+│   ├── 07_data_modeling.sql   # 数据建模最佳实践
+│   ├── 08_realtime_writes.sql  # 实时数据写入
+│   └── 09_data_deduplication.sql # 数据去重实战
 │
 ├── 02-advance/                 # 高级使用
 │   ├── README.md
 │   └── *.sql                   # 高级场景示例
 │
-└── 03-engines/                  # 表引擎
-    ├── README.md
-    └── *.sql / *.md            # 表引擎详解
+├── 03-engines/                  # 表引擎
+│   ├── README.md
+│   └── *.sql / *.md            # 表引擎详解
+│
+├── 05-data-type/               # 数据类型
+│   ├── README.md                  # 数据类型总览
+│   ├── 01_numeric_types.md       # 数值类型
+│   ├── 02_string_types.md        # 字符串类型
+│   ├── 03_date_time_types.md     # 日期时间类型
+│   ├── 04_array_types.md         # 数组类型
+│   ├── 05_tuple_types.md         # 元组类型
+│   ├── 06_map_types.md           # Map 类型
+│   ├── 07_nested_types.md        # Nested 类型
+│   ├── 08_enum_types.md          # Enum 类型
+│   ├── 09_nullable_types.md       # Nullable 类型
+│   ├── 10_special_types.md       # 特殊类型（UUID、JSON、IP 等）
+│   └── 11_type_conversion.md     # 类型转换
+│
+├── 06-admin/                   # 运维管理
+│   ├── README.md                  # 运维管理总览
+│   ├── CLUSTER_ADMIN_GUIDE.md     # 集群管理指南
+│   ├── TROUBLESHOOTING_GUIDE.md   # 故障排查指南
+│   ├── MONITORING_ALERTING_GUIDE.md # 监控告警指南
+│   ├── BACKUP_RECOVERY_GUIDE.md   # 备份恢复指南
+│   ├── ROUTINE_MAINTENANCE_GUIDE.md # 日常维护指南
+│   ├── cluster_admin.sql          # 集群管理 SQL
+│   ├── monitoring.sql             # 监控指标 SQL
+│   ├── maintenance.sql            # 维护操作 SQL
+│   └── diagnostics.sql           # 诊断检查 SQL
+│
+└── 07-troubleshooting/          # 故障排查
+    ├── README.md                  # 故障排查总览
+    ├── 01_connection_issues.md    # 连接问题
+    ├── 02_performance_issues.md   # 性能问题
+    ├── 03_storage_issues.md      # 存储问题
+    ├── 04_replication_issues.md  # 复制问题
+    ├── 05_query_issues.md        # 查询问题
+    ├── 06_startup_issues.md      # 启动问题
+    ├── 07_upgrade_issues.md      # 升级问题
+    ├── 08_data_consistency.md    # 数据一致性问题
+    ├── 09_resource_issues.md     # 资源问题
+    └── 10_common_errors.md      # 常见错误码
+│
+└── 08-information-schema/       # 数据库元数据
+    ├── README.md                  # 元数据查询总览
+    ├── 01_databases_tables.md    # 数据库和表信息
+    ├── 02_columns_schema.md       # 列定义和表结构
+    ├── 03_partitions_parts.md     # 分区和数据块
+    ├── 04_indexes_projections.md  # 索引和投影
+    ├── 05_clusters_replicas.md    # 集群和副本信息
+    ├── 06_users_roles.md          # 用户和权限管理
+    ├── 07_queries_processes.md    # 查询和进程
+    └── 08_system_tables.md        # 系统表详解
+│
+└── 09-data-deletion/           # 数据删除专题
+    ├── README.md                  # 删除方法总览
+    ├── 01_partition_deletion.md  # 分区删除（推荐）
+    ├── 02_ttl_deletion.md        # TTL 自动删除
+    ├── 03_mutation_deletion.md   # Mutation 删除
+    ├── 04_lightweight_deletion.md # 轻量级删除
+    ├── 05_deletion_strategies.md # 删除策略选择
+    ├── 06_deletion_performance.md # 删除性能优化
+    └── 07_deletion_monitoring.md # 删除监控
+│
+└── 10-date-update/             # 日期时间操作专题
+    ├── README.md                  # 日期时间操作总览
+    ├── 01_date_time_types.md    # 日期时间类型详解
+    ├── 02_date_time_functions.md # 日期时间函数大全
+    ├── 03_time_zones.md         # 时区处理
+    ├── 04_date_arithmetic.md     # 日期算术运算
+    ├── 05_time_range_queries.md # 时间范围查询
+    ├── 06_date_formatting.md   # 日期格式化和解析
+    ├── 07_time_series_analysis.md # 时间序列分析
+    ├── 08_window_functions.md   # 窗口函数和时间窗口
+    └── 09_date_performance.md # 日期时间性能优化
+│
+└── test_all_topics.sql         # 综合测试文件
+    ├── 08-information-schema 测试   # 数据库元数据查询测试
+    ├── 09-data-deletion 测试         # 数据删除方法测试
+    └── 10-date-update 测试           # 日期时间操作测试
 ```
 
 ## 快速开始
@@ -49,6 +138,60 @@ clickhouse-doc/
    - 基础操作：查看 [01-base/README.md](./01-base/README.md)
    - 高级功能：查看 [02-advance/README.md](./02-advance/README.md)
    - 表引擎：查看 [03-engines/README.md](./03-engines/README.md)
+
+4. **运行测试**
+   ```bash
+   # Linux/Mac: 使用测试脚本
+   ./run_tests.sh --all
+
+   # Windows: 使用测试脚本
+   run_tests.bat --all
+
+   # 或者直接使用 clickhouse-client
+   docker exec -it clickhouse1 clickhouse-client --queries-file /var/lib/clickhouse/user_files/test_all_topics.sql
+   ```
+
+详细测试指南请查看：[TEST_GUIDE.md](./TEST_GUIDE.md)
+
+## 测试脚本
+
+项目提供了便捷的测试脚本：
+
+### Linux/Mac
+```bash
+# 运行完整测试
+./run_tests.sh --all
+
+# 显示测试结果
+./run_tests.sh --results
+
+# 显示分区信息
+./run_tests.sh --partitions
+
+# 清理测试数据
+./run_tests.sh --cleanup
+
+# 显示帮助
+./run_tests.sh --help
+```
+
+### Windows
+```cmd
+# 运行完整测试
+run_tests.bat --all
+
+# 显示测试结果
+run_tests.bat --results
+
+# 显示分区信息
+run_tests.bat --partitions
+
+# 清理测试数据
+run_tests.bat --cleanup
+
+# 显示帮助
+run_tests.bat --help
+```
 
 ## 架构
 

@@ -4,16 +4,16 @@
 -- ================================================
 
 -- ========================================
--- 1. 创建普通 MergeTree 表
+-- 1. 创建普通 MergeTree 表（生产环境：使用复制引擎 + ON CLUSTER）
 -- ========================================
-CREATE TABLE IF NOT EXISTS test_users (
+CREATE TABLE IF NOT EXISTS test_users ON CLUSTER 'treasurycluster' (
     id UInt64,
     name String,
     email String,
     age UInt8,
     created_at DateTime DEFAULT now(),
     updated_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY id;
 
 -- 查看表结构
@@ -93,13 +93,13 @@ ORDER BY age;
 -- 5. 高级查询
 -- ========================================
 -- JOIN 操作
-CREATE TABLE IF NOT EXISTS test_orders (
+CREATE TABLE IF NOT EXISTS test_orders ON CLUSTER 'treasurycluster' (
     order_id UInt64,
     user_id UInt64,
     product_id UInt32,
     amount Decimal(10, 2),
     order_date DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY order_id;
 
 INSERT INTO test_orders (order_id, user_id, product_id, amount) VALUES
@@ -228,12 +228,12 @@ ORDER BY created_at;
 -- ========================================
 -- 11. 数组操作
 -- ========================================
-CREATE TABLE IF NOT EXISTS test_products (
+CREATE TABLE IF NOT EXISTS test_products ON CLUSTER 'treasurycluster' (
     id UInt64,
     name String,
     tags Array(String),
     prices Array(Decimal(10, 2))
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY id;
 
 INSERT INTO test_products VALUES
@@ -256,11 +256,11 @@ FROM test_products
 ORDER BY id;
 
 -- ========================================
--- 12. 清理测试表
+-- 12. 清理测试表（生产环境：使用 ON CLUSTER SYNC 确保集群范围删除）
 -- ========================================
-DROP TABLE IF EXISTS test_users;
-DROP TABLE IF EXISTS test_orders;
-DROP TABLE IF EXISTS test_products;
+DROP TABLE IF EXISTS test_users ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_orders ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_products ON CLUSTER 'treasurycluster' SYNC;
 
 -- ========================================
 -- 13. 查看所有表

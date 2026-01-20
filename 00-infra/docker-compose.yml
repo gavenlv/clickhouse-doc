@@ -56,6 +56,7 @@ services:
       - ./data/clickhouse1:/var/lib/clickhouse
       - ./config/clickhouse1.xml:/etc/clickhouse-server/config.d/cluster.xml
       - ./config/users.xml:/etc/clickhouse-server/users.d/users.xml
+      - ../test_all_topics.sql:/var/lib/clickhouse/user_files/test_all_topics.sql:ro
     depends_on:
       - keeper1
       - keeper2
@@ -75,6 +76,7 @@ services:
       - ./data/clickhouse2:/var/lib/clickhouse
       - ./config/clickhouse2.xml:/etc/clickhouse-server/config.d/cluster.xml
       - ./config/users.xml:/etc/clickhouse-server/users.d/users.xml
+      - ../test_all_topics.sql:/var/lib/clickhouse/user_files/test_all_topics.sql:ro
     depends_on:
       - keeper1
       - keeper2

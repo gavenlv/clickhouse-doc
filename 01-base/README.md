@@ -83,6 +83,17 @@
 - 最佳实践总结
 - 故障排查和监控
 
+### 09_data_deduplication.sql
+数据去重与幂等性实战：
+- ReplacingMergeTree - 保留最新版本（适合用户资料、配置信息）
+- CollapsingMergeTree - 增量更新（适合库存管理、订单状态）
+- VersionedCollapsingMergeTree - 严格版本控制（适合金融交易）
+- 应用层去重 - INSERT SELECT DISTINCT（临时去重）
+- 电商订单完整示例（包含去重表）
+- 性能对比测试
+- 监控去重效果
+- 最佳实践总结
+
 ## 如何使用
 
 ### 方法 1: 使用 Play UI（推荐）

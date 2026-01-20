@@ -7,14 +7,15 @@
 -- 1. 物化视图 (Materialized View)
 -- ========================================
 
--- 创建源表
-CREATE TABLE IF NOT EXISTS test_source_events (
+-- 创建源表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS test_source_events ON CLUSTER 'treasurycluster' (
     event_id UInt64,
     user_id UInt64,
     event_type String,
     event_value Float64,
     timestamp DateTime
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
+PARTITION BY toYYYYMM(timestamp)
 ORDER BY (user_id, timestamp);
 
 -- 插入一些测试数据
@@ -28,9 +29,9 @@ INSERT INTO test_source_events (event_id, user_id, event_type, event_value, time
 (7, 4, 'click', 12.5, '2024-01-02 11:00:00'),
 (8, 3, 'purchase', 149.99, '2024-01-03 14:00:00');
 
--- 创建物化视图：按用户统计事件
-CREATE MATERIALIZED VIEW IF NOT EXISTS test_user_event_stats_mv
-ENGINE = AggregatingMergeTree()
+-- 创建物化视图：按用户统计事件（生产环境：使用复制聚合引擎 + ON CLUSTER）
+CREATE MATERIALIZED VIEW IF NOT EXISTS test_user_event_stats_mv ON CLUSTER 'treasurycluster'
+ENGINE = ReplicatedAggregatingMergeTree
 ORDER BY (user_id, event_type, date)
 AS SELECT
     user_id,
@@ -70,13 +71,14 @@ GROUP BY user_id;
 -- 2. 聚合函数
 -- ========================================
 
--- 创建测试表
-CREATE TABLE IF NOT EXISTS test_aggregation_data (
+-- 创建测试表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS test_aggregation_data ON CLUSTER 'treasurycluster' (
     id UInt64,
     group_id UInt32,
     value Float64,
     category String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
+PARTITION BY group_id
 ORDER BY (group_id, id);
 
 -- 插入测试数据
@@ -101,14 +103,14 @@ FROM test_aggregation_data
 GROUP BY group_id
 ORDER BY group_id;
 
--- 使用 State 函数进行增量聚合
-CREATE TABLE IF NOT EXISTS test_aggregated_states (
+-- 使用 State 函数进行增量聚合（生产环境：使用复制聚合引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS test_aggregated_states ON CLUSTER 'treasurycluster' (
     group_id UInt32,
     category String,
     sum_state AggregateFunction(sum, Float64),
     count_state AggregateFunction(count),
     date Date DEFAULT today()
-) ENGINE = AggregatingMergeTree()
+) ENGINE = ReplicatedAggregatingMergeTree
 ORDER BY (group_id, category, date);
 
 -- 插入聚合状态
@@ -136,8 +138,8 @@ ORDER BY group_id, category;
 -- 3. 投影 (Projection)
 -- ========================================
 
--- 创建带投影的表
-CREATE TABLE IF NOT EXISTS test_projection_table (
+-- 创建带投影的表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS test_projection_table ON CLUSTER 'treasurycluster' (
     id UInt64,
     user_id UInt64,
     product_id UInt32,
@@ -145,7 +147,8 @@ CREATE TABLE IF NOT EXISTS test_projection_table (
     price Decimal(10, 2),
     timestamp DateTime
 )
-ENGINE = MergeTree()
+ENGINE = ReplicatedMergeTree
+PARTITION BY toYYYYMM(timestamp)
 ORDER BY (user_id, timestamp)
 SETTINGS
     allow_experimental_projection_optimization = 1;
@@ -184,14 +187,14 @@ ORDER BY user_id, product_id;
 -- 4. TTL 设置
 -- ========================================
 
--- 创建带 TTL 的表
-CREATE TABLE IF NOT EXISTS test_ttl_table (
+-- 创建带 TTL 的表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS test_ttl_table ON CLUSTER 'treasurycluster' (
     id UInt64,
     data String,
     created_at DateTime,
     updated_at DateTime DEFAULT now()
 )
-ENGINE = MergeTree()
+ENGINE = ReplicatedMergeTree
 ORDER BY id
 TTL
     created_at + INTERVAL 30 DAY DELETE,
@@ -228,14 +231,14 @@ WHERE table = 'test_ttl_table'
 -- 5. 数据压缩
 -- ========================================
 
--- 创建带压缩设置的表
-CREATE TABLE IF NOT EXISTS test_compression_table (
+-- 创建带压缩设置的表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS test_compression_table ON CLUSTER 'treasurycluster' (
     id UInt64,
     text_data String,
     json_data String,
     created_at DateTime
 )
-ENGINE = MergeTree()
+ENGINE = ReplicatedMergeTree
 ORDER BY id
 SETTINGS
     compress_marks = 1,
@@ -273,11 +276,11 @@ WHERE table = 'test_compression_table'
 -- 6. 虚拟列
 -- ========================================
 
--- 创建测试表
-CREATE TABLE IF NOT EXISTS test_virtual_columns (
+-- 创建测试表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS test_virtual_columns ON CLUSTER 'treasurycluster' (
     id UInt64,
     data String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY id;
 
 -- 插入测试数据
@@ -301,15 +304,16 @@ LIMIT 5;
 -- 7. SKIP 索引
 -- ========================================
 
--- 创建带 SKIP 索引的表
-CREATE TABLE IF NOT EXISTS test_skip_index_table (
+-- 创建带 SKIP 索引的表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS test_skip_index_table ON CLUSTER 'treasurycluster' (
     id UInt64,
     user_id UInt64,
     timestamp DateTime,
     value Float64,
     status String
 )
-ENGINE = MergeTree()
+ENGINE = ReplicatedMergeTree
+PARTITION BY toYYYYMM(timestamp)
 ORDER BY (user_id, timestamp)
 SETTINGS
     index_granularity = 8192;
@@ -357,15 +361,16 @@ WHERE table = 'test_skip_index_table';
 -- 8. 数据采样
 -- ========================================
 
--- 创建支持采样的表
-CREATE TABLE IF NOT EXISTS test_sampling_table (
+-- 创建支持采样的表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS test_sampling_table ON CLUSTER 'treasurycluster' (
     id UInt64,
     user_id UInt64,
     event_type String,
     value Float64,
     timestamp DateTime
 )
-ENGINE = MergeTree()
+ENGINE = ReplicatedMergeTree
+PARTITION BY toYYYYMM(timestamp)
 ORDER BY (user_id, intHash32(user_id))
 SETTINGS
     index_granularity = 8192,
@@ -416,14 +421,15 @@ FROM test_sampling_table;
 -- 10. GROUP BY 优化
 -- ========================================
 
--- 创建测试表
-CREATE TABLE IF NOT EXISTS test_groupby_table (
+-- 创建测试表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS test_groupby_table ON CLUSTER 'treasurycluster' (
     id UInt64,
     group_id UInt32,
     sub_group_id UInt32,
     value Float64,
     category String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
+PARTITION BY group_id
 ORDER BY (group_id, sub_group_id, id);
 
 -- 插入测试数据
@@ -469,13 +475,14 @@ ORDER BY group_id, category;
 -- 11. 窗口函数
 -- ========================================
 
--- 创建测试表
-CREATE TABLE IF NOT EXISTS test_window_table (
+-- 创建测试表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS test_window_table ON CLUSTER 'treasurycluster' (
     id UInt64,
     user_id UInt64,
     amount Float64,
     transaction_date DateTime
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree
+PARTITION BY toYYYYMM(transaction_date)
 ORDER BY (user_id, transaction_date);
 
 -- 插入测试数据
@@ -505,20 +512,20 @@ WHERE user_id IN (1, 2, 3)
 ORDER BY user_id, transaction_date;
 
 -- ========================================
--- 12. 清理测试表
+-- 12. 清理测试表（生产环境：使用 ON CLUSTER SYNC 确保集群范围删除）
 -- ========================================
-DROP TABLE IF EXISTS test_source_events;
-DROP TABLE IF EXISTS test_user_event_stats_mv;
-DROP TABLE IF EXISTS test_aggregation_data;
-DROP TABLE IF EXISTS test_aggregated_states;
-DROP TABLE IF EXISTS test_projection_table;
-DROP TABLE IF EXISTS test_ttl_table;
-DROP TABLE IF EXISTS test_compression_table;
-DROP TABLE IF EXISTS test_virtual_columns;
-DROP TABLE IF EXISTS test_skip_index_table;
-DROP TABLE IF EXISTS test_sampling_table;
-DROP TABLE IF EXISTS test_groupby_table;
-DROP TABLE IF EXISTS test_window_table;
+DROP TABLE IF EXISTS test_source_events ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_user_event_stats_mv ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_aggregation_data ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_aggregated_states ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_projection_table ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_ttl_table ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_compression_table ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_virtual_columns ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_skip_index_table ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_sampling_table ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_groupby_table ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS test_window_table ON CLUSTER 'treasurycluster' SYNC;
 
 -- ========================================
 -- 13. 验证清理
