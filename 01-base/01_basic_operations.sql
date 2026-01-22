@@ -251,12 +251,19 @@ SELECT
     length(tags) as tag_count,
     tags[1] as first_tag,
     has(tags, 'electronics') as has_electronics,
-    arrayJoin(tags) as tag_expanded,
-    max(prices) as max_price,
-    min(prices) as min_price,
-    avg(prices) as avg_price
+    arrayJoin(tags) as tag_expanded
 FROM test_products
 ORDER BY id;
+
+-- 数组聚合操作
+SELECT
+    name,
+    max(prices) as max_price,
+    min(prices) as min_price,
+    avg(arrayJoin(prices)) as avg_price
+FROM test_products
+GROUP BY name
+ORDER BY name;
 
 -- ========================================
 -- 12. 清理测试表（生产环境：使用 ON CLUSTER SYNC 确保集群范围删除）

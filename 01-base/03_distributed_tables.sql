@@ -105,8 +105,8 @@ SELECT
     shard_num,
     replica_num,
     host_name,
-    count() as row_count
-FROM cluster(treasurycluster, default, test_local_orders, count())
+    sum(row_count) as row_count
+FROM clusterAll('treasurycluster', 'default', 'test_local_orders')
 GROUP BY shard_num, replica_num, host_name
 ORDER BY shard_num, replica_num;
 

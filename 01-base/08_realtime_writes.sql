@@ -702,7 +702,7 @@ CREATE TABLE IF NOT EXISTS realtime_examples.events_local ON CLUSTER 'treasurycl
     event_time DateTime,
     event_type String,
     event_data String
-) ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/events_local', '{replica}')
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (event_time, user_id, event_id);
 

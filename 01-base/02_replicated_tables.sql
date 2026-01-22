@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS test_replicated_events (
     event_type String,
     event_data String,
     timestamp DateTime DEFAULT now()
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY (user_id, timestamp);
 
 -- 验证表是否创建成功
@@ -68,7 +68,7 @@ FROM system.tables
 WHERE table = 'test_replicated_events';
 
 -- 查看表是否存在
-SELECT exists('default', 'test_replicated_events') as table_exists;
+SELECT count() > 0 as table_exists FROM system.tables WHERE database = 'default' AND name = 'test_replicated_events';
 
 -- ========================================
 -- 5. 插入测试数据
@@ -134,8 +134,8 @@ INSERT INTO test_replicated_events (event_id, user_id, event_type, event_data) V
 -- SELECT sleep(2);
 
 -- 在两个副本上验证数据
-SELECT 'Replica 1 - Total events:' as info, count() as count FROM test_replicated_events
-UNION ALL
+SELECT 'Replica 1 - Total events:' as info, count() as count FROM test_replicated_events;
+
 -- 连接到 clickhouse2 执行: SELECT 'Replica 2 - Total events:' as info, count() as count FROM test_replicated_events;
 
 -- ========================================
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS test_replicated_logs (
     message String,
     service String,
     timestamp DateTime
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (service, timestamp);
 
@@ -172,13 +172,13 @@ ORDER BY partition;
 
 -- 按分区查询
 SELECT
-    partition,
+    toYYYYMM(timestamp) as partition,
     count() as log_count,
     level,
     service
 FROM test_replicated_logs
-GROUP BY partition, level, service
-ORDER BY partition, log_count DESC;
+GROUP BY toYYYYMM(timestamp), level, service
+ORDER BY toYYYYMM(timestamp), log_count DESC;
 
 -- ========================================
 -- 9. 创建带 TTL 的复制表
@@ -188,7 +188,7 @@ CREATE TABLE IF NOT EXISTS test_replicated_metrics (
     metric_name String,
     metric_value Float64,
     timestamp DateTime
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree
 ORDER BY (metric_name, timestamp)
 TTL timestamp + INTERVAL 7 DAY
 SETTINGS
