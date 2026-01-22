@@ -111,6 +111,57 @@ clickhouse-doc/
     ├── 08_window_functions.md   # 窗口函数和时间窗口
     └── 09_date_performance.md # 日期时间性能优化
 │
+└── 11-data-update/            # 数据更新专题
+    ├── README.md                  # 数据更新方法总览
+    ├── 01_mutation_update.md   # Mutation 更新
+    ├── 02_lightweight_update.md # 轻量级更新
+    ├── 03_partition_update.md   # 分区更新（推荐）
+    ├── 04_update_strategies.md # 更新策略选择
+    ├── 05_update_performance.md # 更新性能优化
+    ├── 06_update_monitoring.md # 更新监控
+    ├── 07_batch_updates.md     # 批量更新实战
+    └── 08_case_studies.md     # 实战案例分析
+│
+└── 11-performance/           # 性能优化专题
+    ├── README.md                      # 性能优化总览
+    ├── 01_query_optimization.md       # 查询优化基础
+    ├── 02_primary_indexes.md         # 主键索引优化
+    ├── 03_partitioning.md           # 分区键优化
+    ├── 04_skipping_indexes.md       # 数据跳数索引
+    ├── 05_prewhere_optimization.md # PREWHERE 优化
+    ├── 06_bulk_inserts.md          # 批量插入优化
+    ├── 07_asynchronous_operations.md # 异步操作优化
+    ├── 08_mutation_optimization.md # Mutation 优化
+    ├── 09_data_types.md           # 数据类型优化
+    ├── 10_common_patterns.md      # 常见性能模式
+    ├── 11_query_profiling.md      # 查询分析和 Profiling
+    ├── 12_analyzer.md             # 查询分析器
+    ├── 13_caching.md              # 缓存优化
+    └── 14_hardware_tuning.md      # 硬件调优和测试
+│
+└── 12-security-authentication/  # 安全认证专题
+    ├── README.md                      # 安全认证总览
+    ├── 01_authentication.md           # 用户认证方法
+    ├── 02_user_role_management.md     # 用户和角色管理
+    ├── 03_permissions.md              # 权限控制
+    ├── 04_row_level_security.md       # 行级安全
+    ├── 05_network_security.md         # 网络安全
+    ├── 06_data_encryption.md          # 数据加密
+    ├── 07_audit_log.md                # 审计日志
+    ├── 08_best_practices.md           # 安全最佳实践
+    └── 09_common_configs.md           # 常见安全配置
+│
+└── 13-monitor/                 # 监控专题
+    ├── README.md                      # 监控总览
+    ├── 01_system_monitoring.md       # 系统资源监控
+    ├── 02_query_monitoring.md        # 查询监控和反模式
+    ├── 03_data_quality_monitoring.md # 数据质量监控
+    ├── 04_operation_monitoring.md     # 操作监控
+    ├── 05_abuse_detection.md         # 滥用检测
+    ├── 06_alerting.md                # 告警机制
+    ├── 07_best_practices.md          # 监控最佳实践
+    └── 08_common_configs.md          # 常见监控配置
+│
 └── test_all_topics.sql         # 综合测试文件
     ├── 08-information-schema 测试   # 数据库元数据查询测试
     ├── 09-data-deletion 测试         # 数据删除方法测试
@@ -268,7 +319,6 @@ run_tests.bat --help
 ### ClickHouse 配置
 
 每个 ClickHouse 节点有自己的配置文件：
-
 - `00-infra/config/clickhouse1.xml` – 第一个副本配置，宏：shard=1, replica=1
 - `00-infra/config/clickhouse2.xml` – 第二个副本配置，宏：shard=1, replica=2
 
@@ -277,7 +327,6 @@ run_tests.bat --help
 ### Keeper 配置
 
 每个 Keeper 节点有自己的配置文件：
-
 - `00-infra/config/keeper1.xml` – server_id=1
 - `00-infra/config/keeper2.xml` – server_id=2
 - `00-infra/config/keeper3.xml` – server_id=3
@@ -289,7 +338,6 @@ Keeper 使用 Raft 协议，端口 9444 用于内部通信，9181 用于客户�
 ### 数据持久化
 
 数据持久化到本地目录 `./00-infra/data/`：
-
 - `./00-infra/data/clickhouse1`, `./00-infra/data/clickhouse2` – ClickHouse 数据
 - `./00-infra/data/keeper1`, `./00-infra/data/keeper2`, `./00-infra/data/keeper3` – Keeper 数据
 
@@ -464,7 +512,7 @@ rm -rf ./data/
 - [备份恢复](./02-advance/README.md#02_backup_recoverysql) - 数据保护
 - [监控指标](./02-advance/README.md#03_monitoring_metricssql) - 系统监控
 - [安全配置](./02-advance/README.md#04_security_configsql) - 权限管理
-- [高可用](./02-advance/README.md#05_high_availabilitysql) - 集群高可用
+- [高可用](./02-advance/README.md#05_high_availablitysql) - 集群高可用
 - [数据迁移](./02-advance/README.md#06_data_migrationsql) - 数据迁移
 - [故障排查](./02-advance/README.md#07_troubleshootingsql) - 问题诊断
 
