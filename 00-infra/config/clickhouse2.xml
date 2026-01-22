@@ -13,10 +13,19 @@
     <interserver_http_port>9009</interserver_http_port>
     <interserver_http_host>0.0.0.0</interserver_http_host>
 
+    <!-- 禁用系统日志以减少 CPU 占用 -->
     <enable_play_ui>1</enable_play_ui>
     <http_server_default_headers>
         <Enable-CORS>true</Enable-CORS>
     </http_server_default_headers>
+
+    <!-- 禁用系统日志表 -->
+    <metric_log remove="1"/>
+    <asynchronous_metric_log remove="1"/>
+    <trace_log remove="1"/>
+    <query_log remove="1"/>
+    <session_log remove="1"/>
+    <crash_log remove="1"/>
 
     <!-- Cluster configuration -->
     <remote_servers>

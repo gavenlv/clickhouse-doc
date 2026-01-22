@@ -1,8 +1,13 @@
-version: '3.8'
-
 networks:
   clickhouse_net:
     driver: bridge
+
+volumes:
+  keeper1_data:
+  keeper2_data:
+  keeper3_data:
+  clickhouse1_data:
+  clickhouse2_data:
 
 services:
   # ClickHouse Keeper ensemble (3 nodes for quorum)
@@ -13,7 +18,7 @@ services:
     networks:
       - clickhouse_net
     volumes:
-      - ./data/keeper1:/var/lib/clickhouse
+      - keeper1_data:/var/lib/clickhouse
       - ./config/keeper1.xml:/etc/clickhouse-server/config.d/keeper.xml
     entrypoint: []
     command: ["/usr/bin/clickhouse-keeper", "--config", "/etc/clickhouse-server/config.d/keeper.xml"]
@@ -26,7 +31,7 @@ services:
     networks:
       - clickhouse_net
     volumes:
-      - ./data/keeper2:/var/lib/clickhouse
+      - keeper2_data:/var/lib/clickhouse
       - ./config/keeper2.xml:/etc/clickhouse-server/config.d/keeper.xml
     entrypoint: []
     command: ["/usr/bin/clickhouse-keeper", "--config", "/etc/clickhouse-server/config.d/keeper.xml"]
@@ -39,7 +44,7 @@ services:
     networks:
       - clickhouse_net
     volumes:
-      - ./data/keeper3:/var/lib/clickhouse
+      - keeper3_data:/var/lib/clickhouse
       - ./config/keeper3.xml:/etc/clickhouse-server/config.d/keeper.xml
     entrypoint: []
     command: ["/usr/bin/clickhouse-keeper", "--config", "/etc/clickhouse-server/config.d/keeper.xml"]
@@ -53,7 +58,7 @@ services:
     networks:
       - clickhouse_net
     volumes:
-      - ./data/clickhouse1:/var/lib/clickhouse
+      - clickhouse1_data:/var/lib/clickhouse
       - ./config/clickhouse1.xml:/etc/clickhouse-server/config.d/cluster.xml
       - ./config/users.xml:/etc/clickhouse-server/users.d/users.xml
       - ../test_all_topics.sql:/var/lib/clickhouse/user_files/test_all_topics.sql:ro
@@ -65,6 +70,11 @@ services:
       - "8123:8123"  # HTTP API
       - "9000:9000"  # Native TCP protocol
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   clickhouse2:
     image: zlsmshoqvwt6q1.xuanyuan.run/clickhouse/clickhouse-server:latest
@@ -73,7 +83,7 @@ services:
     networks:
       - clickhouse_net
     volumes:
-      - ./data/clickhouse2:/var/lib/clickhouse
+      - clickhouse2_data:/var/lib/clickhouse
       - ./config/clickhouse2.xml:/etc/clickhouse-server/config.d/cluster.xml
       - ./config/users.xml:/etc/clickhouse-server/users.d/users.xml
       - ../test_all_topics.sql:/var/lib/clickhouse/user_files/test_all_topics.sql:ro
@@ -85,3 +95,8 @@ services:
       - "8124:8123"  # HTTP API (different host port)
       - "9001:9000"  # Native TCP protocol (different host port)
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

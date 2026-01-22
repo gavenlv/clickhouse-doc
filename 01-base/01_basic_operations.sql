@@ -6,6 +6,9 @@
 -- ========================================
 -- 1. 创建普通 MergeTree 表（生产环境：使用复制引擎 + ON CLUSTER）
 -- ========================================
+create database if not exists test;
+use test;
+
 CREATE TABLE IF NOT EXISTS test_users ON CLUSTER 'treasurycluster' (
     id UInt64,
     name String,
@@ -33,7 +36,7 @@ INSERT INTO test_users (id, name, email, age) VALUES
 (5, 'Eve', 'eve@example.com', 22);
 
 -- 批量插入（使用 VALUES）
-INSERT INTO test_users VALUES
+INSERT INTO test_users  (id, name, email, age)  VALUES
 (6, 'Frank', 'frank@example.com', 40),
 (7, 'Grace', 'grace@example.com', 29);
 
