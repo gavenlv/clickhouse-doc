@@ -4,6 +4,11 @@
 -- ================================================
 
 -- ========================================
+-- 0. 创建测试数据库
+-- ========================================
+CREATE DATABASE IF NOT EXISTS engine_test ON CLUSTER 'treasurycluster';
+
+-- ========================================
 -- 1. ReplicatedMergeTree（复制基础引擎）
 -- ========================================
 
@@ -38,7 +43,6 @@ SELECT
     is_readonly,
     is_session_expired,
     replica_name,
-    replica_path,
     zookeeper_path,
     queue_size,
     absolute_delay,
@@ -48,7 +52,8 @@ FROM system.replicas
 WHERE table = 'replicated_events'
 ORDER BY replica_name;
 
--- 查看复制队列
+-- 查看复制队列（复制队列表可能不存在）
+/*
 SELECT
     database,
     table,
@@ -63,6 +68,7 @@ FROM system.replication_queue
 WHERE table = 'replicated_events'
 ORDER BY replica_name, position
 LIMIT 20;
+*/
 
 -- ========================================
 -- 2. ReplicatedReplacingMergeTree（复制去重引擎）
@@ -290,14 +296,14 @@ SELECT 'MergeTree' as engine, count() as row_count FROM engine_test.mt_compare
 UNION ALL
 SELECT 'ReplicatedMergeTree', count() FROM engine_test.rmt_compare;
 
+
+
 -- 查看表的复制信息
 SELECT
     name,
     engine,
     total_rows,
-    total_bytes,
-    replica_path,
-    zookeeper_path
+    total_bytes
 FROM system.tables
 WHERE table LIKE '%_compare'
   AND database = 'engine_test';
@@ -320,6 +326,9 @@ WHERE database = 'engine_test'
 ORDER BY table, replica_name;
 
 -- 查看复制队列详情
+
+-- 查看复制队列（所有数据库）- 表可能不存在
+/*
 SELECT
     database,
     table,
@@ -335,6 +344,7 @@ FROM system.replication_queue
 WHERE database = 'engine_test'
 ORDER BY table, replica_name, position
 LIMIT 30;
+*/
 
 -- 统计复制健康状态
 SELECT

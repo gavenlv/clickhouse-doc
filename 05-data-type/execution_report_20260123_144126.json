@@ -1,0 +1,206 @@
+{
+  "timestamp": "2026-01-23T14:41:26.361770",
+  "directory": "05-data-type",
+  "summary": {
+    "total_files": 2,
+    "total_statements": 39,
+    "total_success": 38,
+    "total_errors": 1
+  },
+  "results": {
+    "05-data-type\\01_numeric_types_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 01_numeric_types_examples.sql\n-- 从 01_numeric_types.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ===============================================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 插入数据\nINSERT INTO example.numeric_types VALUES\n    (1, 1001, 25, 1000, 36.5, 99.99),\n    (2, 1002, 30, -500, 37.2, 199.99)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询数据\nSELECT * FROM example.numeric_types",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基础使用\n-- ========================================\n\n-- 基础运算\nSELECT\n    10 + 5 as add,          -- 15\n    10 - 5 as subtract,     -- 5\n    10 * 5 as multipl",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 1\n\n-- 取整\nSELECT\n    floor(3.7) as floor_down,   -- 3\n    ceil(3.2) as ceil_up,      -- 4\n    round(3.5) as round_nearest, -- 4\n    trunc(3.9) as truncate",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 3\n\n-- 绝对值\nSELECT\n    abs(-10) as abs_positive,   -- 10\n    abs(10) as abs_original",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 10\n\n-- ========================================\n-- 基础使用\n-- ========================================\n\n-- 创建测试表\nCREATE TABLE example.sales (\n    id UInt64,\n    product_id UInt32,\n    quantity UInt16,",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 插入数据\nINSERT INTO example.sales VALUES\n    (1, 100, 5, 100, 500, 4.5),\n    (2, 101, 3, 200, 600, 4.8),\n    (3, 100, 2, 100, 200, 4.2),\n    (4, 102, 1, 300, 300, 4.9)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 聚合函数\nSELECT\n    sum(quantity) as total_quantity,\n    avg(price) as avg_price,\n    min(rating) as min_rating,\n    max(rating) as max_rating,\n    count() as total_rows\nFROM example.sales",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- GROUP BY 聚合\nSELECT\n    product_id,\n    sum(quantity) as total_quantity,\n    sum(total_price) as total_sales,\n    avg(rating) as avg_rating\nFROM example.sales\nGROUP BY product_id\nORDER BY product_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基础使用\n-- ========================================\n\n-- ❌ 不好：使用 UInt64 存储年龄\nCREATE TABLE users_bad (\n    id UInt64,\n    age UInt64      -- 浪费空间\n) ENGINE = M",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 好：使用 UInt8 存储年龄\nCREATE TABLE users_good (\n    id UInt64,\n    age UInt8       -- 0-255，足够\n) ENGINE = MergeTree ORDER BY id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基础使用\n-- ========================================\n\n-- ✅ 推荐：主键使用 UInt64\nCREATE TABLE events (\n    id UInt64,\n    user_id UInt64,\n    event_time DateTime\n) ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基础使用\n-- ========================================\n\n-- 检查溢出\nSELECT\n    cast(toInt8(200) as UInt8)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 会溢出，产生错误\n\n-- 使用 toUInt64 避免溢出\nSELECT\n    cast(200 as UInt64)",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "05-data-type\\02_string_types_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 02_string_types_examples.sql\n-- 从 02_string_types.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ================================================\n",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 插入数据\nINSERT INTO example.strings VALUES\n    (1, 'Hello, World!', 'user@example.com', 'https://example.com'),\n    (2, '你好，世界！', 'user@example.org', 'https://example.org')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询\nSELECT * FROM example.strings",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- String 类型\n-- ========================================\n\n-- 创建表（存储 MD5 哈希）\nCREATE TABLE example.files (\n    id UInt64,\n    file_name String,\n    file_hash ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 插入数据\nINSERT INTO example.files VALUES\n    (1, 'document.pdf', 'd41d8cd98f00b204e9800998ecf8427e', 1024),\n    (2, 'image.jpg', '0cc175b9c0f1b6a831c399e269772661', 2048)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询\nSELECT * FROM example.files WHERE file_hash = 'd41d8cd98f00b204e9800998ecf8427e'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- String 类型\n-- ========================================\n\n-- 创建表（国家、状态）\nCREATE TABLE example.users (\n    id UInt64,\n    name String,\n    country LowCardinal",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 插入数据\nINSERT INTO example.users VALUES\n    (1, 'Alice', 'USA', 'active', 'F'),\n    (2, 'Bob', 'China', 'inactive', 'M'),\n    (3, 'Charlie', 'UK', 'active', 'M'),\n    (4, 'Diana', 'USA', 'active', 'F",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询\nSELECT country, count() as user_count\nFROM example.users\nGROUP BY country\nORDER BY user_count DESC",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- String 类型\n-- ========================================\n\n-- 长度\nSELECT\n    length('Hello') as len,              -- 5\n    lengthUTF8('你好') as len_utf8",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2（不是字节长度）\n\n-- 拼接\nSELECT\n    concat('Hello', ' ', 'World'),        -- Hello World\n    'Hello ' || 'World'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- Hello World\n\n-- 子串\nSELECT\n    substring('Hello World', 1, 5),      -- Hello（从 1 开始）\n    substring('Hello World', 7, 5)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- World\n\n-- 大小写转换\nSELECT\n    upper('hello') as upper,              -- HELLO\n    lower('WORLD') as lower",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- world\n\n-- ========================================\n-- String 类型\n-- ========================================\n\n-- 包含\nSELECT\n    hasSubString('Hello World', 'World'),   -- 1\n    hasSubString('Hello Wo",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 0\n\n-- 位置\nSELECT\n    position('Hello World', 'World'),        -- 7\n    position('Hello World', 'Python')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 0\n\n-- 替换\nSELECT\n    replace('Hello World', 'World', 'ClickHouse')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- Hello ClickHouse\n\n-- ========================================\n-- String 类型\n-- ========================================\n\n-- 分割为数组\nSELECT\n    splitByString(',', 'apple,banana,cherry'),  -- ['apple', ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ['Hello', 'World']\n\n-- 连接数组\nSELECT\n    arrayJoin(['apple', 'banana', 'cherry']),\n    arrayStringConcat(['apple', 'banana', 'cherry'], ',')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- apple,banana,cherry\n\n-- ========================================\n-- String 类型\n-- ========================================\n\n-- ❌ 不好：低基数字符串使用 String\nCREATE TABLE users_bad (\n    id UInt64,\n    countr",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 好：低基数字符串使用 LowCardinality\nCREATE TABLE users_good (\n    id UInt64,\n    country LowCardinality(String),  -- 字典编码\n    status LowCardinality(String)    -- 字典编码\n) ENGINE = MergeTree ORDER BY id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- String 类型\n-- ========================================\n\n-- ✅ 推荐：MD5、UUID 使用 FixedString\nCREATE TABLE files (\n    id UInt64,\n    file_name String,\n    file",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- String 类型\n-- ========================================\n\n-- ❌ 不好：存储大文本\nCREATE TABLE logs_bad (\n    id UInt64,\n    log_content String  -- 可能很大\n) ENGINE = Me",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 好：大文本存储到外部，只存引用\nCREATE TABLE logs_good (\n    id UInt64,\n    log_path String,     -- 存储文件路径\n    log_size UInt64\n) ENGINE = MergeTree ORDER BY id",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ]
+  }
+}

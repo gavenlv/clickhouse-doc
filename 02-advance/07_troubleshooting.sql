@@ -52,7 +52,8 @@ ORDER BY database, table;
 -- 2. 性能问题诊断
 -- ========================================
 
--- 查看慢查询（超过 5 秒）
+-- 查看慢查询（超过 5 秒）- 需要启用query_log
+/*
 SELECT
     query_id,
     user,
@@ -70,19 +71,19 @@ WHERE type = 'QueryFinish'
   AND event_date >= today()
 ORDER BY query_duration_ms DESC
 LIMIT 20;
+*/
 
 -- 查看当前运行的查询
 SELECT
     query_id,
     user,
     query,
-    query_start_time,
     elapsed,
     read_rows,
     read_bytes,
     memory_usage
 FROM system.processes
-ORDER BY query_start_time DESC;
+ORDER BY query_id DESC;
 
 -- 查看高内存使用的查询
 SELECT

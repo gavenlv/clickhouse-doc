@@ -1,0 +1,1885 @@
+{
+  "timestamp": "2026-01-23T22:14:45.823595",
+  "directory": "11-performance",
+  "summary": {
+    "total_files": 14,
+    "total_statements": 369,
+    "total_success": 354,
+    "total_errors": 15
+  },
+  "results": {
+    "11-performance\\01_query_optimization_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 01_query_optimization_examples.sql\n-- 从 01_query_optimization.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- =====================================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 不使用分区裁剪（慢速）\nSELECT * FROM events\nWHERE toYYYYMM(event_time) >= toYYYYMM(now() - INTERVAL 7 DAY)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- ✅ 使用主键（快速）\nSELECT * FROM users\nWHERE user_id = 123",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 不使用主键（慢速）\nSELECT * FROM users\nWHERE email = 'user@example.com'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- ❌ 在 WHERE 中使用函数（慢速）\nSELECT * FROM users\nWHERE toYYYYMM(created_at) = '202401'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 使用常量范围（快速）\nSELECT * FROM users\nWHERE created_at >= '2024-01-01'\n  AND created_at < '2024-02-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- 使用 PREWHERE 过滤大列\nSELECT \n    user_id,\n    event_type,\n    event_time\nFROM events\nPREWHERE event",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- 使用 LIMIT\nSELECT * FROM events\nWHERE event_time >= now() - INTERVAL 7 DAY\nLIMIT 1000",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 使用 SAMPLE 采样\nSELECT * FROM events\nSAMPLE 0.1  -- 10% 的数据\nWHERE event_time >= now() - INTERVAL 7 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- 查看查询执行计划\nEXPLAIN PLAN\nSELECT \n    user_id,\n    count() as event_count\nFROM events\nWHERE event_t",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- 查看查询管道\nEXPLAIN PIPELINE\nSELECT \n    user_id,\n    count() as event_count\nFROM events\nWHERE event",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- 查看查询预估\nEXPLAIN ESTIMATE\nSELECT \n    user_id,\n    count() as event_count\nFROM events\nWHERE event",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- ❌ 使用 OR（慢速）\nSELECT * FROM users\nWHERE user_id = 1 \n   OR user_id = 2 \n   OR user_id = 3",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 使用 IN（快速）\nSELECT * FROM users\nWHERE user_id IN (1, 2, 3)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- ❌ 使用子查询（慢速）\nSELECT * FROM orders\nWHERE user_id IN (SELECT user_id FROM active_users)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 使用 JOIN（快速）\nSELECT o.*\nFROM orders o\nINNER JOIN active_users u ON o.user_id = u.user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- 创建物化列\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_type String,\n   ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询时使用物化列\nSELECT \n    user_id,\n    count() as event_count\nFROM events\nWHERE event_month = '2024-01'\nGROUP BY user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- 获取每个用户的最新事件\nSELECT *\nFROM events\nWHERE event_time >= now() - INTERVAL 7 DAY\nORDER BY user_id, e",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- ❌ 使用 GROUP BY（慢速）\nSELECT user_id FROM events GROUP BY user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 使用 DISTINCT（快速）\nSELECT DISTINCT user_id FROM events",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- 设置并行线程数\nSELECT * FROM events\nSETTINGS max_threads = 8\nWHERE event_time >= now() - INTERVAL 7 DA",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 设置并发读取\nSELECT * FROM events\nSETTINGS max_concurrent_queries = 4\nWHERE event_time >= now() - INTERVAL 7 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- 设置分布式查询并行\nSELECT * FROM distributed_table\nSETTINGS max_parallel_replicas = 2\nWHERE event_time >",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- 查看最近的查询\nSELECT \n    query,\n    query_duration_ms,\n    read_rows,\n    read_bytes,\n    written_ro",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- 查看慢查询\nSELECT \n    query,\n    query_duration_ms,\n    read_rows,\n    read_bytes,\n    memory_usage",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- 查看查询统计\nSELECT \n    substring(query, 1, 50) as query_sample,\n    count() as query_count,\n    avg",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- ❌ 优化前\nSELECT * FROM events\nWHERE toYYYYMMDD(event_time) >= '20240101'\n  AND toYYYYMMDD(event_ti",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 优化后\nSELECT * FROM events\nWHERE event_time >= '2024-01-01'\n  AND event_time < '2024-02-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- ❌ 优化前\nSELECT \n    user_id,\n    count() as event_count\nFROM events\nWHERE event_time >= now() - I",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 优化后（使用物化视图）\nCREATE MATERIALIZED VIEW user_event_count_mv\nENGINE = AggregatingMergeTree()\nORDER BY (user_id, toStartOfDay(event_time))\nAS SELECT\n    user_id,\n    toStartOfDay(event_time) as date,\n",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询物化视图\nSELECT \n    user_id,\n    sumMerge(event_count) as total_events\nFROM user_event_count_mv\nWHERE date >= now() - INTERVAL 30 DAY\nGROUP BY user_id\nHAVING sumMerge(event_count) > 100",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用分区裁剪\n-- ========================================\n\n-- ❌ 优化前\nSELECT \n    o.order_id,\n    o.amount,\n    u.username\nFROM orders o\nLEFT JOIN users u ON o",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 优化后（使用分布式 JOIN）\nSELECT \n    o.order_id,\n    o.amount,\n    u.username\nFROM orders o\nGLOBAL LEFT JOIN users u ON o.user_id = u.user_id\nWHERE o.order_date >= now() - INTERVAL 30 DAY\nSETTINGS distrib",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "11-performance\\02_primary_indexes_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 02_primary_indexes_examples.sql\n-- 从 02_primary_indexes.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ===========================================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- user_id 高选择性\n\n-- ❌ 低选择性主键\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_type String,\n    event_time DateTime\n) ENGINE = MergeTree()\nPARTITION BY toYYYYMM(event_time)\nORDE",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- event_type 低选择性\n\n-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- 如果查询主要按 user_id 和 event_time\nCREATE TABLE events (\n    event_id UInt64,\n  ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 匹配查询模式\n\n-- 如果查询主要按 event_type 和 event_time\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_type String,\n    event_time DateTime\n) ENGINE = MergeTree()\nPARTITION BY toYYYY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 匹配查询模式\n\n-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- ✅ 2-3 列的主键\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    eve",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 2 列\n\n-- ❌ 过多列的主键\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_type String,\n    event_category String,\n    event_subcategory String,\n    event_time DateTime\n) ENGINE = ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 5 列\n\n-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- ✅ 时间列在最后\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_ty",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 时间在最后\n\n-- ❌ 时间列不在最后\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_time DateTime,\n    event_type String\n) ENGINE = MergeTree()\nPARTITION BY toYYYYMM(event_time)\nORDER BY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 时间在最前\n\n-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- ✅ 使用主键范围查询\nSELECT * FROM events\nWHERE user_id = 123\n  AND event_time >= '2024-01-0",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 使用主键 IN 查询\nSELECT * FROM events\nWHERE user_id IN (1, 2, 3, 4, 5)\n  AND event_time >= now() - INTERVAL 7 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- ✅ 使用主键前缀查询\nSELECT * FROM events\nWHERE user_id = 123",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 只使用主键第一列\n\n-- ✅ 使用主键前两列\nSELECT * FROM events\nWHERE user_id = 123\n  AND event_type = 'click'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- ❌ 在主键上使用函数（慢速）\nSELECT * FROM events\nWHERE toYYYYMM(event_time) = '202401'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 使用范围查询（快速）\nSELECT * FROM events\nWHERE event_time >= '2024-01-01'\n  AND event_time < '2024-02-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- 创建表时设置索引粒度\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_time DateT",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 默认值\n\n-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- 读取密集型：较小的粒度\nCREATE TABLE events_read (\n    event_id UInt64,\n    user_id UInt64,\n    ev",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 写入密集型：较大的粒度\nCREATE TABLE events_write (\n    event_id UInt64,\n    user_id UInt64,\n    event_time DateTime\n) ENGINE = MergeTree()\nPARTITION BY toYYYYMM(event_time)\nORDER BY (user_id, event_time)\nSETT",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- 查看表的主键\nSELECT \n    database,\n    table,\n    primary_key,\n    sorting_key\nFROM system.tables\nWH",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- 查看主键扫描情况\nSELECT \n    query,\n    read_rows,\n    read_bytes,\n    result_rows,\n    result_bytes,\n",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- 查看索引使用情况\nSELECT \n    table,\n    partition,\n    name,\n    type,\n    rows,\n    bytes_on_disk,\n  ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- 优化前\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_type String,\n    ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 只有时间\n\n-- 优化后\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_type String,\n    event_time DateTime,\n    event_data String\n) ENGINE = MergeTree()\nPARTITION BY toYYYYMM(even",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ user_id + time\n\n-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- 优化前\nCREATE TABLE orders (\n    order_id UInt64,\n    user_id UInt64,\n    pr",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 只有 order_id\n\n-- 优化后\nCREATE TABLE orders (\n    order_id UInt64,\n    user_id UInt64,\n    product_id UInt64,\n    amount Float64,\n    order_date DateTime,\n    status String\n) ENGINE = MergeTree()\nPAR",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ user_id + date + order_id\n\n-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- 优化前\nCREATE TABLE users (\n    user_id UInt64,\n    username Stri",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 只有时间\n\n-- 优化后\nCREATE TABLE users (\n    user_id UInt64,\n    username String,\n    email String,\n    created_at DateTime,\n    last_login DateTime\n) ENGINE = MergeTree()\nPARTITION BY toYYYYMM(created_",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ user_id + time\n\n-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- 如果经常按 user_id 查询\nCREATE TABLE events (\n    user_id UInt64,\n    event_id U",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ user_id 在主键中\n\n-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- ✅ 高选择性列在前\nORDER BY (user_id, event_type)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 低选择性列在前\nORDER BY (event_type, user_id)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- ✅ 2-3 列\nORDER BY (user_id, event_time)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 过多列\nORDER BY (user_id, event_type, event_category, event_time)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- ✅ 时间列在最后\nORDER BY (user_id, event_type, event_time)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 时间列在最前\nORDER BY (event_time, user_id, event_type)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 原则 1: 高选择性\n-- ========================================\n\n-- 定期分析主键使用情况\nSELECT \n    query,\n    count() as query_count,\n    avg(read_rows) as avg_rows_read,",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "11-performance\\03_partitioning_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 03_partitioning_examples.sql\n-- 从 03_partitioning.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ================================================\n",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 按天分区（分区过多）\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_time DateTime,\n    event_data String\n) ENGINE = MergeTree()\nPARTITION BY toDate(event_time)  -- ❌ 按天（分区过多）\nORDE",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 分区类型\n-- ========================================\n\n-- ✅ 适中的分区大小（1-10 GB）\nPARTITION BY toYYYYMM(event_time)  -- 按月，通常 1-10 GB\n\n-- ❌ 过小的分区\nPARTITION BY toYY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 如果查询主要按用户\nCREATE TABLE user_events (\n    event_id UInt64,\n    user_id UInt64,\n    event_time DateTime\n) ENGINE = MergeTree()\nPARTITION BY user_id % 100  -- ✅ 匹配查询模式\nORDER BY (event_time)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 分区类型\n-- ========================================\n\n-- ✅ 使用分区裁剪（快速）\nSELECT * FROM events\nWHERE event_time >= '2024-01-01'\n  AND event_time < '2024-02-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 不使用分区裁剪（慢速）\nSELECT * FROM events\nWHERE toYYYYMM(event_time) = '202401'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 分区类型\n-- ========================================\n\n-- 查询特定分区\nSELECT * FROM events\nPARTITION '202401'\nWHERE user_id = 123",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询多个分区\nSELECT * FROM events\nWHERE event_time >= '2024-01-01'\n  AND event_time < '2024-03-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 分区类型\n-- ========================================\n\n-- 使用虚拟列 `_partition_id`\nSELECT \n    _partition_id,\n    count() as row_count\nFROM events\nGROUP BY _part",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 分区类型\n-- ========================================\n\n-- 查看表的分区\nSELECT \n    partition,\n    name,\n    sum(rows) as total_rows,\n    sum(bytes_on_disk) as total",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 分区类型\n-- ========================================\n\n-- 删除单个分区\nALTER TABLE events\nDROP PARTITION '202401'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 删除多个分区\nALTER TABLE events\nDROP PARTITION '202301', '202302', '202303'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 删除旧分区\nALTER TABLE events\nDROP PARTITION '202301', '202302', '202303', '202304', '202305'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 分区类型\n-- ========================================\n\n-- 复制分区到另一个表\nCREATE TABLE events_new AS events",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "ALTER TABLE events_new\nREPLACE PARTITION '202401'\nFROM events",
+        "success": false,
+        "result": "HTTP 404: Code: 60. DB::Exception: Could not find table: events_new. (UNKNOWN_TABLE) (version 25.12.3.21 (official build))\n"
+      },
+      {
+        "statement": "-- ========================================\n-- 分区类型\n-- ========================================\n\n-- 交换分区\nALTER TABLE events_archive\nEXCHANGE PARTITION '202401'\nWITH events",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 分区类型\n-- ========================================\n\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_type String,\n    event_time Da",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询优化\nSELECT * FROM events\nWHERE event_time >= '2024-01-01'\n  AND event_time < '2024-02-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 使用分区裁剪\n\n-- ========================================\n-- 分区类型\n-- ========================================\n\nCREATE TABLE user_events (\n    event_id UInt64,\n    user_id UInt64,\n    event_time DateTim",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询特定用户\nSELECT * FROM user_events\nWHERE user_id = 123",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 只扫描一个分区\n\n-- ========================================\n-- 分区类型\n-- ========================================\n\nCREATE TABLE orders (\n    order_id UInt64,\n    user_id UInt64,\n    amount Float64,\n    or",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询特定状态\nSELECT * FROM orders\nWHERE status = 'pending'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 只扫描一个分区\n\n-- ========================================\n-- 分区类型\n-- ========================================\n\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_type String,\n   ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询优化\nSELECT * FROM events\nWHERE event_time >= '2024-01-01'\n  AND event_time < '2024-02-01'\n  AND user_id = 123",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 只扫描一个分区\n\n-- ========================================\n-- 分区类型\n-- ========================================\n\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_time DateTime,\n ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 90 天后自动删除\n\n-- ========================================\n-- 分区类型\n-- ========================================\n\n-- 活跃数据：按天分区\nCREATE TABLE events_active (\n    event_id UInt64,\n    user_id UInt64,\n    ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 历史数据：按月分区\nCREATE TABLE events_history (\n    event_id UInt64,\n    user_id UInt64,\n    event_time DateTime,\n    event_data String\n) ENGINE = MergeTree()\nPARTITION BY toYYYYMM(event_time)  -- 按月\nORDER",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 分区类型\n-- ========================================\n\n-- 定期归档旧分区\nALTER TABLE events\nDROP PARTITION '202301', '202302', '202303'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 或移动到归档表\nALTER TABLE events_archive\nEXCHANGE PARTITION '202301', '202302', '202303'\nWITH events",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 分区类型\n-- ========================================\n\n-- 监控分区大小\nSELECT \n    partition,\n    sum(rows) as total_rows,\n    sum(bytes_on_disk) as total_bytes,\n  ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 分区类型\n-- ========================================\n\n-- 手动合并小分区\nOPTIMIZE TABLE events\nPARTITION '202401'\nFINAL",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "11-performance\\04_skipping_indexes_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 04_skipping_indexes_examples.sql\n-- 从 04_skipping_indexes.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- =========================================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 每个 mark 8192 行\n\n-- 跳数索引粒度 = index_granularity / 2\n-- 默认 = 4096 行\n\n-- ========================================\n-- 索引粒度\n-- ========================================\n\n-- 创建 minmax 索引\nCREATE TABLE event",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 添加 minmax 索引\nALTER TABLE events\nADD INDEX idx_status status\nTYPE minmax\nGRANULARITY 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\n-- 创建 set 索引\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_type String,\n    ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 添加 set 索引\nALTER TABLE events\nADD INDEX idx_event_type event_type\nTYPE set(0)\nGRANULARITY 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\n-- 创建 bloom_filter 索引\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    user_email Str",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 添加 bloom_filter 索引\nALTER TABLE events\nADD INDEX idx_user_email user_email\nTYPE bloom_filter(0.01)\nGRANULARITY 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\n-- 创建 ngrambf_v1 索引\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_data Strin",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 添加 ngrambf_v1 索引\nALTER TABLE events\nADD INDEX idx_event_data event_data\nTYPE ngrambf_v1(4, 256, 3, 0.01)\nGRANULARITY 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\n-- 创建 tokenbf_v1 索引\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_data Strin",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 添加 tokenbf_v1 索引\nALTER TABLE events\nADD INDEX idx_event_data event_data\nTYPE tokenbf_v1(256, 3, 0)\nGRANULARITY 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\n-- 创建表时创建索引\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_type String,\n    e",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 添加索引\nALTER TABLE events\nADD INDEX idx_event_type event_type\nTYPE set(2)\nGRANULARITY 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "ALTER TABLE events\nADD INDEX idx_status status\nTYPE minmax\nGRANULARITY 4",
+        "success": false,
+        "result": "HTTP 404: Code: 60. DB::Exception: Could not find table: events. (UNKNOWN_TABLE) (version 25.12.3.21 (official build))\n"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\n-- 查看表的索引\nSELECT \n    database,\n    table,\n    name,\n    type,\n    expr,\n    granularity,\n    data_comp",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\n-- 删除索引\nALTER TABLE events\nDROP INDEX idx_event_type",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\n-- 查询时禁用索引\nSELECT * FROM events\nSETTINGS force_primary_key = 1,  -- 禁用所有跳数索引\n          skip_unused_shar",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_type String,  -- 低基数（< 100 个值）",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 使用 set 索引\nALTER TABLE events\nADD INDEX idx_event_type event_type\nTYPE set(2)\nGRANULARITY 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询使用索引\nSELECT * FROM events\nWHERE event_type = 'click'  -- ✅ 使用 set 索引\n  AND event_time >= now() - INTERVAL 7 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    user_email String,  -- 高基数（每个用户唯一）\n ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 使用 bloom_filter 索引\nALTER TABLE events\nADD INDEX idx_user_email user_email\nTYPE bloom_filter(0.01)\nGRANULARITY 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询使用索引\nSELECT * FROM events\nWHERE user_email = 'user@example.com'  -- ✅ 使用 bloom_filter 索引\n  AND event_time >= now() - INTERVAL 7 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_data String,\n    event_time Da",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 使用 ngrambf_v1 索引\nALTER TABLE events\nADD INDEX idx_event_data event_data\nTYPE ngrambf_v1(4, 256, 3, 0.01)\nGRANULARITY 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询使用索引\nSELECT * FROM events\nWHERE event_data LIKE '%laptop%'  -- ✅ 使用 ngrambf_v1 索引\n  AND event_time >= now() - INTERVAL 7 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_type String,\n    event_categor",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 创建多个索引\nALTER TABLE events\nADD INDEX idx_event_type event_type\nTYPE set(2)\nGRANULARITY 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "ALTER TABLE events\nADD INDEX idx_event_category event_category\nTYPE set(2)\nGRANULARITY 4",
+        "success": false,
+        "result": "HTTP 404: Code: 60. DB::Exception: Could not find table: events. (UNKNOWN_TABLE) (version 25.12.3.21 (official build))\n"
+      },
+      {
+        "statement": "ALTER TABLE events\nADD INDEX idx_status status\nTYPE minmax\nGRANULARITY 4",
+        "success": false,
+        "result": "HTTP 404: Code: 60. DB::Exception: Could not find table: events. (UNKNOWN_TABLE) (version 25.12.3.21 (official build))\n"
+      },
+      {
+        "statement": "-- 查询使用多个索引\nSELECT * FROM events\nWHERE event_type = 'click'  -- ✅ 使用 set 索引\n  AND event_category = 'product'  -- ✅ 使用 set 索引\n  AND status = 1  -- ✅ 使用 minmax 索引\n  AND event_time >= now() - INTERVAL 7 ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\n-- 查看索引使用统计\nSELECT \n    index_name,\n    marks,\n    rows,\n    bytes_on_disk,\n    formatReadableSize(byte",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\n-- 查看索引过滤效果\nSELECT \n    query,\n    read_rows,\n    read_bytes,\n    result_rows,\n    result_bytes,\n    fo",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\n-- 低基数字符串：set\nALTER TABLE events\nADD INDEX idx_event_type event_type\nTYPE set(2)\nGRANULARITY 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 高基数字符串：bloom_filter\nALTER TABLE events\nADD INDEX idx_user_email user_email\nTYPE bloom_filter(0.01)\nGRANULARITY 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 数值范围：minmax\nALTER TABLE events\nADD INDEX idx_status status\nTYPE minmax\nGRANULARITY 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\n-- ✅ 适量索引\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_type String,\n    eve",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 只创建高频查询的索引\nALTER TABLE events ADD INDEX idx_event_type event_type TYPE set(2) GRANULARITY 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "ALTER TABLE events ADD INDEX idx_status status TYPE minmax GRANULARITY 4",
+        "success": false,
+        "result": "HTTP 404: Code: 60. DB::Exception: Could not find table: events. (UNKNOWN_TABLE) (version 25.12.3.21 (official build))\n"
+      },
+      {
+        "statement": "-- ========================================\n-- 索引粒度\n-- ========================================\n\n-- ✅ 适中的粒度\nALTER TABLE events\nADD INDEX idx_event_type event_type\nTYPE set(2)\nGRANULARITY 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 每 4 个 mark 存储索引\n\n-- ========================================\n-- 索引粒度\n-- ========================================\n\n-- 分析索引使用情况\nSELECT \n    index_name,\n    marks,\n    type,\n    bytes_on_disk\nFROM sys",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "11-performance\\05_prewhere_optimization_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 05_prewhere_optimization_examples.sql\n-- 从 05_prewhere_optimization.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ===============================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基本 PREWHERE\n-- ========================================\n\nSELECT \n    user_id,\n    event_type,\n    event_time\nFROM events\nPREWHERE event_time >= now() - I",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基本 PREWHERE\n-- ========================================\n\n-- 编写的查询\nSELECT \n    user_id,\n    event_type,\n    event_time\nFROM events\nWHERE event_time >= now",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ClickHouse 自动优化为\nSELECT \n    user_id,\n    event_type,\n    event_time\nFROM events\nPREWHERE event_time >= now() - INTERVAL 7 DAY\nWHERE user_id = 123",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基本 PREWHERE\n-- ========================================\n\n-- ✅ 使用 PREWHERE 过滤时间范围\nSELECT \n    user_id,\n    event_type,\n    event_data\nFROM events\nPREWHERE",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 不使用 PREWHERE\nSELECT \n    user_id,\n    event_type,\n    event_data\nFROM events\nWHERE event_time >= now() - INTERVAL 30 DAY\n  AND user_id IN (1, 2, 3, ..., 1000)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基本 PREWHERE\n-- ========================================\n\n-- ✅ 使用 PREWHERE 过滤大列\nSELECT \n    user_id,\n    event_type\nFROM events\nPREWHERE event_data LIKE '",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 不使用 PREWHERE\nSELECT \n    user_id,\n    event_type\nFROM events\nWHERE event_data LIKE '%keyword%'\n  AND user_id IN (1, 2, 3, ..., 1000)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基本 PREWHERE\n-- ========================================\n\n-- ✅ 使用 PREWHERE 过滤状态\nSELECT \n    user_id,\n    event_type,\n    event_time\nFROM events\nPREWHERE s",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 不使用 PREWHERE\nSELECT \n    user_id,\n    event_type,\n    event_time\nFROM events\nWHERE status = 1\n  AND user_id IN (1, 2, 3, ..., 1000)\n  AND event_time >= now() - INTERVAL 7 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基本 PREWHERE\n-- ========================================\n\n-- ✅ 高选择性条件\nSELECT * FROM events\nPREWHERE event_time >= now() - INTERVAL 7 DAY  -- 高选择性\nWHERE us",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 低选择性条件\nSELECT * FROM events\nPREWHERE status = 1  -- 低选择性\nWHERE user_id = 123",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基本 PREWHERE\n-- ========================================\n\n-- ✅ 使用列名\nSELECT * FROM events\nPREWHERE event_time >= now() - INTERVAL 7 DAY\nWHERE user_id = 123",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 使用表达式\nSELECT * FROM events\nPREWHERE toDate(event_time) >= now() - INTERVAL 7 DAY\nWHERE user_id = 123",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基本 PREWHERE\n-- ========================================\n\n-- ✅ 组合多个 PREWHERE 条件\nSELECT * FROM events\nPREWHERE event_time >= now() - INTERVAL 7 DAY\n  AND s",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基本 PREWHERE\n-- ========================================\n\n-- ✅ 简单条件\nSELECT * FROM events\nPREWHERE event_time >= now() - INTERVAL 7 DAY\nWHERE user_id = 123",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 复杂表达式\nSELECT * FROM events\nPREWHERE event_time >= now() - INTERVAL 7 DAY\n  AND substring(event_data, 1, 10) = 'prefix'\nWHERE user_id = 123",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基本 PREWHERE\n-- ========================================\n\n-- 查看是否使用了 PREWHERE\nEXPLAIN PIPELINE\nSELECT \n    user_id,\n    event_type\nFROM events\nPREWHERE ev",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基本 PREWHERE\n-- ========================================\n\n-- 查看过滤统计\nSELECT \n    query,\n    read_rows,\n    read_bytes,\n    result_rows,\n    result_bytes,\n ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基本 PREWHERE\n-- ========================================\n\n-- ✅ 大表使用 PREWHERE\nSELECT * FROM large_events\nPREWHERE event_time >= now() - INTERVAL 7 DAY\nWHER",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 小表不需要 PREWHERE\nSELECT * FROM small_events\nWHERE event_time >= now() - INTERVAL 7 DAY\n  AND user_id = 123",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基本 PREWHERE\n-- ========================================\n\n-- ✅ 高选择性条件\nSELECT * FROM events\nPREWHERE event_time >= now() - INTERVAL 7 DAY  -- 过滤 80% 数据\nWHE",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 低选择性条件\nSELECT * FROM events\nPREWHERE status = 1  -- 只过滤 10% 数据\nWHERE user_id = 123",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基本 PREWHERE\n-- ========================================\n\n-- ✅ 大列使用 PREWHERE\nSELECT \n    user_id,\n    event_type\nFROM events\nPREWHERE event_data LIKE '%ke",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 小列不需要 PREWHERE\nSELECT \n    user_id,\n    event_data\nFROM events\nWHERE user_id = 123\n  AND event_data LIKE '%keyword%'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 基本 PREWHERE\n-- ========================================\n\n-- 分析 PREWHERE 效果\nSELECT \n    substring(query, 1, 100) as query_sample,\n    count() as query_cou",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "11-performance\\06_bulk_inserts_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 06_bulk_inserts_examples.sql\n-- 从 06_bulk_inserts.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ================================================\n",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 单条插入（避免）\nINSERT INTO events\nVALUES (1, 100, 'click', now(), '{\"page\":\"/home\"}')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "INSERT INTO events\nVALUES (2, 100, 'view', now(), '{\"product\":\"laptop\"}')",
+        "success": false,
+        "result": "HTTP 404: Code: 60. DB::Exception: Table default.events does not exist. Maybe you meant realtime_examples.events?. (UNKNOWN_TABLE) (version 25.12.3.21 (official build))\n"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用 INSERT VALUES\n-- ========================================\n\n-- ✅ 批量插入（从其他表）\nINSERT INTO events\nSELECT \n    number as event_id,\n    number % 1000 as ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 10 万行\n\n-- ✅ 批量插入（从外部数据）\nINSERT INTO events\nFROM file('events.csv', 'CSV')\nSETTINGS input_format_skip_first_lines = 1,\n        input_format_allow_errors_num = 100",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用 INSERT VALUES\n-- ========================================\n\n-- ✅ 异步插入\nINSERT INTO events\nSETTINGS async_insert = 1,\n        wait_for_async_insert = ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 异步插入不等待结果\nINSERT INTO events\nSETTINGS async_insert = 1,\n        wait_for_async_insert = 0\nVALUES (3, 101, 'click', now(), '{\"page\":\"/about\"}')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用 INSERT VALUES\n-- ========================================\n\n-- ✅ 并行插入（多个客户端）\n-- 客户端 1\nINSERT INTO events\nVALUES (1, 100, 'click', now(), '{}')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 客户端 2\nINSERT INTO events\nVALUES (2, 100, 'view', now(), '{}')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 客户端 3\nINSERT INTO events\nVALUES (3, 101, 'click', now(), '{}')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 或使用分布式表\nINSERT INTO distributed_events\nVALUES (4, 102, 'click', now(), '{}')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用 INSERT VALUES\n-- ========================================\n\n-- ✅ 使用压缩插入\nINSERT INTO events\nSETTINGS max_insert_threads = 4,\n        min_insert_block",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 使用压缩协议\nclickhouse-client --query=\"INSERT INTO events FORMAT Native\" \\\n  --format=Native \\\n  --compression=lz4 \\\n  < data.bin\n\n-- ========================================\n-- 1. 使用 INSERT VALUES\n--",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用 INSERT VALUES\n-- ========================================\n\n-- 设置块大小\nINSERT INTO events\nSETTINGS min_insert_block_size_rows = 65536,\n        min_ins",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用 INSERT VALUES\n-- ========================================\n\n-- 设置最大并发插入数\nINSERT INTO events\nSETTINGS max_concurrent_inserts = 10\nVALUES (1, 100, 'cl",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用 INSERT VALUES\n-- ========================================\n\n-- 等待插入完成\nINSERT INTO events\nSETTINGS wait_for_async_insert = 1\nVALUES (1, 100, 'click',",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用 INSERT VALUES\n-- ========================================\n\n-- ✅ 批量插入日志数据\nINSERT INTO logs\nSETTINGS max_insert_threads = 8,\n        min_insert_block",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用 INSERT VALUES\n-- ========================================\n\n-- ✅ 使用 INSERT SELECT\nINSERT INTO events\nSETTINGS max_insert_threads = 8,\n        min_in",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 100 万行\n\n-- ========================================\n-- 1. 使用 INSERT VALUES\n-- ========================================\n\n-- ✅ 异步批量插入\nINSERT INTO events\nSETTINGS async_insert = 1,\n        wait_for_as",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用 INSERT VALUES\n-- ========================================\n\n-- ✅ 并行插入（使用分布式表）\nINSERT INTO distributed_events\nSETTINGS max_insert_threads = 4\nSELECT ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 第一个分片\n\nINSERT INTO distributed_events\nSETTINGS max_insert_threads = 4\nSELECT \n    event_id,\n    user_id,\n    event_type,\n    event_time,\n    event_data\nFROM events_temp\nWHERE shard % 4 = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 第二个分片\n\n-- ========================================\n-- 1. 使用 INSERT VALUES\n-- ========================================\n\n-- ✅ Native 格式（最快）\nINSERT INTO events\nFORMAT Native\nFROM file('events.native',",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ CSV 格式（通用）\nINSERT INTO events\nFORMAT CSVWithNames\nFROM file('events.csv', 'CSV')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ JSONEachRow 格式（JSON 数据）\nINSERT INTO events\nFORMAT JSONEachRow\nFROM file('events.jsonl', 'JSONEachRow')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用 INSERT VALUES\n-- ========================================\n\n-- ✅ 合理的线程数\nINSERT INTO events\nSETTINGS max_insert_threads = min(8, CPU核数)\nVALUES (...)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用 INSERT VALUES\n-- ========================================\n\n-- 查看插入统计\nSELECT \n    query,\n    write_rows,\n    write_bytes,\n    query_duration_ms,\n   ",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "11-performance\\07_asynchronous_operations_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 07_asynchronous_operations_examples.sql\n-- 从 07_asynchronous_operations.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ===========================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 配置异步插入\n-- ========================================\n\n-- 示例 1: 不等待插入完成\nINSERT INTO events\nSETTINGS async_insert = 1,\n        wait_for_async_insert = 0\nVALU",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 示例 2: 等待插入完成\nINSERT INTO events\nSETTINGS async_insert = 1,\n        wait_for_async_insert = 1,\n        async_insert_max_wait_time_ms = 5000\nVALUES (2, 100, 'view', now(), '{}')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 示例 3: 批量异步插入\nINSERT INTO events\nSETTINGS async_insert = 1,\n        wait_for_async_insert = 0,\n        async_insert_max_data_size = 100000000\nVALUES (3, 101, 'click', now(), '{}'),\n       (4, 102, '",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 配置异步插入\n-- ========================================\n\n-- 示例 1: 使用 HTTP 接口异步查询\ncurl 'http://localhost:8123/?query=SELECT+sleep(1)&wait_end_of_query=0&query_",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 异步插入\n\n-- ========================================\n-- 配置异步插入\n-- ========================================\n\n-- 全局配置（在 config.xml 中）\n<clickhouse>\n    <mutations_sync>0</mutations_sync>\n    <background_",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 0: 异步, 1: 等待当前分片, 2: 等待所有分片\n\n-- ========================================\n-- 配置异步插入\n-- ========================================\n\n-- 示例 1: 异步 Mutation\nALTER TABLE users\nUPDATE status = 'active'\nWHERE",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 示例 2: 等待当前分片\nALTER TABLE users\nUPDATE status = 'active'\nWHERE user_id IN (1, 2, 3)\nSETTINGS mutations_sync = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 示例 3: 等待所有分片\nALTER TABLE users\nUPDATE status = 'active'\nWHERE user_id IN (1, 2, 3)\nSETTINGS mutations_sync = 2",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 配置异步插入\n-- ========================================\n\n-- 查看异步插入统计\nSELECT \n    event_time,\n    type,\n    query_duration_ms,\n    async_insert_wait_time_ms,\n ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 配置异步插入\n-- ========================================\n\n-- 查看异步查询状态\nSELECT \n    query_id,\n    query,\n    type,\n    event_time,\n    query_duration_ms,\n    exc",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 配置异步插入\n-- ========================================\n\n-- 查看 Mutation 状态\nSELECT \n    database,\n    table,\n    mutation_id,\n    command,\n    is_done,\n    par",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 配置异步插入\n-- ========================================\n\n-- ✅ 合理的异步插入配置\nINSERT INTO events\nSETTINGS async_insert = 1,\n        wait_for_async_insert = 0,\n     ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 配置异步插入\n-- ========================================\n\n-- 定期监控异步操作\nSELECT \n    type,\n    count() as count,\n    avg(query_duration_ms) as avg_duration,\n    m",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 配置异步插入\n-- ========================================\n\n-- 查看失败的异步操作\nSELECT \n    query_id,\n    query,\n    exception_code,\n    exception_text\nFROM system.quer",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "11-performance\\08_mutation_optimization_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 08_mutation_optimization_examples.sql\n-- 从 08_mutation_optimization.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ===============================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "INSERT INTO users_temp SELECT * FROM users WHERE ...",
+        "success": false,
+        "result": "HTTP 400: Code: 62. DB::Exception: Syntax error: failed at position 50 (.): ...\n. Expected one of: expression with optional alias, element of expression with optional alias, lambda expression, CAST operator, NO"
+      },
+      {
+        "statement": "ALTER TABLE users REPLACE PARTITION '202401' FROM users_temp",
+        "success": false,
+        "result": "HTTP 404: Code: 60. DB::Exception: Could not find table: users. (UNKNOWN_TABLE) (version 25.12.3.21 (official build))\n"
+      },
+      {
+        "statement": "-- ❌ 使用 Mutation（慢速）\nALTER TABLE users DELETE WHERE toYYYYMM(created_at) = '202401'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 策略 1: 优先使用分区操作\n-- ========================================\n\n-- ✅ 使用轻量级删除（ClickHouse 23.8+）\nALTER TABLE users\nDELETE WHERE user_id IN (1, 2, 3)\nSETTINGS l",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 使用传统 Mutation\nALTER TABLE users DELETE WHERE user_id IN (1, 2, 3)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 策略 1: 优先使用分区操作\n-- ========================================\n\n-- ✅ 分批处理\n-- 批次 1\nALTER TABLE users\nDELETE WHERE user_id BETWEEN 1 AND 10000",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 等待完成后执行下一批次\n-- 批次 2\nALTER TABLE users\nDELETE WHERE user_id BETWEEN 10001 AND 20000",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 单次大批量 Mutation\nALTER TABLE users DELETE WHERE user_id IN (1, 2, ..., 100000)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 策略 1: 优先使用分区操作\n-- ========================================\n\n-- ✅ 低峰期执行\nALTER TABLE users\nDELETE WHERE created_at < now() - INTERVAL 90 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 或使用定时任务\n\n-- ========================================\n-- 策略 1: 优先使用分区操作\n-- ========================================\n\n-- 0: 异步执行（默认）\nALTER TABLE users\nDELETE WHERE user_id IN (1, 2, 3)\nSETTINGS mutat",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 1: 等待当前分片完成\nALTER TABLE users\nDELETE WHERE user_id IN (1, 2, 3)\nSETTINGS mutations_sync = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2: 等待所有分片完成\nALTER TABLE users\nDELETE WHERE user_id IN (1, 2, 3)\nSETTINGS mutations_sync = 2",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 策略 1: 优先使用分区操作\n-- ========================================\n\n-- 限制并发线程数\nALTER TABLE users\nDELETE WHERE user_id IN (1, 2, 3)\nSETTINGS max_threads = 2",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 限制内存使用\nALTER TABLE users\nDELETE WHERE user_id IN (1, 2, 3)\nSETTINGS max_memory_usage = 10000000000",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 10 GB\n\n-- ========================================\n-- 策略 1: 优先使用分区操作\n-- ========================================\n\n-- 设置 Mutation 优先级（1-10，默认 5）\nALTER TABLE users\nDELETE WHERE user_id IN (1, 2, 3)\nS",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 策略 1: 优先使用分区操作\n-- ========================================\n\n-- 是否等待复制完成\nALTER TABLE users\nDELETE WHERE user_id IN (1, 2, 3)\nSETTINGS replication_alter_pa",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 0: 不同步, 1: 当前表, 2: 所有副本\n\n-- ========================================\n-- 策略 1: 优先使用分区操作\n-- ========================================\n\n-- 查看 Mutation 状态\nSELECT \n    database,\n    table,\n    mutation_i",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 策略 1: 优先使用分区操作\n-- ========================================\n\n-- 实时监控 Mutation 进度\nSELECT \n    database,\n    table,\n    mutation_id,\n    command,\n    is_don",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 策略 1: 优先使用分区操作\n-- ========================================\n\n-- 查看最近完成的 Mutation\nSELECT \n    database,\n    table,\n    mutation_id,\n    command,\n    parts_",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 策略 1: 优先使用分区操作\n-- ========================================\n\n-- ✅ 分批删除（每批 1 万行）\n-- 批次 1\nALTER TABLE users\nDELETE WHERE user_id BETWEEN 1 AND 10000\nSETTING",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 等待完成后执行下一批次\n-- 批次 2\nALTER TABLE users\nDELETE WHERE user_id BETWEEN 10001 AND 20000\nSETTINGS max_threads = 2",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 单次大批量删除\nALTER TABLE users DELETE WHERE user_id IN (1, 2, ..., 20000)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 策略 1: 优先使用分区操作\n-- ========================================\n\n-- ✅ 使用分区删除\n-- 删除 2023 年的所有分区\nALTER TABLE users\nDROP PARTITION '202301', '202302', '202303', ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 使用 Mutation\nALTER TABLE users\nDELETE WHERE toYYYYMM(created_at) IN ('202301', '202302', '202303', ..., '202312')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 策略 1: 优先使用分区操作\n-- ========================================\n\n-- ✅ 使用轻量级删除（ClickHouse 23.8+）\nALTER TABLE users\nDELETE WHERE user_id IN (1, 2, 3, ..., 1000)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 使用传统 Mutation\nALTER TABLE users DELETE WHERE user_id IN (1, 2, 3, ..., 1000)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 策略 1: 优先使用分区操作\n-- ========================================\n\n-- ✅ 组合策略：新数据用轻量级删除，旧数据用分区删除\n-- 新数据（最近 30 天）\nALTER TABLE users\nDELETE WHERE created_at >= now",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 旧数据（30 天前）\nCREATE TABLE users_temp AS users",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "INSERT INTO users_temp\nSELECT * FROM users\nWHERE created_at < now() - INTERVAL 30 DAY\n  AND status = 'inactive'",
+        "success": false,
+        "result": "HTTP 404: Code: 60. DB::Exception: Table default.users_temp does not exist. Maybe you meant migration_test.users_new?. (UNKNOWN_TABLE) (version 25.12.3.21 (official build))\n"
+      },
+      {
+        "statement": "ALTER TABLE users\nREPLACE PARTITION '202312'\nFROM users_temp",
+        "success": false,
+        "result": "HTTP 404: Code: 60. DB::Exception: Could not find table: users. (UNKNOWN_TABLE) (version 25.12.3.21 (official build))\n"
+      },
+      {
+        "statement": "DROP TABLE users_temp",
+        "success": false,
+        "result": "HTTP 404: Code: 60. DB::Exception: Table default.users_temp does not exist. Maybe you meant migration_test.users_new?. (UNKNOWN_TABLE) (version 25.12.3.21 (official build))\n"
+      }
+    ],
+    "11-performance\\09_data_types_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 09_data_types_examples.sql\n-- 从 09_data_types.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ================================================\n\n\n--",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 使用过大类型\nCREATE TABLE users (\n    user_id UInt64,      -- 0-2^64-1（8 字节）\n    age String,          -- 不必要\n    status String,        -- 不必要\n    created_at DateTime64 -- 不需要微秒精度\n) ENGINE = MergeTree()",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用最小的数据类型\n-- ========================================\n\n-- ✅ 使用非 Nullable 类型\nCREATE TABLE users (\n    user_id UInt32,\n    username String,\n    email St",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 使用 Nullable 类型\nCREATE TABLE users (\n    user_id UInt32,\n    username Nullable(String),\n    email Nullable(String),\n    status Nullable(UInt8)  -- 不必要\n) ENGINE = MergeTree()\nORDER BY user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用最小的数据类型\n-- ========================================\n\n-- ✅ 使用定长类型\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt32,\n    event_type Fixed",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 使用变长类型\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt32,\n    event_type String,  -- 变长字符串\n    event_time DateTime\n) ENGINE = MergeTree()\nORDER BY (user_id, event_time)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用最小的数据类型\n-- ========================================\n\n-- ✅ 使用 Enum 类型\nCREATE TABLE orders (\n    order_id UInt64,\n    status Enum8('pending'=1, 'paid'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 使用 String 类型\nCREATE TABLE orders (\n    order_id UInt64,\n    status String,  -- 不必要\n    priority String,  -- 不必要\n    created_at DateTime\n) ENGINE = MergeTree()\nORDER BY order_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用最小的数据类型\n-- ========================================\n\n-- ✅ 使用专用类型\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt32,\n    ip_addr IPv4,  -",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 使用 String 存储数字\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt32,\n    ip_addr String,  -- 不必要\n    event_time DateTime,\n    url String\n) ENGINE = MergeTree()\nORDER BY (user_id, event_t",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用最小的数据类型\n-- ========================================\n\n-- ✅ 合理的整数类型\nCREATE TABLE users (\n    user_id UInt32,      -- 0-42 亿\n    age UInt8,           -",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用最小的数据类型\n-- ========================================\n\n-- ✅ 合理的浮点类型\nCREATE TABLE products (\n    product_id UInt32,\n    price Float32,        -- 金额（7 位",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用最小的数据类型\n-- ========================================\n\n-- ✅ 使用 FixedString（已知长度）\nCREATE TABLE users (\n    user_id UInt32,\n    username String,\n    pho",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 使用 String（已知长度）\nCREATE TABLE users (\n    user_id UInt32,\n    username String,\n    phone String,  -- 不必要\n    email String,\n    created_at DateTime\n) ENGINE = MergeTree()\nORDER BY user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用最小的数据类型\n-- ========================================\n\n-- ✅ 使用 LowCardinality（低基数）\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt32,\n    ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 使用 String（低基数）\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt32,\n    event_type String,  -- 不必要\n    event_time DateTime,\n    event_data String\n) ENGINE = MergeTree()\nORDER BY (user_i",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用最小的数据类型\n-- ========================================\n\n-- ✅ 使用 Enum8（低基数）\nCREATE TABLE orders (\n    order_id UInt64,\n    status Enum8('pending'=1, 'pa",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 使用 Enum16（高基数）\nCREATE TABLE products (\n    product_id UInt32,\n    category Enum16('electronics'=1, 'clothing'=2, 'food'=3, ..., 'books'=100),\n    created_at DateTime\n) ENGINE = MergeTree()\nORDER ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用最小的数据类型\n-- ========================================\n\n-- ✅ 使用默认值\nCREATE TABLE users (\n    user_id UInt32,\n    username String,\n    email String,\n    ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 使用 Nullable\nCREATE TABLE users (\n    user_id UInt32,\n    username Nullable(String),\n    email Nullable(String),\n    status Nullable(UInt8),\n    created_at DateTime\n) ENGINE = MergeTree()\nORDER BY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用最小的数据类型\n-- ========================================\n\n-- ✅ 使用 Date（只需要日期）\nCREATE TABLE users (\n    user_id UInt32,\n    birth_date Date,  -- 只需要日期\n   ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 使用 DateTime（只需要日期）\nCREATE TABLE users (\n    user_id UInt32,\n    birth_date DateTime,  -- 不必要\n    register_date DateTime\n) ENGINE = MergeTree()\nORDER BY user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用最小的数据类型\n-- ========================================\n\n-- ✅ 使用 DateTime（秒级精度）\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt32,\n    event",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 使用 DateTime64（需要毫秒级）\nCREATE TABLE metrics (\n    metric_id UInt64,\n    metric_value Float64,\n    timestamp DateTime64(3)  -- 毫秒级精度\n) ENGINE = MergeTree()\nORDER BY timestamp",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用最小的数据类型\n-- ========================================\n\n-- ✅ 使用 Array（同类数据）\nCREATE TABLE users (\n    user_id UInt32,\n    tags Array(String),  -- 标签数组\n ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ❌ 使用多个列（不适合数组）\nCREATE TABLE users (\n    user_id UInt32,\n    tag1 String,\n    tag2 String,\n    tag3 String,\n    tag4 String,\n    tag5 String,\n    score1 UInt16,\n    score2 UInt16,\n    score3 UInt16,",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用最小的数据类型\n-- ========================================\n\n-- 优化前\nCREATE TABLE users (\n    user_id UInt64,\n    age String,\n    status String,\n    email Nu",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 优化后\nCREATE TABLE users (\n    user_id UInt32,              -- 4 字节（足够）\n    age UInt8,                    -- 1 字节（0-255）\n    status Enum8('active'=1, 'inactive'=2, 'banned'=3),  -- 1 字节\n    email Str",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用最小的数据类型\n-- ========================================\n\n-- 优化前\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt64,\n    event_type String,\n  ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 优化后\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt32,                      -- 4 字节\n    event_type LowCardinality(String),      -- 低基数\n    ip_address IPv4,                      -- 专用类型\n",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 使用最小的数据类型\n-- ========================================\n\n-- 优化前\nCREATE TABLE orders (\n    order_id UInt64,\n    user_id UInt64,\n    amount String,       ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 优化后\nCREATE TABLE orders (\n    order_id UInt64,\n    user_id UInt32,                  -- 4 字节\n    amount Float32,                  -- 金额（7 位精度）\n    status Enum8('pending'=1, 'paid'=2, 'shipped'=3, 'c",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "11-performance\\10_common_patterns_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 10_common_patterns_examples.sql\n-- 从 10_common_patterns.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ===========================================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 推荐\nSELECT \n    event_id,\n    user_id,\n    event_type,\n    event_time\nFROM events\nWHERE event_time >= now() - INTERVAL 7 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 解决方案\n-- ========================================\n\n-- ❌ 避免\nSELECT * FROM orders\nWHERE user_id IN (SELECT user_id FROM active_users)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 推荐\nSELECT o.*\nFROM orders o\nINNER JOIN active_users u ON o.user_id = u.user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 解决方案\n-- ========================================\n\n-- ❌ 避免\nSELECT * FROM events\nWHERE toYYYYMM(event_time) = '202401'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 推荐\nSELECT * FROM events\nWHERE event_time >= '2024-01-01'\n  AND event_time < '2024-02-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 解决方案\n-- ========================================\n\n-- ❌ 避免\nSELECT * FROM events\nORDER BY toDate(event_time)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 推荐\nSELECT \n    event_id,\n    user_id,\n    event_type,\n    event_time,\n    toDate(event_time) as date\nFROM events\nORDER BY event_time",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 解决方案\n-- ========================================\n\n-- ❌ 避免\nSELECT \n    toDate(event_time) as date,\n    count() as event_count\nFROM events\nGROUP BY toDate(",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 推荐\n-- 方法 1: 使用物化列\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt32,\n    event_time DateTime,\n    event_date Date MATERIALIZED toDate(event_time)\n) ENGINE = MergeTree()\nPARTITION BY t",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询\nSELECT \n    event_date,\n    count() as event_count\nFROM events\nGROUP BY event_date",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 方法 2: 使用物化视图\nCREATE MATERIALIZED VIEW event_daily_stats_mv\nENGINE = AggregatingMergeTree()\nORDER BY (event_date)\nAS SELECT\n    toDate(event_time) as event_date,\n    countState() as event_count\nFROM",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询\nSELECT \n    event_date,\n    sumMerge(event_count) as event_count\nFROM event_daily_stats_mv\nGROUP BY event_date",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 解决方案\n-- ========================================\n\n-- ❌ 避免\nSELECT DISTINCT toDate(event_time) as date\nFROM events",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 推荐\nSELECT DISTINCT event_time\nFROM events",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 解决方案\n-- ========================================\n\n-- ❌ 避免\nSELECT * FROM events\nORDER BY event_time\nLIMIT 100 OFFSET 1000",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 推荐\n-- 方法 1: 使用游标分页\nSELECT * FROM events\nWHERE event_time > '2024-01-20 10:00:00'  -- 上一次的最后一条记录的时间\nORDER BY event_time\nLIMIT 100",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 方法 2: 使用物化视图\nCREATE MATERIALIZED VIEW event_ids_mv\nENGINE = MergeTree()\nORDER BY (event_time, event_id)\nAS SELECT \n    event_time,\n    event_id\nFROM events",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 分页查询\nSELECT e.*\nFROM events e\nINNER JOIN event_ids_mv m ON e.event_id = m.event_id\nWHERE m.event_time >= '2024-01-20 10:00:00'\nORDER BY e.event_time, e.event_id\nLIMIT 100",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 解决方案\n-- ========================================\n\n-- ❌ 避免\nSELECT \n    user_id,\n    count(DISTINCT event_id) as unique_events\nFROM events\nGROUP BY user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 推荐\n-- 方法 1: 使用 uniqCombined\nSELECT \n    user_id,\n    uniqCombined(event_id) as unique_events\nFROM events\nGROUP BY user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 方法 2: 使用物化视图\nCREATE MATERIALIZED VIEW user_event_stats_mv\nENGINE = AggregatingMergeTree()\nORDER BY (user_id)\nAS SELECT\n    user_id,\n    uniqState(event_id) as unique_events_state\nFROM events\nGROUP ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询\nSELECT \n    user_id,\n    uniqMerge(unique_events_state) as unique_events\nFROM user_event_stats_mv\nGROUP BY user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 解决方案\n-- ========================================\n\n-- ❌ 避免\nSELECT * FROM events\nWHERE user_id IN (SELECT user_id FROM active_users)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 推荐\n-- 方法 1: 使用 JOIN\nSELECT e.*\nFROM events e\nINNER JOIN active_users a ON e.user_id = a.user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 方法 2: 使用子查询（限制返回结果）\nSELECT * FROM events\nWHERE user_id IN (\n    SELECT user_id \n    FROM active_users \n    LIMIT 10000\n)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 解决方案\n-- ========================================\n\n-- ❌ 避免\nSELECT * FROM events\nWHERE event_data LIKE '%keyword%'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 推荐\n-- 方法 1: 使用 hasToken\nSELECT * FROM events\nWHERE hasToken(event_data, 'keyword')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 方法 2: 使用 ngrambf_v1 索引\nCREATE TABLE events (\n    event_id UInt64,\n    user_id UInt32,\n    event_data String,\n    event_time DateTime\n) ENGINE = MergeTree()\nORDER BY (user_id, event_time)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "ALTER TABLE events\nADD INDEX idx_event_data event_data\nTYPE ngrambf_v1(4, 256, 3, 0.01)\nGRANULARITY 1",
+        "success": false,
+        "result": "HTTP 404: Code: 60. DB::Exception: Could not find table: events. (UNKNOWN_TABLE) (version 25.12.3.21 (official build))\n"
+      },
+      {
+        "statement": "-- 查询\nSELECT * FROM events\nWHERE event_data LIKE '%keyword%'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 解决方案\n-- ========================================\n\n-- ❌ 避免\nSELECT * FROM events\nWHERE user_id = 1\n   OR user_id = 2\n   OR user_id = 3",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 推荐\n-- 方法 1: 使用 IN\nSELECT * FROM events\nWHERE user_id IN (1, 2, 3)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 方法 2: 使用 UNION\nSELECT * FROM events WHERE user_id = 1\nUNION ALL\nSELECT * FROM events WHERE user_id = 2\nUNION ALL\nSELECT * FROM events WHERE user_id = 3",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 解决方案\n-- ========================================\n\n-- ❌ 避免\nSELECT * FROM events\nWHERE event_time >= '2023-01-01'\n  AND event_time < '2024-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 推荐\n-- 查询最近数据\nSELECT * FROM events\nWHERE event_time >= now() - INTERVAL 30 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 或使用物化视图汇总\nCREATE MATERIALIZED VIEW event_daily_stats_mv\nENGINE = SummingMergeTree()\nORDER BY (date)\nAS SELECT\n    toDate(event_time) as date,\n    count() as event_count\nFROM events\nGROUP BY date",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询物化视图\nSELECT \n    date,\n    sum(event_count) as total_events\nFROM event_daily_stats_mv\nWHERE date >= toDate(now() - INTERVAL 365 DAY)\n  AND date <= toDate(now())\nGROUP BY date",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 解决方案\n-- ========================================\n\n-- ❌ 避免\nSELECT \n    o.order_id,\n    o.amount,\n    u.username,\n    p.product_name\nFROM orders o\nLEFT JOI",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 推荐\n-- 方法 1: 使用 GLOBAL JOIN\nSELECT \n    o.order_id,\n    o.amount,\n    u.username,\n    p.product_name\nFROM orders o\nGLOBAL LEFT JOIN users u ON o.user_id = u.user_id\nGLOBAL LEFT JOIN products p ON ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 方法 2: 使用物化视图\nCREATE MATERIALIZED VIEW order_user_product_mv\nENGINE = MergeTree()\nORDER BY (order_id)\nAS SELECT\n    o.order_id,\n    o.amount,\n    u.username,\n    p.product_name\nFROM orders o\nLEFT JO",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询物化视图\nSELECT *\nFROM order_user_product_mv\nWHERE order_id >= last_processed_order_id\nLIMIT 1000",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 解决方案\n-- ========================================\n\n-- ❌ 避免\nSELECT \n    user_id,\n    sum(amount) / count() as avg_amount,\n    sum(amount) / count() * 2 as ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 推荐\nSELECT \n    user_id,\n    avg_amount,\n    avg_amount * 2 as avg_amount_double\nFROM (\n    SELECT \n        user_id,\n        sum(amount) / count() as avg_amount\n    FROM orders\n    GROUP BY user_i",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 解决方案\n-- ========================================\n\n-- ❌ 避免\nSELECT \n    user_id,\n    event_count,\n    (\n        SELECT avg(event_count)\n        FROM (\n    ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 推荐\n-- 方法 1: 使用 JOIN\nSELECT \n    e1.user_id,\n    e1.event_count,\n    e2.avg_event_count\nFROM (\n    SELECT \n        user_id,\n        count() as event_count\n    FROM events\n    WHERE event_time >= n",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 方法 2: 使用窗口函数\nSELECT \n    user_id,\n    event_count,\n    avg(event_count) OVER (PARTITION BY user_id) as avg_event_count\nFROM (\n    SELECT \n        user_id,\n        count() as event_count\n    FROM ev",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "11-performance\\11_query_profiling_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 11_query_profiling_examples.sql\n-- 从 11_query_profiling.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ===========================================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查看查询管道\nEXPLAIN PIPELINE\nSELECT \n    user_id,\n    count() as event_count\nFROM events\nWHERE event_time >= now() - INTERVAL 7 DAY\nGROUP BY user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查看查询预估\nEXPLAIN ESTIMATE\nSELECT \n    user_id,\n    count() as event_count\nFROM events\nWHERE event_time >= now() - INTERVAL 7 DAY\nGROUP BY user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. EXPLAIN\n-- ========================================\n\n-- 查看查询日志\nSELECT \n    query,\n    query_duration_ms,\n    read_rows,\n    read_bytes,\n    written_ro",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. EXPLAIN\n-- ========================================\n\n-- 启用 Profiling\nCLICKHOUSE_SETTINGS_PROFILE='profiling'\n\n-- 查看性能统计\nSELECT \n    ProfileEvents['Net",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. EXPLAIN\n-- ========================================\n\n-- 计算性能比率\nSELECT \n    query,\n    read_rows,\n    result_rows,\n    read_rows / result_rows as filte",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. EXPLAIN\n-- ========================================\n\n-- 查看慢查询\nSELECT \n    query,\n    query_duration_ms,\n    read_rows,\n    read_bytes,\n    result_rows",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. EXPLAIN\n-- ========================================\n\n-- 分析慢查询的特征\nSELECT \n    substring(query, 1, 100) as query_sample,\n    count() as slow_query_count",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. EXPLAIN\n-- ========================================\n\n-- 优化前\nSELECT * FROM events\nWHERE event_time >= now() - INTERVAL 30 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 优化后（使用 PREWHERE）\nSELECT \n    event_id,\n    user_id,\n    event_type\nFROM events\nPREWHERE event_time >= now() - INTERVAL 30 DAY\nWHERE user_id = 123",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. EXPLAIN\n-- ========================================\n\n-- 优化前\nSELECT * FROM events\nWHERE toDate(event_time) >= '2024-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 优化后\nSELECT * FROM events\nWHERE event_time >= '2024-01-01'\n  AND event_time < '2024-02-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. EXPLAIN\n-- ========================================\n\n-- 优化前\nSELECT * FROM events\nWHERE event_type = 'click'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 优化后（使用跳数索引）\n-- 首先创建索引\nALTER TABLE events\nADD INDEX idx_event_type event_type\nTYPE set(2)\nGRANULARITY 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询\nSELECT * FROM events\nWHERE event_type = 'click'",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "11-performance\\12_analyzer_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 12_analyzer_examples.sql\n-- 从 12_analyzer.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ================================================\n\n\n-- ===",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "SET optimize_move_to_prewhere = 1",
+        "success": true,
+        "result": ""
+      },
+      {
+        "statement": "SET optimize_where_to_prewhere = 1",
+        "success": false,
+        "result": "HTTP 404: Code: 115. DB::Exception: Setting optimize_where_to_prewhere is neither a builtin setting nor started with the prefix 'SQL_' registered for user-defined settings: Maybe you meant ['optimize_move_to_pr"
+      },
+      {
+        "statement": "-- 查询\nSELECT \n    user_id,\n    event_type\nFROM events\nWHERE event_time >= now() - INTERVAL 7 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 查询优化\n-- ========================================\n\n-- 查看查询重写\nEXPLAIN OPTIMIZE\nSELECT \n    user_id,\n    count() as event_count\nFROM events\nWHERE event_t",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 查询优化\n-- ========================================\n\n-- 设置并行化\nSET parallel_replicas_count = 2",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "SET max_threads = 8",
+        "success": true,
+        "result": ""
+      },
+      {
+        "statement": "SET max_concurrent_queries = 4",
+        "success": false,
+        "result": "HTTP 404: Code: 115. DB::Exception: Setting max_concurrent_queries is neither a builtin setting nor started with the prefix 'SQL_' registered for user-defined settings. (UNKNOWN_SETTING) (version 25.12.3.21 (of"
+      },
+      {
+        "statement": "-- 查询\nSELECT * FROM events\nWHERE event_time >= now() - INTERVAL 7 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 查询优化\n-- ========================================\n\n-- 查看重写后的查询\nEXPLAIN OPTIMIZE\nSELECT DISTINCT user_id\nFROM events\nWHERE event_time >= now() - INTERVA",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 查询优化\n-- ========================================\n\n-- 并行化查询\nSELECT * FROM events\nSETTINGS max_threads = 8,\n        parallel_replicas_count = 2\nWHERE ev",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 查询优化\n-- ========================================\n\n-- 分布式查询优化\nSELECT * FROM distributed_events\nSETTINGS \n    distributed_product_mode = 'global',\n    p",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "11-performance\\13_caching_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 13_caching_examples.sql\n-- 从 13_caching.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ================================================\n\n\n-- =====",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "SET query_cache_max_size_bytes = 10737418240",
+        "success": false,
+        "result": "HTTP 404: Code: 115. DB::Exception: Setting query_cache_max_size_bytes is neither a builtin setting nor started with the prefix 'SQL_' registered for user-defined settings: Maybe you meant ['query_cache_max_siz"
+      },
+      {
+        "statement": "-- 10 GB\n\n-- 查询（会被缓存）\nSELECT \n    user_id,\n    count() as event_count\nFROM events\nWHERE event_time >= now() - INTERVAL 7 DAY\nGROUP BY user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 再次查询（使用缓存）\nSELECT \n    user_id,\n    count() as event_count\nFROM events\nWHERE event_time >= now() - INTERVAL 7 DAY\nGROUP BY user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 查询缓存\n-- ========================================\n\n-- 启用条件缓存\nSET enable_query_cache = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询（条件被缓存）\nSELECT * FROM events\nWHERE event_time >= now() - INTERVAL 7 DAY\n  AND user_id = 123",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 查询缓存\n-- ========================================\n\n-- 配置用户空间页缓存（在 config.xml 中）\n<clickhouse>\n    <user_defined_fetches_cache_size>5368709120</user_defi",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 查询缓存\n-- ========================================\n\n-- 启用查询缓存\nSET use_query_cache = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询（会被缓存）\nSELECT \n    toDate(event_time) as date,\n    count() as event_count,\n    sum(amount) as total_amount\nFROM events\nWHERE event_time >= now() - INTERVAL 7 DAY\nGROUP BY date",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 再次查询（使用缓存）\nSELECT \n    toDate(event_time) as date,\n    count() as event_count,\n    sum(amount) as total_amount\nFROM events\nWHERE event_time >= now() - INTERVAL 7 DAY\nGROUP BY date",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 查询缓存\n-- ========================================\n\n-- 启用查询缓存\nSET use_query_cache = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询（会被缓存）\nSELECT \n    o.order_id,\n    o.amount,\n    u.username\nFROM orders o\nINNER JOIN users u ON o.user_id = u.user_id\nWHERE o.order_date >= now() - INTERVAL 7 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 再次查询（使用缓存）\nSELECT \n    o.order_id,\n    o.amount,\n    u.username\nFROM orders o\nINNER JOIN users u ON o.user_id = u.user_id\nWHERE o.order_date >= now() - INTERVAL 7 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 查询缓存\n-- ========================================\n\n-- 创建物化视图\nCREATE MATERIALIZED VIEW daily_stats_mv\nENGINE = AggregatingMergeTree()\nORDER BY (date)\nAS",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询物化视图（比缓存更稳定）\nSELECT \n    date,\n    sumMerge(event_count) as event_count,\n    sumMerge(total_amount) as total_amount\nFROM daily_stats_mv\nWHERE date >= toDate(now() - INTERVAL 30 DAY)\nGROUP BY date",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 查询缓存\n-- ========================================\n\n-- 查看查询缓存统计\nSELECT \n    metric,\n    value,\n    description\nFROM system.metrics\nWHERE metric LIKE '%Q",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 查询缓存\n-- ========================================\n\n-- 查看缓存命中统计\nSELECT \n    sum(ProfileEvents['QueryCacheHits']) as cache_hits,\n    sum(ProfileEvents['Q",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "11-performance\\14_hardware_tuning_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 14_hardware_tuning_examples.sql\n-- 从 14_hardware_tuning.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ===========================================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 测试查询性能\nSELECT count() FROM events",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 测试聚合性能\nSELECT \n    user_id,\n    count() as event_count\nFROM events\nGROUP BY user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 测试 JOIN 性能\nSELECT \n    o.order_id,\n    u.username\nFROM orders o\nINNER JOIN users u ON o.user_id = u.user_id",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 性能基准测试\n-- ========================================\n\n-- 查看 CPU 使用率\nSELECT \n    metric,\n    value,\n    description\nFROM system.metrics\nWHERE metric LIKE '%",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 性能基准测试\n-- ========================================\n\n-- 查看内存使用\nSELECT \n    metric,\n    value,\n    description\nFROM system.metrics\nWHERE metric LIKE '%Memo",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 性能基准测试\n-- ========================================\n\n-- 查看磁盘使用\nSELECT \n    metric,\n    value,\n    description\nFROM system.metrics\nWHERE metric LIKE '%Disk",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ]
+  }
+}

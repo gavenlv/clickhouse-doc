@@ -4,11 +4,16 @@
 -- ================================================
 
 -- ========================================
+-- 0. 创建测试数据库
+-- ========================================
+CREATE DATABASE IF NOT EXISTS engine_test ON CLUSTER 'treasurycluster';
+
+-- ========================================
 -- 1. Distributed（分布式表引擎）
 -- ========================================
 
 -- 创建本地表
-CREATE TABLE IF NOT EXISTS engine_test.local_orders (
+CREATE TABLE IF NOT EXISTS engine_test.local_orders ON CLUSTER 'treasurycluster' (
     order_id UInt64,
     user_id UInt64,
     product_id UInt32,
@@ -19,7 +24,7 @@ PARTITION BY toYYYYMM(order_date)
 ORDER BY (user_id, order_id);
 
 -- 创建分布式表
-CREATE TABLE IF NOT EXISTS engine_test.distributed_orders AS local_orders
+CREATE TABLE IF NOT EXISTS engine_test.distributed_orders ON CLUSTER 'treasurycluster' AS local_orders
 ENGINE = Distributed(treasurycluster, engine_test, local_orders, user_id);
 
 -- 插入数据（通过分布式表）
@@ -50,7 +55,7 @@ ORDER BY total_amount DESC;
 -- ========================================
 
 -- 创建源表
-CREATE TABLE IF NOT EXISTS engine_test.source_events (
+CREATE TABLE IF NOT EXISTS engine_test.source_events ON CLUSTER 'treasurycluster' (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -60,7 +65,7 @@ CREATE TABLE IF NOT EXISTS engine_test.source_events (
 ORDER BY (user_id, timestamp);
 
 -- 创建物化视图
-CREATE MATERIALIZED VIEW IF NOT EXISTS engine_test.event_stats_mv
+CREATE MATERIALIZED VIEW IF NOT EXISTS engine_test.event_stats_mv ON CLUSTER 'treasurycluster'
 ENGINE = AggregatingMergeTree()
 ORDER BY (user_id, toDate(timestamp))
 AS SELECT

@@ -177,16 +177,21 @@ ORDER BY latest_fail_time DESC;
 
 ```sql
 -- 监控 TTL 删除/更新操作
-SELECT 
+-- 注意：system.ttl_tables 在某些配置中可能不可用
+-- 替代方案：使用 SHOW CREATE TABLE 或查询 system.parts 查看分区变化
+SELECT
     database,
     table,
-    expression,
-    result_column,
-    result_type,
-    is_compressed,
-    count() as part_count
-FROM system.ttl_tables
-WHERE database LIKE 'test_%';
+    partition,
+    sum(rows) AS total_rows,
+    formatReadableSize(sum(bytes_on_disk)) AS total_size,
+    min(modification_time) AS oldest_part_time,
+    max(modification_time) AS newest_part_time
+FROM system.parts
+WHERE database LIKE 'test_%'
+  AND active = 1
+GROUP BY database, table, partition
+ORDER BY database, table, partition;
 ```
 
 ### 查询 5: 分区删除监控
@@ -486,21 +491,25 @@ ORDER BY created DESC;
 
 ```sql
 -- 监控 TTL 执行情况
-SELECT 
-    database,
+-- 注意：system.ttl_tables 在某些配置中可能不可用
+-- 替代方案：使用 SHOW CREATE TABLE 查看配置，使用 system.parts 查看分区
+SHOW CREATE TABLE test_data_deletion.test_events_ttl;
+
+-- 查看分区变化来推断 TTL 执行情况
+SELECT
     table,
-    expression,
-    result_column,
-    result_type,
-    count() as affected_parts,
-    sum(rows) as total_rows,
-    formatReadableSize(sum(bytes_on_disk)) as total_size
-FROM system.ttl_tables
-LEFT JOIN system.parts
-USING (database, table)
+    partition,
+    sum(rows) AS total_rows,
+    formatReadableSize(sum(bytes_on_disk)) AS total_size,
+    min(modification_time) AS oldest_part,
+    max(modification_time) AS newest_part,
+    dateDiff('day', max(modification_time), now()) AS days_since_last_modified
+FROM system.parts
 WHERE database = 'test_data_deletion'
   AND active = 1
-GROUP BY database, table, expression, result_column, result_type;
+  AND table = 'test_events_ttl'
+GROUP BY table, partition
+ORDER BY partition;
 ```
 
 ### 场景 3: 系统健康监控

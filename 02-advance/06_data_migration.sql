@@ -4,6 +4,30 @@
 -- ================================================
 
 -- ========================================
+-- 0. 创建测试数据库和表
+-- ========================================
+CREATE DATABASE IF NOT EXISTS migration_test ON CLUSTER 'treasurycluster';
+
+CREATE TABLE IF NOT EXISTS migration_test.users ON CLUSTER 'treasurycluster' (
+    user_id UInt64,
+    name String,
+    email String,
+    created_at DateTime DEFAULT now()
+) ENGINE = ReplicatedMergeTree
+PARTITION BY toYYYYMM(created_at)
+ORDER BY user_id;
+
+CREATE TABLE IF NOT EXISTS migration_test.users_new ON CLUSTER 'treasurycluster' (
+    user_id UInt64,
+    name String,
+    email String,
+    created_at DateTime DEFAULT now(),
+    updated_at DateTime DEFAULT now()
+) ENGINE = ReplicatedMergeTree
+PARTITION BY toYYYYMM(created_at)
+ORDER BY user_id;
+
+-- ========================================
 -- 1. 导出数据
 -- ========================================
 
@@ -304,7 +328,7 @@ WHERE created_at > (SELECT max(created_at) FROM dest_db.users);
 
 -- 使用标记表追踪迁移进度
 /*
-CREATE TABLE IF NOT EXISTS migration.migration_log (
+CREATE TABLE IF NOT EXISTS migration_test.migration_log (
     source_table String,
     dest_table String,
     last_migrated_id UInt64,
@@ -314,13 +338,13 @@ CREATE TABLE IF NOT EXISTS migration.migration_log (
 ORDER BY (source_table, dest_table);
 
 -- 记录迁移进度
-INSERT INTO migration.migration_log VALUES
+INSERT INTO migration_test.migration_log VALUES
 ('source_db.users', 'dest_db.users', 0, now(), 'in_progress');
 
 -- 执行增量迁移
 INSERT INTO dest_db.users
 SELECT * FROM remote('source:9000', source_db, users, 'default', '')
-WHERE id > (SELECT last_migrated_id FROM migration.migration_log
+WHERE id > (SELECT last_migrated_id FROM migration_test.migration_log
            WHERE source_table = 'source_db.users' AND dest_table = 'dest_db.users');
 
 -- 更新迁移状态
@@ -412,7 +436,7 @@ cat tables.txt | parallel -j 4 "clickhouse-client --query 'INSERT INTO dest_db.{
 -- ========================================
 
 -- 记录迁移错误
-CREATE TABLE IF NOT EXISTS migration.migration_errors (
+CREATE TABLE IF NOT EXISTS migration_test.migration_errors (
     error_time DateTime DEFAULT now(),
     source_table String,
     dest_table String,
@@ -424,7 +448,7 @@ ORDER BY error_time;
 -- 捕获并记录错误
 /*
 ON ERROR
-INSERT INTO migration.migration_errors (source_table, dest_table, error_message)
+INSERT INTO migration_test.migration_errors (source_table, dest_table, error_message)
 VALUES ('source_db.users', 'dest_db.users', 'Migration failed');
 */
 
@@ -515,8 +539,8 @@ DROP TABLE IF EXISTS migration_test.source_data;
 DROP TABLE IF EXISTS migration_test.target_data;
 DROP TABLE IF EXISTS migration_test.dirty_data;
 DROP TABLE IF EXISTS migration_test.clean_data;
-DROP TABLE IF EXISTS migration.migration_log;
-DROP TABLE IF EXISTS migration.migration_errors;
+DROP TABLE IF EXISTS migration_test.migration_log;
+DROP TABLE IF EXISTS migration_test.migration_errors;
 DROP DATABASE IF EXISTS migration_test;
 
 -- ========================================

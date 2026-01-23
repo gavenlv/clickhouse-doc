@@ -10,14 +10,14 @@
 -- ========================================
 
 -- 场景 1：消费 Kafka 事件数据
-CREATE DATABASE IF NOT EXISTS realtime_examples;
+CREATE DATABASE IF NOT EXISTS realtime_examples ON CLUSTER 'treasurycluster';
 
 -- 创建 Kafka 引擎表（作为数据消费者）
 CREATE TABLE IF NOT EXISTS realtime_examples.kafka_events (
     -- 事件标识
     event_id String,
     event_type String,
-    event_time DateTime DEFAULT now(),
+    event_time DateTime,
     
     -- 用户信息
     user_id UInt64,
@@ -40,26 +40,19 @@ CREATE TABLE IF NOT EXISTS realtime_examples.kafka_events (
     interaction_count UInt16,
     
     -- 元数据
-    topic String DEFAULT 'user_events',
+    topic String,
     partition Int64,
     offset Int64
 ) ENGINE = Kafka
-SETTINGS 
-    -- Kafka 配置
-    kafka_broker_list = 'kafka-broker:9092',      -- Kafka broker 地址
-    kafka_topic_list = 'user_events',                -- 主题名称
-    kafka_group_name = 'clickhouse_consumer',         -- 消费者组
-    kafka_format = 'JSONEachRow',                   -- 数据格式
-    -- 性能配置
-    kafka_num_consumers = 2,                       -- 消费者数量
-    kafka_max_block_size = 65536,                  -- 最大块大小
-    kafka_skip_broken_messages = 1,                 -- 跳过损坏的消息
-    kafka_row_delimiter = '\n',                    -- 行分隔符
-    -- 可选：认证配置
-    -- kafka_security_protocol = 'SASL_SSL',
-    -- kafka_sasl_mechanism = 'PLAIN',
-    -- kafka_sasl_username = 'username',
-    -- kafka_sasl_password = 'password';
+SETTINGS
+    kafka_broker_list = 'kafka-broker:9092',
+    kafka_topic_list = 'user_events',
+    kafka_group_name = 'clickhouse_consumer',
+    kafka_format = 'JSONEachRow',
+    kafka_num_consumers = 2,
+    kafka_max_block_size = 65536,
+    kafka_skip_broken_messages = 1,
+    kafka_row_delimiter = '\n';
 
 -- 创建目标表（存储消费的数据，生产环境：使用复制引擎 + ON CLUSTER）
 CREATE TABLE IF NOT EXISTS realtime_examples.events ON CLUSTER 'treasurycluster' (
@@ -210,7 +203,7 @@ CREATE TABLE IF NOT EXISTS realtime_examples.kafka_multi_topics (
     event_id String,
     event_type String,
     event_data String,
-    event_time DateTime DEFAULT now(),
+    event_time DateTime,
     topic String
 ) ENGINE = Kafka
 SETTINGS

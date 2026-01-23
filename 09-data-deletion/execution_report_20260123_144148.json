@@ -1,0 +1,1211 @@
+{
+  "timestamp": "2026-01-23T14:41:48.878377",
+  "directory": "09-data-deletion",
+  "summary": {
+    "total_files": 7,
+    "total_statements": 243,
+    "total_success": 233,
+    "total_errors": 10
+  },
+  "results": {
+    "09-data-deletion\\01_partition_deletion_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 01_partition_deletion_examples.sql\n-- 从 01_partition_deletion.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- =====================================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 删除多个分区\nALTER TABLE table_name\nDROP PARTITION partition_value1, partition_value2, ...",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 使用 DETACH 后再删除（更安全）\nALTER TABLE table_name\nDETACH PARTITION partition_value",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 删除 2023 年 1 月的所有数据\nALTER TABLE events\nDROP PARTITION '2023-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 删除多个月份的数据\nALTER TABLE events\nDROP PARTITION '2023-01', '2023-02', '2023-03'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 查看当前分区\nSELECT \n    partition,\n    formatReadableSize(sum(bytes_on_disk)) AS size,\n    sum(rows) AS",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 删除早于特定日期的分区\nALTER TABLE events\nDROP PARTITION '2023-06'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 删除测试分区的数据\nALTER TABLE events\nDROP PARTITION 'test_2023-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 或使用 DETACH（保留数据文件）\nALTER TABLE events\nDETACH PARTITION 'test_2023-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 重新附加分区（恢复数据）\nALTER TABLE events\nATTACH PARTITION 'test_2023-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 按月分区\nPARTITION BY toYYYYMM(event_time)\n-- 分区值: '202301'\n\n-- 按日期分区\nPARTITION BY toDate(event_time)\n",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 分析分区大小分布\nSELECT\n    partition,\n    formatReadableSize(sum(bytes_on_disk)) AS size,\n    formatReada",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 查找可以删除的旧分区（超过 90 天）\nSELECT\n    partition,\n    toDate(replaceRegexpOne(partition, '^(\\\\d{4})(\\\\d{2}",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 1. 创建归档表（使用不同的存储策略）\nCREATE TABLE events_archive AS events\nENGINE = MergeTree\nPARTITION BY toYYYYMM",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2. 将旧数据移动到归档表\nINSERT INTO events_archive\nSELECT * FROM events\nWHERE event_time < '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 3. 验证数据已复制\nSELECT \n    'events' as table_name,\n    partition,\n    sum(rows) as rows\nFROM system.parts\nWHERE database = 'default' AND table = 'events' AND active = 1\nGROUP BY partition\n\nUNION ALL\n\nS",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 4. 删除原表中的旧分区\nALTER TABLE events\nDROP PARTITION '2022-12'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 使用分区交换快速删除数据（适用于临时表）\n\n-- 1. 创建临时表\nCREATE TEMPORARY TABLE temp_delete AS events",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2. 插入要保留的数据\nINSERT INTO temp_delete\nSELECT * FROM events\nWHERE event_time >= '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 3. 替换分区\nALTER TABLE events\nREPLACE PARTITION '2023-01' FROM temp_delete",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 4. 验证数据\nSELECT count() FROM events",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 将数据重新分区后删除\n\n-- 1. 添加临时分区列\nALTER TABLE events\nADD COLUMN temp_partition String",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2. 标记要删除的数据\nALTER TABLE events\nUPDATE temp_partition = 'delete' WHERE event_time < '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 3. 强制合并\nOPTIMIZE TABLE events FINAL",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 4. 删除标记的分区\nALTER TABLE events\nDROP PARTITION 'delete'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 5. 清理临时列\nALTER TABLE events\nDROP COLUMN temp_partition",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 查看正在执行的 ALTER 操作\nSELECT\n    database,\n    table,\n    mutation_id,\n    command,\n    is_done,\n    cr",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 检查分区是否已删除\nSELECT\n    partition,\n    sum(rows) AS rows,\n    sum(bytes_on_disk) AS bytes\nFROM system",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 检查非活动数据块（等待清理）\nSELECT\n    partition,\n    name AS part_name,\n    bytes_on_disk,\n    remove_time\nFROM system.parts\nWHERE database = 'your_database'\n  AND table = 'your_table'\n  AND active = 0\nORDER B",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "09-data-deletion\\02_ttl_deletion_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 02_ttl_deletion_examples.sql\n-- 从 02_ttl_deletion.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ================================================\n",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 为现有表添加 TTL\nALTER TABLE table_name\nMODIFY TTL event_time + INTERVAL 90 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 删除 TTL\nALTER TABLE table_name\nREMOVE TTL",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 数据过期后自动删除\nCREATE TABLE events (\n    id UInt64,\n    event_time DateTime,\n    data String\n) ENGINE =",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 数据过期后移动到归档表\nCREATE TABLE events (\n    id UInt64,\n    event_time DateTime,\n    data String\n) ENGINE",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 数据过期后重新聚合\nCREATE TABLE events (\n    id UInt64,\n    event_time DateTime,\n    user_id UInt64,\n    va",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 列数据过期后删除或重新计算\nCREATE TABLE events (\n    id UInt64,\n    event_time DateTime,\n    temporary_data Str",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 修改列 TTL\nALTER TABLE events\nMODIFY COLUMN temporary_data String TTL event_time + INTERVAL 3 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 简单的时间到期删除\nCREATE TABLE logs (\n    event_time DateTime,\n    level String,\n    message String\n) ENGI",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 多个 TTL 规则\nCREATE TABLE events (\n    event_time DateTime,\n    event_type String,\n    data String,\n ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 表和列同时设置 TTL\nCREATE TABLE events (\n    event_time DateTime,\n    data String TTL event_time + INTERV",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 创建日志表\nCREATE TABLE application_logs (\n    timestamp DateTime,\n    level String,\n    service String",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 插入数据\nINSERT INTO application_logs VALUES\n    (now(), 'INFO', 'api', 'Request received'),\n    (now() - INTERVAL 31 DAY, 'INFO', 'api', 'Old request')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查询 TTL 信息\nSELECT\n    database,\n    table,\n    engine_full,\n    ttl_table\nFROM system.tables\nWHERE table = 'application_logs'\\G\n\n-- ========================================\n-- 📋 基本语法\n-- ============",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查看用户的 TTL 设置\nSELECT\n    user_id,\n    data_retention,\n    TTL_setting\nFROM user_settings",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 配置存储策略\n-- 在 config.xml 中定义存储策略\n\n\n-- 创建表使用分层存储\nCREATE TABLE events (\n    event_time DateTime,\n    d",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 时序数据聚合滚动\nCREATE TABLE metrics (\n    timestamp DateTime,\n    metric_name String,\n    value Float64,",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 查看表的 TTL 定义\nSELECT\n    database,\n    table,\n    ttl_table,\n    ttl_definition\nFROM system.tables\nW",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 查看即将过期的数据\nSELECT\n    event_time,\n    event_time + INTERVAL 90 DAY AS expire_time,\n    dateDiff('da",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 延长 TTL\nALTER TABLE events\nMODIFY TTL event_time + INTERVAL 180 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 缩短 TTL\nALTER TABLE events\nMODIFY TTL event_time + INTERVAL 30 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 添加新的 TTL 规则\nALTER TABLE events\nMODIFY TTL\n    event_time + INTERVAL 30 DAY,\n    event_time + INTERVAL 7 DAY TO DISK 'archive' WHERE priority = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 移除表 TTL\nALTER TABLE events\nREMOVE TTL",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 移除列 TTL\nALTER TABLE events\nMODIFY COLUMN temporary_data String",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 查看 TTL 处理日志\nSELECT\n    event_time,\n    event_date,\n    database,\n    table,\n    query,\n    type,\n ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 监控数据清理效果\nSELECT\n    toStartOfDay(event_time) AS day,\n    count() AS rows,\n    count() / NULLIF(LAG",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 配置多级存储\nCREATE TABLE events (\n    event_time DateTime,\n    data String,\n    size UInt64\n) ENGINE = ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查看数据在各层级的分布\nSELECT\n    CASE\n        WHEN event_time >= now() - INTERVAL 1 DAY THEN 'hot'\n        WHEN event_time >= now() - INTERVAL 7 DAY THEN 'warm'\n        WHEN event_time >= now() - INTERVAL 30",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 根据数据优先级设置不同 TTL\nCREATE TABLE notifications (\n    id UInt64,\n    event_time DateTime,\n    priority ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 高优先级 30 天\n\n-- 插入数据\nINSERT INTO notifications VALUES\n    (1, now(), 1, 'Low priority'),\n    (2, now(), 2, 'Medium priority'),\n    (3, now(), 3, 'High priority')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- TTL 自动触发分区删除\nCREATE TABLE events (\n    event_time DateTime,\n    data String\n) ENGINE = MergeTree\nP",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "09-data-deletion\\03_mutation_deletion_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 03_mutation_deletion_examples.sql\n-- 从 03_mutation_deletion.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- =======================================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 更新数据\nALTER TABLE table_name\nUPDATE column = expression WHERE condition",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 立即执行 Mutation\nALTER TABLE table_name\nDELETE WHERE condition\nSETTINGS mutations_sync = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- Mutation 是异步执行的\nALTER TABLE events\nDELETE WHERE event_time < '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查看执行状态\nSELECT\n    mutation_id,\n    command,\n    is_done,\n    create_time,\n    done_time,\n    exception_code\nFROM system.mutations\nWHERE database = 'your_database' AND table = 'your_table'\nORDER BY ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- Mutation 是重操作，会触发数据重写\n-- 查看受影响的行数\nSELECT\n    mutation_id,\n    command,\n    parts_to_do_names,\n    ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 删除特定条件的数据\nALTER TABLE events\nDELETE WHERE event_time < '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 删除多个条件\nALTER TABLE events\nDELETE WHERE \n    event_time < '2023-01-01'\n    OR level = 'debug'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 使用子查询\nALTER TABLE events\nDELETE WHERE user_id IN (\n    SELECT user_id FROM deleted_users\n)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 将大删除拆分为多个小批次\n-- 批次 1\nALTER TABLE events\nDELETE WHERE event_time >= '2022-01-01' AND event_time < '",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 批次 2\nALTER TABLE events\nDELETE WHERE event_time >= '2022-03-01' AND event_time < '2022-05-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 批次 3\nALTER TABLE events\nDELETE WHERE event_time >= '2022-05-01' AND event_time < '2022-07-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 更新单列\nALTER TABLE events\nUPDATE status = 'archived' WHERE event_time < '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 使用表达式更新\nALTER TABLE events\nUPDATE status = CASE \n    WHEN event_time < '2023-01-01' THEN 'archived'\n    WHEN event_time < '2023-06-01' THEN 'old'\n    ELSE 'current'\nEND",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 更新多列\nALTER TABLE users\nUPDATE \n    last_login = now(),\n    login_count = login_count + 1\nWHERE use",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 使用 Map 更新\nALTER TABLE events\nUPDATE tags = mapInsert(tags, 'processed', 'true') WHERE id = 123",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 复杂条件更新\nALTER TABLE orders\nUPDATE \n    status = 'cancelled',\n    cancelled_at = now()\nWHERE \n    st",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 删除用户的所有数据\nALTER TABLE user_events\nDELETE WHERE user_id = 'user123'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 删除用户的敏感信息（保留统计）\nALTER TABLE users\nUPDATE \n    email = 'deleted@deleted.com',\n    phone = 'deleted',\n    address = 'deleted'\nWHERE user_id = 'user123'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 记录删除操作\nINSERT INTO data_deletion_log\nSELECT\n    user_id,\n    'delete' as action,\n    now() as timestamp\nFROM users\nWHERE user_id = 'user123'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 修正错误数据\nALTER TABLE orders\nUPDATE total_amount = quantity * unit_price\nWHERE total_amount != quanti",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 修正日期格式错误\nALTER TABLE events\nUPDATE event_time = parseDateTimeBestEffort(event_date_str)\nWHERE event_time = toDateTime('1970-01-01')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 软删除（标记而非物理删除）\nALTER TABLE messages\nUPDATE is_deleted = 1, deleted_at = now()\nWHERE message_id IN (",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 查看软删除的数据\nSELECT * FROM messages WHERE is_deleted = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 恢复软删除的数据\nALTER TABLE messages\nUPDATE is_deleted = 0, deleted_at = NULL\nWHERE message_id = 'msg123'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 对数据进行聚合更新\nALTER TABLE daily_metrics\nUPDATE \n    total_value = sum(value)\nGROUP BY metric_name, dat",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 查看所有 Mutation\nSELECT\n    database,\n    table,\n    mutation_id,\n    command,\n    is_done,\n    parts",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 监控 Mutation 的资源使用\nSELECT\n    mutation_id,\n    command,\n    formatReadableSize(total_bytes_read_unc",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 预估 Mutation 的影响\nSELECT\n    '预估删除行数' as metric,\n    count() as value\nFROM your_table\nWHERE event_ti",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 步骤 1: 预估影响\nSELECT\n    count() AS rows_to_delete,\n    formatReadableSize(sum(length(data))) AS size",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 步骤 2: 备份数据\nINSERT INTO events_backup\nSELECT * FROM events\nWHERE event_time < '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 步骤 3: 验证备份\nSELECT count() FROM events_backup",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 步骤 4: 执行删除\nALTER TABLE events\nDELETE WHERE event_time < '2023-01-01'\nSETTINGS mutations_sync = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 步骤 5: 验证删除\nSELECT count() FROM events WHERE event_time < '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 按优先级删除数据\n\n-- 先删除最不重要的数据\nALTER TABLE events\nDELETE WHERE priority = 'low' AND event_time < '2023-01",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 再删除中等重要数据\nALTER TABLE events\nDELETE WHERE priority = 'medium' AND event_time < '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 最后删除高优先级数据（如有必要）\nALTER TABLE events\nDELETE WHERE priority = 'high' AND event_time < '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 增量删除策略\n\n-- 第一天：删除最旧的数据\nALTER TABLE events\nDELETE WHERE event_time < '2022-01-01'\nSETTINGS max_thre",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 第二天：删除次旧的数据\nALTER TABLE events\nDELETE WHERE \n    event_time >= '2022-01-01' \n    AND event_time < '2022-03-01'\nSETTINGS max_threads = 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 第三天：删除更近的数据\nALTER TABLE events\nDELETE WHERE \n    event_time >= '2022-03-01' \n    AND event_time < '2022-06-01'\nSETTINGS max_threads = 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 异步执行（默认）\nALTER TABLE events\nDELETE WHERE event_time < '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 同步执行（等待完成）\nALTER TABLE events\nDELETE WHERE event_time < '2023-01-01'\nSETTINGS mutations_sync = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 同步执行所有之前的 Mutation\nALTER TABLE events\nDELETE WHERE event_time < '2023-01-01'\nSETTINGS mutations_sync = 2",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 控制并发线程数\nALTER TABLE events\nDELETE WHERE event_time < '2023-01-01'\nSETTINGS max_threads = 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 控制复制线程数（复制表）\nALTER TABLE events\nDELETE WHERE event_time < '2023-01-01'\nSETTINGS replicated_deduplication_window = 0",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "09-data-deletion\\04_lightweight_deletion_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 04_lightweight_deletion_examples.sql\n-- 从 04_lightweight_deletion.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- =================================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 等价于\nALTER TABLE table_name\nDELETE LIGHTWEIGHT WHERE condition",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 轻量级删除是异步的\nALTER TABLE events\nDELETE WHERE event_time < '2023-01-01'\nSETTINGS lightweight_delete = ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 删除会立即返回，后台执行\n\n-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 轻量级删除使用标记机制\n-- 数据不会被立即删除，而是标记为已删除\n\n-- 查看被标记删除的数据\nSELECT\n    _part,\n    _block_off",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 删除少量数据（<10%）\nALTER TABLE events\nDELETE WHERE event_id = 12345\nSETTINGS lightweight_delete = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 删除中等量数据（10-30%）\nALTER TABLE events\nDELETE WHERE user_id = 'user123'\nSETTINGS lightweight_delete = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 快速删除用户数据\nALTER TABLE user_events\nDELETE WHERE user_id = 'user123'\nSETTINGS lightweight_delete = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "ALTER TABLE user_profile\nDELETE WHERE user_id = 'user123'\nSETTINGS lightweight_delete = 1",
+        "success": false,
+        "result": "HTTP 404: Code: 115. DB::Exception: Setting lightweight_delete is neither a builtin setting nor started with the prefix 'SQL_' registered for user-defined settings: Maybe you meant ['lightweight_delete_mode','l"
+      },
+      {
+        "statement": "-- 记录删除操作\nINSERT INTO data_deletion_log\nVALUES ('user123', now(), 'lightweight_delete')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 实时删除过期数据\nCREATE MATERIALIZED VIEW expired_events_mv\nENGINE = MergeTree()\nORDER BY event_id\nAS SELE",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 定期执行轻量级删除\n-- 可以通过外部调度器触发\nALTER TABLE events\nDELETE WHERE event_time < now() - INTERVAL 90 DAY\nSETTINGS lightweight_delete = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 删除测试环境数据\nALTER TABLE events\nDELETE WHERE environment = 'test'\nSETTINGS lightweight_delete = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 删除调试数据\nALTER TABLE logs\nDELETE WHERE level = 'debug'\nSETTINGS lightweight_delete = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 查看活跃的轻量级删除\nSELECT\n    query_id,\n    query,\n    elapsed,\n    read_rows,\n    written_rows,\n    memor",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 查看被标记删除的数据\nSELECT\n    _part,\n    _block_offset,\n    count() as deleted_count\nFROM events\nWHERE eve",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 监控轻量级删除的空间占用\nSELECT\n    'Active Rows' as metric,\n    sum(rows) as value,\n    formatReadableSize(su",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 从用户删除列表中读取要删除的用户 ID\n-- 假设有一个表存储了要删除的用户\nCREATE TABLE users_to_delete (\n    user_id String\n) ENGINE ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 插入要删除的用户 ID\nINSERT INTO users_to_delete VALUES\n    ('user123'),\n    ('user456'),\n    ('user789')",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 执行轻量级删除\nALTER TABLE user_events\nDELETE WHERE user_id IN (\n    SELECT user_id FROM users_to_delete\n)\nSETTINGS lightweight_delete = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "ALTER TABLE user_profile\nDELETE WHERE user_id IN (\n    SELECT user_id FROM users_to_delete\n)\nSETTINGS lightweight_delete = 1",
+        "success": false,
+        "result": "HTTP 404: Code: 115. DB::Exception: Setting lightweight_delete is neither a builtin setting nor started with the prefix 'SQL_' registered for user-defined settings: Maybe you meant ['lightweight_delete_mode','l"
+      },
+      {
+        "statement": "-- 清空删除列表\nTRUNCATE TABLE users_to_delete",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 创建监控视图\nCREATE VIEW deletion_monitor AS\nSELECT\n    now() as timestamp,\n    'lightweight_delete' as ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 定期查询监控数据\nSELECT * FROM deletion_monitor\nORDER BY timestamp DESC\nLIMIT 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 轻量级删除只是标记数据\n-- 实际删除需要通过合并操作\n\n-- 触发合并以清理已标记的数据\nOPTIMIZE TABLE events FINAL",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 或者等待自然的合并过程\n-- 可以调整合并策略加快合并\n\n-- 查看合并进度\nSELECT\n    table,\n    partition,\n    sum(rows) as rows,\n    count() as parts\nFROM system.parts\nWHERE table = 'events' AND active = 1\nGROUP BY table, partition",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 在查询中启用\nSELECT * FROM events\nSETTINGS allow_experimental_lightweight_delete = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 执行轻量级删除\nALTER TABLE events\nDELETE WHERE event_time < '2023-01-01'\nSETTINGS lightweight_delete = 1",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 检查 ClickHouse 版本\nSELECT version()",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 轻量级删除需要 ClickHouse 23.8 或更高版本\n-- 如果版本过低，会回退到传统的 Mutation 删除\n\n-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 轻量级删除不会立即释放存储空间\n-- 已标记删除的数据仍然占用空间\n",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 📋 基本语法\n-- ========================================\n\n-- 轻量级删除适用于删除少量数据\n-- 如果删除大量数据（>30%），应该使用分区删除\n\n-- 判断是否应该使用轻量级删除\nSELECT\n    count() as total_rows,\n    ",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "09-data-deletion\\05_deletion_strategies_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 05_deletion_strategies_examples.sql\n-- 从 05_deletion_strategies.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ===================================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 优点：自动化，无需手动操作\n-- 缺点：删除有延迟\n\n-- ========================================\n-- SQL Block 2\n-- ========================================\n\n-- 每月执行一次\nALTER TABLE application_logs\nDROP PARTITION '202301'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 优点：立即生效，完全控制\n-- 缺点：需要手动执行\n\n-- ========================================\n-- SQL Block 3\n-- ========================================\n\n-- 快速删除用户数据\nALTER TABLE user_events\nDELETE WHERE user_id = 'user12",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "ALTER TABLE user_profile\nDELETE WHERE user_id = 'user123'\nSETTINGS lightweight_delete = 1",
+        "success": false,
+        "result": "HTTP 404: Code: 115. DB::Exception: Setting lightweight_delete is neither a builtin setting nor started with the prefix 'SQL_' registered for user-defined settings: Maybe you meant ['lightweight_delete_mode','l"
+      },
+      {
+        "statement": "-- 优点：快速，性能影响小\n-- 缺点：需要 ClickHouse 23.8+\n\n-- ========================================\n-- SQL Block 4\n-- ========================================\n\nALTER TABLE user_events\nDELETE WHERE user_id = 'user12",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "ALTER TABLE user_profile\nDELETE WHERE user_id = 'user123'",
+        "success": false,
+        "result": "HTTP 404: Code: 60. DB::Exception: Could not find table: user_profile. (UNKNOWN_TABLE) (version 25.12.3.21 (official build))\n"
+      },
+      {
+        "statement": "-- 优点：兼容所有版本\n-- 缺点：性能影响大\n\n-- ========================================\n-- SQL Block 5\n-- ========================================\n\n-- 配置分层存储\nCREATE TABLE events (\n    event_time DateTime,\n    data Stri",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 优点：自动移动，数据保留\n-- 缺点：需要配置存储策略\n\n-- ========================================\n-- SQL Block 6\n-- ========================================\n\n-- 1. 导出数据到归档表\nINSERT INTO events_archive\nSELECT * FROM events\nW",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2. 删除原表数据\nALTER TABLE events\nDROP PARTITION '2022-12'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 优点：灵活，完全控制\n-- 缺点：需要手动操作\n\n-- ========================================\n-- SQL Block 7\n-- ========================================\n\n-- 删除测试数据\nALTER TABLE events\nDELETE WHERE environment = 'test'\nSETTI",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 优点：快速，不影响生产数据\n-- 缺点：需要 ClickHouse 23.8+\n\n-- ========================================\n-- SQL Block 8\n-- ========================================\n\nALTER TABLE events\nDELETE WHERE environment = 'test'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 优点：兼容所有版本\n-- 缺点：性能影响大\n\n-- ========================================\n-- SQL Block 9\n-- ========================================\n\n-- 批量删除分区\nALTER TABLE events\nDROP PARTITION '2022-01', '2022-02', '202",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 优点：最快，效率最高\n-- 缺点：只能按分区删除\n\n-- ========================================\n-- SQL Block 10\n-- ========================================\n\n-- 1. 重新分区以支持按日期删除\nALTER TABLE events\nMODIFY PARTITION BY toYYYYMM",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2. 等待合并完成\nOPTIMIZE TABLE events FINAL",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 3. 删除旧分区\nALTER TABLE events\nDROP PARTITION '2022-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 优点：可以精确控制\n-- 缺点：重新分区需要时间\n\n-- ========================================\n-- SQL Block 11\n-- ========================================\n\n-- 估算删除的影响\nSELECT\n    '总行数' as metric,\n    count() as value\nFROM e",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- SQL Block 12\n-- ========================================\n\n-- 根据删除比例推荐方法\nSELECT\n    CASE \n        WHEN delete_percentage < 10 THEN '轻量级删除'\n        WHEN de",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- SQL Block 13\n-- ========================================\n\n-- 使用 TTL 自动删除，但手动控制关键数据\n\n-- 创建表\nCREATE TABLE events (\n    event_time DateTime,\n    event_type ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 只删除非关键数据\n\n-- 定期手动清理关键数据\nALTER TABLE events\nDELETE WHERE \n    is_critical = 1 \n    AND event_time < '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- SQL Block 14\n-- ========================================\n\n-- 使用分区删除删除大部分数据，用 Mutation 删除少量数据\n\n-- 1. 删除整个旧分区\nALTER TABLE events\nDROP PARTITION '2022-12'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2. 对最近分区进行精确删除\nALTER TABLE events\nDELETE WHERE \n    event_time >= '2023-01-01'\n    AND event_time < '2023-01-15'\n    AND user_id = 'deleted_user'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- SQL Block 15\n-- ========================================\n\n-- 使用轻量级删除标记数据，定期 OPTIMIZE 清理\n\n-- 1. 标记删除\nALTER TABLE events\nDELETE WHERE event_time < '2023-01",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2. 定期触发合并清理已标记的数据\n-- 可以通过调度器每天执行一次\nOPTIMIZE TABLE events PARTITION '2022-12' FINAL",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- SQL Block 16\n-- ========================================\n\n-- 总是优先考虑分区删除\n-- 它是最快、最高效的方法\n\n-- 检查能否按分区删除\nSELECT \n    partition,\n    toDate(replaceRegexpOne(p",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- SQL Block 17\n-- ========================================\n\n-- 为固定的保留策略设置 TTL\n-- 但要注意删除延迟\n\n-- 查看当前的 TTL 设置\nSELECT \n    database,\n    table,\n    ttl_table\nF",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- SQL Block 18\n-- ========================================\n\n-- 将大删除拆分为多个小批次\n\n-- 第一批次\nALTER TABLE events\nDELETE WHERE \n    event_time >= '2022-01-01' \n    A",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 等待完成\nSELECT is_done FROM system.mutations\nWHERE command LIKE '%2022-01-01%' AND command LIKE '%2022-03-01%'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 第二批次\nALTER TABLE events\nDELETE WHERE \n    event_time >= '2022-03-01' \n    AND event_time < '2022-05-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- SQL Block 19\n-- ========================================\n\n-- 监控删除操作的执行情况\nSELECT\n    mutation_id,\n    command,\n    is_done,\n    create_time,\n    done_time",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- SQL Block 20\n-- ========================================\n\n-- 删除前总是备份数据\n\n-- 1. 创建备份表\nCREATE TABLE events_backup AS events",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2. 备份要删除的数据\nINSERT INTO events_backup\nSELECT * FROM events\nWHERE event_time < '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 3. 验证备份\nSELECT count() FROM events_backup",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 4. 执行删除\nALTER TABLE events\nDROP PARTITION '2022-12'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- SQL Block 21\n-- ========================================\n\n-- ❌ 错误：删除 50% 的数据使用 Mutation\nALTER TABLE events\nDELETE WHERE event_time < '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 正确：使用分区删除\nALTER TABLE events\nDROP PARTITION '2022-12'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- SQL Block 23\n-- ========================================\n\n-- ❌ 错误：执行删除后不检查状态\nALTER TABLE events\nDELETE WHERE event_time < '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 正确：监控删除进度\nSELECT \n    is_done,\n    parts_to_do,\n    parts_done,\n    parts_to_do - parts_done AS remaining_parts\nFROM system.mutations\nWHERE command LIKE '%event_time < 2023-01-01%'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- SQL Block 24\n-- ========================================\n\n-- ❌ 错误：直接删除不备份\nALTER TABLE events\nDROP PARTITION '2022-12'",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "09-data-deletion\\06_deletion_performance_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 06_deletion_performance_examples.sql\n-- 从 06_deletion_performance.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- =================================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 插入 1 亿行测试数据\nINSERT INTO performance_test\nSELECT \n    number,\n    toDateTime('2023-01-01 00:00:00') + toIntervalMinute(number),\n    repeat('data', 10)\nFROM numbers(100000000)",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 测试不同删除方法的性能\n\n-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- 最快的删除方法\n\n-- 查看分区信息\nSELECT\n    partition,\n    formatReadableSize(sum(bytes_on_dis",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 删除整个分区\nALTER TABLE performance_test\nDROP PARTITION '202301'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 性能：⭐⭐⭐⭐⭐ 极快\n\n-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- 将大删除拆分为多个小批次\n\n-- 查看要删除的数据量\nSELECT\n    count() AS total_rows,\n    count() / 10 AS",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 分 10 批次删除\n-- 批次 1\nALTER TABLE performance_test\nDELETE WHERE \n    event_time >= '2023-01-01' \n    AND event_time < '2023-01-15'\nSETTINGS max_threads = 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 等待完成\n-- SELECT is_done FROM system.mutations WHERE ...\n\n-- 批次 2\nALTER TABLE performance_test\nDELETE WHERE \n    event_time >= '2023-01-15' \n    AND event_time < '2023-02-01'\nSETTINGS max_threads = 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 性能提升：减少单次操作的 I/O 和 CPU 峰值\n\n-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- 限制并发线程数以减少系统负载\n\n-- 使用较少的线程\nALTER TABLE performance_test\nDELETE WHE",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 使用更多线程（如果系统负载低）\nALTER TABLE performance_test\nDELETE WHERE event_time < '2023-03-01'\nSETTINGS max_threads = 8",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 建议：根据系统负载动态调整\n\n-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- 调整合并策略以优化删除后的性能\n\n-- 查看当前合并设置\nSELECT\n    name,\n    value,\n    changed\nFROM syst",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 调整合并参数\nSET max_bytes_to_merge_at_once = 10737418240",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 10GB\nSET max_rows_to_merge_at_once = 1000000",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 100 万行\n\n-- 删除后触发合并\nOPTIMIZE TABLE performance_test FINAL",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- 在业务低峰期执行删除操作\n\n-- 查看当前系统负载\nSELECT\n    metric,\n    value,\n    description\nFROM system.asynchronous",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 建议在以下时间执行：\n-- - 凌晨 2-6 点（业务低峰）\n-- - 周末\n-- - 节假日\n\n-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- 实时监控删除操作\nSELECT\n    query_id,\n    user,\n    ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- 监控删除期间的系统资源使用\nSELECT\n    'CPU' as metric,\n    (sum(OSUserTime) + sum(OSSystemTime)) / sum(OSIdle",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- 监控 Mutation 执行进度\nSELECT\n    mutation_id,\n    command,\n    is_done,\n    parts_to_do,\n    parts_do",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- 创建表时设置优化参数\nCREATE TABLE optimized_table (\n    id UInt64,\n    event_time DateTime,\n    data Strin",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2GB\n\n-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- 在查询中设置优化参数\nALTER TABLE performance_test\nDELETE WHERE event_time < '2023-03-01'\nSETTINGS\n",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- 1. 先删除大部分数据（使用分区删除）\nALTER TABLE events\nDROP PARTITION '2022-12'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2. 再删除少量数据（使用 Mutation）\nALTER TABLE events\nDELETE WHERE \n    event_time >= '2023-01-01'\n    AND event_time < '2023-01-15'\n    AND user_id = 'deleted_user'\nSETTINGS max_threads = 2",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 性能：分区删除 + 少量 Mutation = 最优性能\n\n-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- 1. 使用轻量级删除标记数据\nALTER TABLE events\nDELETE WHERE event_time < '20",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2. 定期触发合并清理已标记的数据\n-- 可以通过 cron 每天执行\nOPTIMIZE TABLE events PARTITION '2022-12' FINAL\nSETTINGS max_threads = 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 性能：轻量级删除（快速）+ 定期 OPTIMIZE（后台清理）\n\n-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- 1. 创建物化视图捕获删除操作\nCREATE MATERIALIZED VIEW delete_operations_l",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2. 监控删除操作\nSELECT\n    toStartOfHour(timestamp) AS hour,\n    count() AS delete_operations,\n    avg(elapsed_seconds) AS avg_duration\nFROM delete_operations_log\nWHERE timestamp >= now() - INTERVAL 24 H",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 3. 根据监控数据优化删除策略\n\n-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- ClickHouse 23.8+ 使用轻量级删除\nALTER TABLE events\nDELETE WHERE event_time < '2023-",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 性能提升：3-5 倍\n\n-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- 限制并发线程数\nALTER TABLE events\nDELETE WHERE event_time < '2023-01-01'\nSETTINGS max_th",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 性能影响：减少 CPU 和 I/O 峰值\n\n-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- 确保删除条件使用索引\n\n-- 查看表的排序键\nSELECT \n    name AS table,\n    sorting_key\nFROM ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 优化：使删除条件与排序键匹配\nALTER TABLE events\nDELETE WHERE \n    event_time < '2023-01-01'  -- event_time 是排序键\n    AND user_id = 'user123'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 性能提升：减少扫描的数据量\n\n-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- ❌ 避免：全表扫描\nALTER TABLE events\nDELETE WHERE data LIKE '%test%'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ✅ 推荐：使用分区裁剪\nALTER TABLE events\nDELETE WHERE \n    partition = '202301'  -- 只扫描特定分区\n    AND data LIKE '%test%'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 性能提升：只扫描需要的分区\n\n-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- 设置 TTL 自动清理\nALTER TABLE events\nMODIFY TTL event_time + INTERVAL 90 DAY",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 性能优势：自动化，无需手动干预\n\n-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- ❌ 陷阱：一次性删除大量数据\nALTER TABLE events\nDELETE WHERE event_time < '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 删除 50% 的数据\n\n-- 影响：系统负载高，查询性能下降\n\n-- ✅ 解决：分批次删除\n-- （参考上面的批次删除脚本）\n\n-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- ❌ 陷阱：不限制线程数\nALTER TABLE event",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 使用所有可用线程（可能 16+）\n\n-- 影响：CPU 使用率 100%\n\n-- ✅ 解决：限制线程数\nALTER TABLE events\nDELETE WHERE event_time < '2023-01-01'\nSETTINGS max_threads = 4",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 删除方法性能对比\n-- ========================================\n\n-- ❌ 陷阱：执行后不监控\nALTER TABLE events\nDELETE WHERE event_time < '2023-01-01'",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ],
+    "09-data-deletion\\07_deletion_monitoring_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 07_deletion_monitoring_examples.sql\n-- 从 07_deletion_monitoring.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:40:17\n-- ===================================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 查看 Mutation 执行进度\nSELECT\n    database,\n    table,\n    mutation_id,\n    command,\n    is_done,\n   ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 监控删除期间的系统资源\nSELECT\n    'CPU Usage (%)' as metric,\n    round(\n        (sum(OSUserTime) + sum(OSS",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 统计删除操作的执行情况\nSELECT\n    toStartOfDay(event_time) AS day,\n    count() AS delete_count,\n    avg(el",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 分析删除操作对表的影响\nSELECT\n    database,\n    table,\n    count() AS delete_operations,\n    avg(parts_to_",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 监控删除操作中的错误\nSELECT\n    event_time,\n    event_date,\n    database,\n    table,\n    query,\n    excep",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 监控 TTL 删除执行情况\nSELECT\n    event_time,\n    database,\n    table,\n    query,\n    elapsed,\n    read_",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 监控分区删除操作\nSELECT\n    event_time,\n    database,\n    table,\n    query,\n    elapsed\nFROM system.que",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 创建监控视图供 Grafana 查询\n\n-- 1. 删除操作执行时间视图\nCREATE MATERIALIZED VIEW deletion_metrics_mv\nENGINE = Summ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2. Mutation 状态视图\nCREATE MATERIALIZED VIEW mutation_status_mv\nENGINE = ReplacingMergeTree()\nORDER BY mutation_id\nAS\nSELECT\n    mutation_id,\n    database,\n    table,\n    command,\n    is_done,\n    par",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 导出删除操作的指标\nSELECT\n    'clickhouse_deletions_total' as metric_name,\n    count() as metric_value,\n",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 检查执行时间过长的删除操作\nSELECT\n    'Long running deletion' as alert_type,\n    query_id,\n    elapsed,\n    ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 告警级别：WARNING\n-- 处理建议：检查删除的数据量，考虑分批次处理\n\n-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 检查积压的 Mutation\nSELECT\n    'Mutation backlog' as alert",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 告警级别：\n-- - 1-2: INFO\n-- - 3-5: WARNING\n-- - >5: CRITICAL\n\n-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 检查删除操作的错误率\nSELECT\n    'High deleti",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 告警级别：\n-- - >1%: WARNING\n-- - >5%: CRITICAL\n\n-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 检查删除后存储空间是否释放\nSELECT\n    'Storage not released' ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- > 1GB\n\n-- 告警级别：WARNING\n-- 处理建议：触发 OPTIMIZE 清理非活动数据块\n\n-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 诊断删除操作的性能问题\nSELECT\n    query_id,\n    el",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 查看失败的 Mutation\nSELECT\n    mutation_id,\n    database,\n    table,\n    command,\n    is_done,\n    c",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 评估删除操作的影响范围\nSELECT\n    database,\n    table,\n    mutation_id,\n    command,\n    parts_to_do,\n    ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 监控批量删除的进度和性能\n\n-- 1. 查看当前批次\nSELECT\n    mutation_id,\n    command,\n    is_done,\n    parts_to_do,\n ",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2. 查看历史批次统计\nSELECT\n    toStartOfHour(create_time) AS hour,\n    count() AS batches_completed,\n    avg(elapsed_seconds) AS avg_batch_duration,\n    sum(elapsed_seconds) AS total_duration\nFROM system.m",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 监控 TTL 自动删除的效果\n\n-- 1. 查看表的数据趋势\nSELECT\n    toStartOfDay(event_time) AS day,\n    count() AS row_c",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 2. 查看分区数量变化\nSELECT\n    toStartOfDay(modification_time) AS day,\n    count() AS partition_count\nFROM system.parts\nWHERE table = 'events' AND active = 1\nGROUP BY day\nORDER BY day",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 监控删除操作对系统健康的影响\n\n-- 1. 查看当前负载\nSELECT\n    'CPU Usage (%)',\n    round(\n        (OSUserTime + OSSys",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 删除操作概览\nSELECT\n    'Today' as period,\n    count() as total_deletions,\n    avg(elapsed) as avg_du",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- Mutation 状态概览\nSELECT\n    'Active' as status,\n    count() as mutation_count,\n    sum(parts_to_do",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 实时监控删除操作\n-- 使用 clickhouse-client 的 --interactive 选项\n\nclickhouse-client --host=localhost --port=",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 分析历史删除操作\nSELECT\n    toStartOfWeek(event_time) AS week,\n    count() AS deletion_count,\n    avg(e",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- ========================================\n-- 1. 删除操作监控\n-- ========================================\n\n-- 预测未来的删除需求\nSELECT\n    'Estimated deletions next week' as metric,\n    round(avg(deletion_count)) ",
+        "success": true,
+        "result": "Comment - skipped"
+      }
+    ]
+  }
+}

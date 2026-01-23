@@ -87,9 +87,11 @@ ORDER BY position;
 #### system.zookeeper
 ```sql
 -- 查看 ZooKeeper 连接状态
-SELECT name, value
-FROM system.zookeeper
-WHERE path = '/';
+-- 注意：system.zookeeper 在某些配置中可能不可用或返回 400 错误
+-- 替代方案：使用 system.replicas 查看复制状态
+SELECT database, table, replica_name, is_leader, queue_size, absolute_delay
+FROM system.replicas
+WHERE database != 'system';
 ```
 
 ### 4. 查询和进程

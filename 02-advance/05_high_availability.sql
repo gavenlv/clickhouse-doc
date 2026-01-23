@@ -35,8 +35,7 @@ GROUP BY cluster;
 SELECT
     database,
     name,
-    engine,
-    engine_full
+    engine
 FROM system.tables
 WHERE engine = 'Distributed';
 
@@ -49,7 +48,6 @@ SELECT
     database,
     table,
     engine,
-    engine_full,
     total_replicas,
     active_replicas
 FROM system.replicas
@@ -451,7 +449,7 @@ SELECT
     round(
         (sum(if(errors_count = 0, 1, 0)) * 0.4 +
          sum(if(estimated_recovery_time < 10, 1, 0)) * 0.3 +
-         count(*) * 0.3) * 100 / count(*, 0
+         count(*) * 0.3) * 100 / count(*)
     ) as health_score
 FROM system.clusters
 WHERE cluster = 'treasurycluster'

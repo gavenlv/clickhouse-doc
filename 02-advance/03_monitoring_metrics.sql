@@ -51,14 +51,13 @@ SELECT
     query_id,
     user,
     query,
-    query_start_time,
     elapsed,
     rows_read,
     bytes_read,
     memory_usage,
     thread_ids
 FROM system.processes
-ORDER BY query_start_time DESC;
+ORDER BY query_id DESC;
 
 -- 查看最近的查询统计
 SELECT
@@ -246,13 +245,19 @@ ORDER BY max_delay DESC;
 -- ========================================
 
 -- 查看 ZooKeeper 连接状态（如果可用）
-/*
+-- 替代方案：使用 system.replicas 查看复制状态
 SELECT
-    name,
-    value
-FROM system.zookeeper
-WHERE path = '/';
-*/
+    database,
+    table,
+    replica_name,
+    is_leader,
+    can_become_leader,
+    queue_size,
+    absolute_delay,
+    formatReadableTimeDelta(absolute_delay) AS delay_readable
+FROM system.replicas
+WHERE database NOT IN ('system', 'information_schema', 'default')
+ORDER BY database, table;
 
 -- 查看 Keeper 节点信息
 SELECT
@@ -367,18 +372,20 @@ ORDER BY create_time DESC;
 -- 10. 错误和异常监控
 -- ========================================
 
--- 查看查询错误
+-- 查看查询错误（如果启用query_log）
+/*
 SELECT
     type,
     exception_code,
     count() as error_count,
-    max(query_start_time) as last_occurred
+    max(event_time) as last_occurred
 FROM system.query_log
 WHERE type IN ('ExceptionWhileProcessing', 'ExceptionBeforeStart')
   AND event_date >= today()
 GROUP BY type, exception_code
 ORDER BY error_count DESC
 LIMIT 20;
+*/
 
 -- 查看最近的错误详情
 SELECT
@@ -426,7 +433,6 @@ SELECT
     initial_port as remote_port,
     connection_id,
     connected_at,
-    query_start_time,
     elapsed,
     is_cancelled
 FROM system.connections

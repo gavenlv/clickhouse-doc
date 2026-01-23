@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-01-23T14:37:50.411920",
+  "directory": "05-data-type",
+  "summary": {
+    "total_files": 2,
+    "total_statements": 39,
+    "total_success": 0,
+    "total_errors": 39
+  },
+  "results": {
+    "05-data-type\\01_numeric_types_examples.sql": [],
+    "05-data-type\\02_string_types_examples.sql": []
+  }
+}

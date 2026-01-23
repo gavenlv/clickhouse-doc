@@ -1,0 +1,46 @@
+{
+  "timestamp": "2026-01-23T14:39:17.365225",
+  "directory": "07-troubleshooting",
+  "summary": {
+    "total_files": 2,
+    "total_statements": 6,
+    "total_success": 3,
+    "total_errors": 3
+  },
+  "results": {
+    "07-troubleshooting\\01_connection_issues_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 01_connection_issues_examples.sql\n-- 从 01_connection_issues.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:33:37\n-- =======================================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "```\n\n2. **授予权限**\n   ```sql\n   GRANT ALL ON *.* TO app_user",
+        "success": false,
+        "result": "HTTP 400: Code: 62. DB::Exception: Syntax error: failed at position 1 (```\n\n2. **授予权限**\n   ```) (line 1, col 1): ```\n\n2. **授予权限**\n   ```sql\n   GRANT ALL ON *.* TO app_user\n. Expected one of: Query, Query with o"
+      },
+      {
+        "statement": "```\n\n3. **检查连接字符串**\n   ```bash\n   # 确保用户名和密码正确\n   clickhouse-client --user app_user --password your_password\n   ```\n\n## 问题 4: SSL/TLS 连接问题\n\n### 现象",
+        "success": false,
+        "result": "HTTP 400: Code: 62. DB::Exception: Back quoted string is not closed: Syntax error: failed at position 107 (```\n\n## 问题 4: SSL/TLS 连接问题\n\n### 现象\n) (line 7, col 4): ```\n\n## 问题 4: SSL/TLS 连接问题\n\n### 现象\n. . (SYNTAX_ER"
+      }
+    ],
+    "07-troubleshooting\\02_performance_issues_examples.sql": [
+      {
+        "statement": "-- ================================================\n-- 02_performance_issues_examples.sql\n-- 从 02_performance_issues.md 提取的 SQL 示例\n-- 提取时间: 2026-01-23 14:33:37\n-- =====================================",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "-- 4GB\n   ```\n\n2. **优化查询**\n   - 使用 LIMIT\n   - 避免 SELECT *\n   - 使用聚合函数\n\n3. **增加内存限制**\n   ```xml\n   <max_memory_usage>8000000000</max_memory_usage>\n   ```\n\n4. **使用物化视图**\n   ```sql\n   CREATE MATERIALIZED",
+        "success": true,
+        "result": "Comment - skipped"
+      },
+      {
+        "statement": "```\n\n## 问题 5: 合并积压\n\n### 现象\n\n- 分区数量持续增长\n- 查询性能下降\n\n### 诊断",
+        "success": false,
+        "result": "HTTP 400: Code: 62. DB::Exception: Back quoted string is not closed: Syntax error: failed at position 1 (```\n\n## 问题 5: 合并积压\n\n### 现象\n\n- 分区数量持续增长\n- 查询性能下降\n\n### 诊断\n) (line 1, col 1): ```\n\n## 问题 5: 合并积压\n\n### 现象\n\n- "
+      }
+    ]
+  }
+}

@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS test_info_schema.test_events ON CLUSTER 'treasuryclus
     event_type String,
     event_time DateTime,
     event_data String
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/{database}.{table}', '{replica}')
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (user_id, event_time);
 
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS test_info_schema.test_users ON CLUSTER 'treasuryclust
     email String,
     created_at DateTime,
     last_login DateTime
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/{database}.{table}', '{replica}')
 PARTITION BY toYYYYMM(created_at)
 ORDER BY user_id;
 
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS test_info_schema.test_metrics ON CLUSTER 'treasuryclu
     metric_name String,
     metric_value Float64,
     timestamp DateTime64(3)
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/{database}.{table}', '{replica}')
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (metric_name, timestamp);
 
@@ -143,13 +143,13 @@ WHERE database = 'test_info_schema';
 -- ========================================
 
 -- 测试查询：运行中的进程
-SELECT 
+SELECT
     query_id,
     user,
     query,
     elapsed,
-    rows_read,
-    bytes_read
+    read_rows,
+    read_bytes
 FROM system.processes
 ORDER BY elapsed DESC
 LIMIT 10;
@@ -170,7 +170,7 @@ CREATE TABLE IF NOT EXISTS test_data_deletion.test_logs ON CLUSTER 'treasuryclus
     event_time DateTime,
     event_data String,
     created_at DateTime DEFAULT now()
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/{database}.{table}', '{replica}')
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (event_time, event_id);
 
@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS test_data_deletion.test_events_ttl ON CLUSTER 'treasu
     event_type String,
     event_time DateTime,
     event_data String
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/{database}.{table}', '{replica}')
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (event_time, event_id)
 TTL event_time + INTERVAL 90 DAY;
@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS test_data_deletion.test_user_events ON CLUSTER 'treas
     event_type String,
     event_time DateTime,
     event_data String
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/{database}.{table}', '{replica}')
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (user_id, event_time);
 
@@ -203,7 +203,7 @@ CREATE TABLE IF NOT EXISTS test_data_deletion.test_transactions ON CLUSTER 'trea
     amount Float64,
     transaction_time DateTime,
     status String
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/{database}.{table}', '{replica}')
 PARTITION BY toYYYYMM(transaction_time)
 ORDER BY (transaction_id);
 
@@ -298,19 +298,11 @@ ORDER BY partition;
 -- ========================================
 
 -- 查看 TTL 配置
-SELECT 
-    database,
-    table,
-    expression,
-    result_column,
-    result_type,
-    is_compressed
-FROM system.ttl_tables
-WHERE database = 'test_data_deletion' 
-  AND table = 'test_events_ttl';
+-- 替代方案：使用 SHOW CREATE TABLE 查看 TTL 定义
+SHOW CREATE TABLE test_data_deletion.test_events_ttl;
 
 -- 手动触发 TTL 合并（可选）
-OPTIMIZE TABLE test_data_deletion.test_events_ttl ON CLUSTER 'treasurycluster' 
+OPTIMIZE TABLE test_data_deletion.test_events_ttl ON CLUSTER 'treasurycluster'
 FINAL;
 
 -- 查看剩余数据
@@ -334,17 +326,16 @@ ALTER TABLE test_data_deletion.test_user_events ON CLUSTER 'treasurycluster'
 DELETE WHERE user_id = 1;
 
 -- 监控 Mutation 进度
-SELECT 
+SELECT
     database,
     table,
     mutation_id,
     command,
     is_done,
     parts_to_do,
-    parts_to_do_names,
-    progress
+    parts_to_do_names
 FROM system.mutations
-WHERE database = 'test_data_deletion' 
+WHERE database = 'test_data_deletion'
   AND table = 'test_user_events'
 ORDER BY mutation_id DESC
 LIMIT 5;
@@ -364,8 +355,7 @@ WHERE status = 'failed';
 
 -- 使用轻量级删除删除失败的交易
 ALTER TABLE test_data_deletion.test_transactions ON CLUSTER 'treasurycluster'
-DELETE WHERE status = 'failed'
-SETTINGS lightweight_delete = 1;
+DELETE WHERE status = 'failed';
 
 -- 查询删除后的数据
 SELECT 
@@ -392,7 +382,7 @@ CREATE TABLE IF NOT EXISTS test_date_time.test_types ON CLUSTER 'treasurycluster
     datetime_col DateTime,
     datetime64_col DateTime64(3),
     timestamp_col UInt64
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/{database}.{table}', '{replica}')
 PARTITION BY toYYYYMM(datetime_col)
 ORDER BY id;
 
@@ -403,7 +393,7 @@ CREATE TABLE IF NOT EXISTS test_date_time.test_timezones ON CLUSTER 'treasuryclu
     event_time_utc DateTime,
     event_time_local DateTime('Asia/Shanghai'),
     event_time_ny DateTime('America/New_York')
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/{database}.{table}', '{replica}')
 PARTITION BY toYYYYMM(event_time_utc)
 ORDER BY id;
 
@@ -416,7 +406,7 @@ CREATE TABLE IF NOT EXISTS test_date_time.test_timeseries ON CLUSTER 'treasurycl
     hour_key String,
     day_key String,
     month_key String
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/{database}.{table}', '{replica}')
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (metric_name, timestamp);
 
@@ -475,11 +465,10 @@ FROM test_date_time.test_types
 LIMIT 5;
 
 -- 日期格式化
-SELECT 
+SELECT
     datetime_col,
     formatDateTime(datetime_col, '%Y-%m-%d %H:%M:%S') AS standard_format,
-    formatDateTime(datetime_col, '%Y年%m月%d日 %H时%M分%S秒') AS chinese_format,
-    formatDateTime(datetime_col, '%A, %B %d, %Y') AS full_format
+    formatDateTime(datetime_col, '%Y年%m月%d日 %H时%M分%S秒') AS chinese_format
 FROM test_date_time.test_types
 LIMIT 5;
 
@@ -568,12 +557,12 @@ GROUP BY day
 ORDER BY day;
 
 -- 查询本月的数据
-SELECT 
+SELECT
     toStartOfMonth(event_time) AS month,
     count() AS event_count
 FROM test_data_deletion.test_events_ttl
 WHERE event_time >= toStartOfMonth(now())
-  AND event_time < toEndOfMonth(now())
+  AND event_time < addMonths(toStartOfMonth(now()), 1)
 GROUP BY month;
 
 -- 使用 toStartOfDay 查询
@@ -690,17 +679,16 @@ WHERE database LIKE 'test_%'
 ORDER BY database, table;
 
 -- 查看所有 Mutation 的状态
-SELECT 
+SELECT
     database,
     table,
     mutation_id,
     command,
     is_done,
-    parts_to_do,
-    progress
+    parts_to_do
 FROM system.mutations
 WHERE database LIKE 'test_%'
-ORDER BY created;
+ORDER BY create_time;
 
 -- 查看所有副本状态
 SELECT 

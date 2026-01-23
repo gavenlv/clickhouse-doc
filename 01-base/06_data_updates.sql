@@ -15,7 +15,7 @@
 -- ========================================
 
 -- 场景：用户信息实时更新，保留最新的记录
-CREATE DATABASE IF NOT EXISTS update_examples;
+CREATE DATABASE IF NOT EXISTS update_examples ON CLUSTER 'treasurycluster';
 
 -- 创建用户信息表（ReplicatedReplacingMergeTree - 生产环境：使用复制引擎 + ON CLUSTER）
 CREATE TABLE IF NOT EXISTS update_examples.user_profile_replacing ON CLUSTER 'treasurycluster' (
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS update_examples.user_profile_replacing ON CLUSTER 'tr
     status UInt8,  -- 0: inactive, 1: active
     updated_at DateTime DEFAULT now(),
     version UInt64 DEFAULT 1
-) ENGINE = ReplicatedReplacingMergeTree(updated_at, version)
+) ENGINE = ReplicatedReplacingMergeTree(version)
 ORDER BY user_id;
 
 -- 插入初始数据
