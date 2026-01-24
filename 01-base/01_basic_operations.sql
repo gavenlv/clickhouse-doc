@@ -9,6 +9,7 @@
 create database if not exists test;
 use test;
 
+drop TABLE if EXISTS test_users ON CLUSTER treasurycluster SYNC;
 CREATE TABLE IF NOT EXISTS test_users ON CLUSTER 'treasurycluster' (
     id UInt64,
     name String,
@@ -34,6 +35,11 @@ INSERT INTO test_users (id, name, email, age) VALUES
 (3, 'Charlie', 'charlie@example.com', 28),
 (4, 'David', 'david@example.com', 35),
 (5, 'Eve', 'eve@example.com', 22);
+-- 利用mergetree 本身的特性去重 deduplicating-inserts-on-retries
+
+SELECT * FROM test_users;
+
+
 
 -- 批量插入（使用 VALUES）
 INSERT INTO test_users  (id, name, email, age)  VALUES
@@ -276,3 +282,136 @@ DROP TABLE IF EXISTS test_products ON CLUSTER 'treasurycluster' SYNC;
 -- 13. 查看所有表
 -- ========================================
 SHOW TABLES;
+
+-- ========================================
+-- 14. 数据去重与幂等性测试
+-- ========================================
+-- 说明：解决上游写入一半程序崩溃时，如何保证 ClickHouse 数据不重复
+
+-- ========================================
+-- 场景 1：ReplacingMergeTree - 保留最新版本
+-- ========================================
+-- 适用场景：用户资料更新、配置信息、状态变更
+
+DROP TABLE IF EXISTS dedup_user_profiles;
+
+CREATE TABLE dedup_user_profiles (
+    user_id UInt64,
+    profile_id String,       -- 业务唯一ID
+    name String,
+    email String,
+    phone String,
+    updated_at DateTime,
+    version UInt64,           -- 版本号（必需）
+    inserted_at DateTime DEFAULT now()
+) ENGINE = ReplacingMergeTree(version)  -- version 指定去重字段
+PARTITION BY toYYYYMM(updated_at)
+ORDER BY (user_id, profile_id)  -- 唯一键
+SETTINGS index_granularity = 8192;
+
+-- 插入初始数据（version 1）
+INSERT INTO dedup_user_profiles VALUES
+(1001, 'prof-001', '张三', 'zhangsan@example.com', '13800000001', '2024-01-01 10:00:00', 1, now()),
+(1002, 'prof-002', '李四', 'lisi@example.com', '13800000002', '2024-01-01 10:00:00', 1, now()),
+(1003, 'prof-003', '王五', 'wangwu@example.com', '13800000003', '2024-01-01 10:00:00', 1, now());
+
+-- 模拟程序崩溃：重复插入相同的数据
+-- 即使重复插入，也不会产生重复数据（相同的 profile_id + version）
+INSERT INTO dedup_user_profiles VALUES
+(1001, 'prof-001', '张三', 'zhangsan@example.com', '13800000001', '2024-01-01 10:00:00', 1, now()),
+(1002, 'prof-002', '李四', 'lisi@example.com', '13800000002', '2024-01-01 10:00:00', 1, now()),
+(1003, 'prof-003', '王五', 'wangwu@example.com', '13800000003', '2024-01-01 10:00:00', 1, now());
+
+-- 查询原始数据（可能看到重复）
+SELECT * FROM dedup_user_profiles
+ORDER BY user_id, profile_id, version;
+
+-- 查询去重后的数据（使用 argMax 手动去重 - 推荐）
+SELECT
+    user_id,
+    profile_id,
+    argMax(name, version) as name,
+    argMax(email, version) as email,
+    argMax(phone, version) as phone,
+    argMax(updated_at, version) as updated_at,
+    max(version) as latest_version
+FROM dedup_user_profiles
+GROUP BY user_id, profile_id
+ORDER BY user_id;
+
+-- 更新用户资料（version 2）
+INSERT INTO dedup_user_profiles VALUES
+(1001, 'prof-001', '张三丰', 'zhangsanfeng@example.com', '13800000011', '2024-01-01 11:00:00', 2, now()),
+(1002, 'prof-002', '李四光', 'lisiguang@example.com', '13800000012', '2024-01-01 11:00:00', 2, now());
+
+-- 再次查询去重后的数据（应该看到更新的资料）
+SELECT
+    user_id,
+    profile_id,
+    argMax(name, version) as name,
+    argMax(email, version) as email,
+    max(version) as latest_version
+FROM dedup_user_profiles
+GROUP BY user_id, profile_id
+ORDER BY user_id;
+
+-- 使用 FINAL 关键字查询（自动去重，但性能较差）
+SELECT * FROM dedup_user_profiles FINAL
+ORDER BY user_id;
+
+-- 手动触发合并
+OPTIMIZE TABLE dedup_user_profiles FINAL;
+
+-- 再次查询（已合并，无重复）
+SELECT * FROM dedup_user_profiles
+ORDER BY user_id, version;
+
+-- ========================================
+-- 场景 2：CollapsingMergeTree - 增量更新
+-- ========================================
+-- 适用场景：库存管理、订单状态、增量计数器
+
+DROP TABLE IF EXISTS dedup_inventory;
+
+CREATE TABLE dedup_inventory (
+    product_id UInt64,
+    product_name String,
+    quantity Int32,
+    sign Int8,               -- 1 for insert, -1 for delete（必需）
+    timestamp DateTime,
+    inserted_at DateTime DEFAULT now()
+) ENGINE = CollapsingMergeTree(sign)  -- sign 指定字段
+PARTITION BY toYYYYMM(timestamp)
+ORDER BY product_id
+SETTINGS index_granularity = 8192;
+
+-- 初始化库存（sign = 1）
+INSERT INTO dedup_inventory VALUES
+(101, '产品A', 100, 1, '2024-01-01 10:00:00', now()),
+(102, '产品B', 50, 1, '2024-01-01 10:00:00', now()),
+(103, '产品C', 75, 1, '2024-01-01 10:00:00', now());
+
+-- 销售商品（sign = -1）
+-- 如果程序崩溃，重试时再次执行，结果也是正确的
+INSERT INTO dedup_inventory VALUES
+(101, '产品A', 10, -1, '2024-01-01 11:00:00', now()),
+(102, '产品B', 5, -1, '2024-01-01 11:00:00', now());
+
+-- 进货（sign = 1）
+INSERT INTO dedup_inventory VALUES
+(101, '产品A', 20, 1, '2024-01-01 12:00:00', now()),
+(103, '产品C', 10, 1, '2024-01-01 12:00:00', now());
+
+-- 查询当前库存（使用 GROUP BY 抵消 sign）
+SELECT
+    product_id,
+    argMax(product_name, timestamp) as product_name,
+    sum(quantity * sign) as current_inventory,
+    max(timestamp) as last_updated
+FROM dedup_inventory
+GROUP BY product_id
+ORDER BY product_id;
+
+-- 使用 FINAL 查询
+SELECT * FROM dedup_inventory FINAL
+ORDER BY product_id, timestamp;
