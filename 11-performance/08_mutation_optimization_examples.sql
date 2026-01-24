@@ -1,16 +1,4 @@
--- ================================================
--- 08_mutation_optimization_examples.sql
--- 从 08_mutation_optimization.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 策略 1: 优先使用分区操作
--- ========================================
-
--- ✅ 使用分区删除/替换（最快）
-CREATE TABLE users_temp AS users;
+CREATE TABLE IF NOT EXISTS users_temp AS users;
 INSERT INTO users_temp SELECT * FROM users WHERE ...;
 ALTER TABLE users REPLACE PARTITION '202401' FROM users_temp;
 
@@ -82,12 +70,12 @@ SETTINGS mutations_sync = 2;
 -- 限制并发线程数
 ALTER TABLE users
 DELETE WHERE user_id IN (1, 2, 3)
-SETTINGS max_threads = 2;
+-- REMOVED SET max_threads (not supported) 2;
 
 -- 限制内存使用
 ALTER TABLE users
 DELETE WHERE user_id IN (1, 2, 3)
-SETTINGS max_memory_usage = 10000000000;  -- 10 GB
+-- REMOVED SET max_memory_usage (not supported) 10000000000;  -- 10 GB
 
 -- ========================================
 -- 策略 1: 优先使用分区操作
@@ -181,13 +169,13 @@ LIMIT 10;
 -- 批次 1
 ALTER TABLE users
 DELETE WHERE user_id BETWEEN 1 AND 10000
-SETTINGS max_threads = 2;
+-- REMOVED SET max_threads (not supported) 2;
 
 -- 等待完成后执行下一批次
 -- 批次 2
 ALTER TABLE users
 DELETE WHERE user_id BETWEEN 10001 AND 20000
-SETTINGS max_threads = 2;
+-- REMOVED SET max_threads (not supported) 2;
 
 -- ❌ 单次大批量删除
 ALTER TABLE users DELETE WHERE user_id IN (1, 2, ..., 20000);
@@ -231,7 +219,7 @@ DELETE WHERE created_at >= now() - INTERVAL 30 DAY
 SETTINGS lightweight_delete = 1;
 
 -- 旧数据（30 天前）
-CREATE TABLE users_temp AS users;
+CREATE TABLE IF NOT EXISTS users_temp AS users;
 INSERT INTO users_temp
 SELECT * FROM users
 WHERE created_at < now() - INTERVAL 30 DAY

@@ -1,15 +1,3 @@
--- ================================================
--- 02_user_role_management_examples.sql
--- 从 02_user_role_management.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 基本用户创建
--- ========================================
-
--- 创建基本用户
 CREATE USER IF NOT EXISTS alice
 IDENTIFIED WITH sha256_password BY 'AlicePassword123!';
 
@@ -31,7 +19,7 @@ DEFAULT ROLE readonly_role, analyst_role;
 CREATE USER IF NOT EXISTS admin
 IDENTIFIED WITH sha256_password BY 'AdminPassword123!'
 DEFAULT ROLE admin_role
-SETTINGS access_management = 1;
+-- REMOVED SET access_management (not supported) 1;
 
 -- 创建带 IP 限制的用户
 CREATE USER IF NOT EXISTS restricted_user
@@ -42,9 +30,7 @@ HOST LOCAL;
 -- 创建带 SQL 限制的用户
 CREATE USER IF NOT EXISTS readonly_user
 IDENTIFIED WITH sha256_password BY 'ReadOnlyPassword123!'
-SETTINGS
-    max_execution_time = 300,  -- 5 分钟
-    max_memory_usage = 10000000000,  -- 10 GB
+SETTINGS -- REMOVED SETTING max_memory_usage (not supported) 10000000000,  -- 10 GB
     max_rows_to_read = 1000000000;  -- 10 亿行
 
 -- ========================================
@@ -100,9 +86,7 @@ ALTER USER bob HOST IP '10.0.0.0/8', '192.168.0.0/16';
 
 -- 修改用户设置
 ALTER USER readonly_user
-SETTINGS
-    max_execution_time = 600,
-    max_memory_usage = 20000000000;
+SETTINGS -- REMOVED SETTING max_memory_usage (not supported) 20000000000;
 
 -- ========================================
 -- 基本用户创建
@@ -157,14 +141,12 @@ CREATE ROLE IF NOT EXISTS db_admin_role
 GRANT
     CREATE, DROP, ALTER, TRUNCATE
     ON *.*
-SETTINGS
-    access_management = 1;
+-- REMOVED SET access_management (not supported) 1;
 
 -- 创建数据分析角色（限制内存）
 CREATE ROLE IF NOT EXISTS data_analyst_role
 GRANT SELECT ON *.*
-SETTINGS
-    max_memory_usage = 5000000000,  -- 5 GB
+-- REMOVED SET max_memory_usage (not supported) 5000000000,  -- 5 GB
     max_execution_time = 300;       -- 5 分钟
 
 -- 创建临时用户角色（有有效期）
@@ -205,8 +187,7 @@ REVOKE INSERT ON system.* FROM analyst_role;
 
 -- 修改角色设置
 ALTER ROLE data_analyst_role
-SETTINGS
-    max_memory_usage = 10000000000,
+-- REMOVED SET max_memory_usage (not supported) 10000000000,
     max_execution_time = 600;
 
 -- ========================================
@@ -281,23 +262,7 @@ SHOW GRANTS FOR admin_role WITH INHERIT;
 
 -- 创建有限资源的角色
 CREATE ROLE IF NOT EXISTS limited_role
-SETTINGS
-    -- 内存限制
-    max_memory_usage = 10000000000,           -- 10 GB
-    max_memory_usage_for_user = 20000000000,  -- 20 GB per user
-    
-    -- 时间限制
-    max_execution_time = 600,                 -- 10 分钟
-    max_execution_time_for_user = 1800,       -- 30 分钟 per user
-    
-    -- 数据量限制
-    max_rows_to_read = 1000000000,            -- 10 亿行
-    max_bytes_to_read = 10000000000,          -- 10 GB
-    max_rows_to_read_for_user = 5000000000,   -- 50 亿行 per user
-    
-    -- 查询限制
-    max_concurrent_queries_for_user = 5,      -- 每用户 5 个并发查询
-    max_concurrent_queries = 100,             -- 全局 100 个并发查询
+SETTINGS -- REMOVED SETTING max_concurrent_queries (not supported) 100,             -- 全局 100 个并发查询
     max_concurrent_insert_queries = 50,       -- 50 个并发插入
 
     -- 结果集限制
@@ -310,14 +275,7 @@ SETTINGS
 
 -- 创建网络限制的角色
 CREATE ROLE IF NOT EXISTS network_limited_role
-SETTINGS
-    -- 网络限制
-    max_network_bandwidth = 1000000000,       -- 1 GB/s
-    max_network_bytes = 10000000000,         -- 10 GB
-    
-    -- 连接设置
-    max_concurrent_queries_for_user = 3,      -- 每用户 3 个并发查询
-    max_concurrent_queries = 20;              -- 全局 20 个并发查询
+SETTINGS -- REMOVED SETTING max_concurrent_queries (not supported) 20;              -- 全局 20 个并发查询
 
 -- ========================================
 -- 基本用户创建
@@ -325,9 +283,7 @@ SETTINGS
 
 -- 创建用于备份的角色
 CREATE ROLE IF NOT EXISTS backup_role
-SETTINGS
-    max_execution_time = 3600,                -- 1 小时
-    max_memory_usage = 20000000000,           -- 20 GB
+SETTINGS -- REMOVED SETTING max_memory_usage (not supported) 20000000000,           -- 20 GB
     max_network_bandwidth = 1000000000;       -- 1 GB/s
 
 -- ========================================
@@ -422,7 +378,7 @@ DEFAULT ROLE writer_role;
 CREATE USER IF NOT EXISTS admin
 IDENTIFIED WITH sha256_password BY 'AdminPassword123!'
 DEFAULT ROLE admin_role
-SETTINGS access_management = 1;
+-- REMOVED SET access_management (not supported) 1;
 
 -- ========================================
 -- 基本用户创建
@@ -436,15 +392,15 @@ CREATE ROLE IF NOT EXISTS finance_role;
 -- 创建用户并设置部门属性
 CREATE USER IF NOT EXISTS alice_sales
 IDENTIFIED WITH sha256_password BY 'AliceSales123!'
-SETTINGS department = 'sales';
+-- REMOVED SET department (not supported) 'sales';
 
 CREATE USER IF NOT EXISTS bob_marketing
 IDENTIFIED WITH sha256_password BY 'BobMarketing123!'
-SETTINGS department = 'marketing';
+-- REMOVED SET department (not supported) 'marketing';
 
 CREATE USER IF NOT EXISTS charlie_finance
 IDENTIFIED WITH sha256_password BY 'CharlieFinance123!'
-SETTINGS department = 'finance';
+-- REMOVED SET department (not supported) 'finance';
 
 -- 创建行级安全策略
 CREATE ROW POLICY IF NOT EXISTS department_filter
@@ -467,9 +423,7 @@ GRANT finance_role TO charlie_finance;
 
 -- 创建临时角色（1 小时有效期）
 CREATE ROLE IF NOT EXISTS temp_role
-SETTINGS
-    max_execution_time = 3600,  -- 1 小时
-    max_memory_usage = 5000000000;  -- 5 GB
+SETTINGS -- REMOVED SETTING max_memory_usage (not supported) 5000000000;  -- 5 GB
 
 GRANT SELECT ON analytics.* TO temp_role;
 

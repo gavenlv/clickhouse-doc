@@ -1,21 +1,3 @@
--- ================================================
--- 07_asynchronous_operations_examples.sql
--- 从 07_asynchronous_operations.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 配置异步插入
--- ========================================
-
--- 全局配置（在 config.xml 中）
-<clickhouse>
-    <async_insert>1</async_insert>
-    <async_insert_max_data_size>100000000</async_insert_max_data_size>
-    <async_insert_busy_timeout_ms>5000</async_insert_busy_timeout_ms>
-    <async_insert_max_wait_time_ms>10000</async_insert_max_wait_time_ms>
-</clickhouse>
 
 -- 查询级别配置
 INSERT INTO events
@@ -90,10 +72,6 @@ SETTINGS mv_insert_thread = 2;  -- 异步插入
 -- ========================================
 
 -- 全局配置（在 config.xml 中）
-<clickhouse>
-    <mutations_sync>0</mutations_sync>
-    <background_pool_size>16</background_pool_size>
-</clickhouse>
 
 -- 查询级别配置
 ALTER TABLE users

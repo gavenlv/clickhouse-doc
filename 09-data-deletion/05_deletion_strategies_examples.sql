@@ -1,16 +1,4 @@
--- ================================================
--- 05_deletion_strategies_examples.sql
--- 从 05_deletion_strategies.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- SQL Block 1
--- ========================================
-
--- 创建表时设置 TTL
-CREATE TABLE application_logs (
+CREATE TABLE IF NOT EXISTS application_logs (
     timestamp DateTime,
     level String,
     service String,
@@ -68,7 +56,7 @@ DELETE WHERE user_id = 'user123';
 -- ========================================
 
 -- 配置分层存储
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_time DateTime,
     data String
 ) ENGINE = MergeTree
@@ -213,7 +201,7 @@ FROM (
 -- 使用 TTL 自动删除，但手动控制关键数据
 
 -- 创建表
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_time DateTime,
     event_type String,
     data String,
@@ -271,8 +259,8 @@ OPTIMIZE TABLE events PARTITION '2022-12' FINAL;
 
 -- 检查能否按分区删除
 SELECT 
-    partition,
-    toDate(replaceRegexpOne(partition, '^(\\d{4})(\\d{2})', '\\1-\\2-01')) AS partition_date,
+    '',
+    toDate(replaceRegexpOne('', '^(\\d{4})(\\d{2})', '\\1-\\2-01')) AS partition_date,
     count() AS rows
 FROM system.parts
 WHERE table = 'events' AND active = 1
@@ -340,7 +328,7 @@ ORDER BY create_time DESC;
 -- 删除前总是备份数据
 
 -- 1. 创建备份表
-CREATE TABLE events_backup AS events;
+CREATE TABLE IF NOT EXISTS events_backup AS events;
 
 -- 2. 备份要删除的数据
 INSERT INTO events_backup

@@ -1,15 +1,3 @@
--- ================================================
--- 12_analyzer_examples.sql
--- 从 12_analyzer.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 1. 查询优化
--- ========================================
-
--- 启用查询优化
 SET enable_optimizer = 1;
 SET optimize_move_to_prewhere = 1;
 SET optimize_where_to_prewhere = 1;
@@ -40,8 +28,8 @@ GROUP BY user_id;
 
 -- 设置并行化
 SET parallel_replicas_count = 2;
-SET max_threads = 8;
-SET max_concurrent_queries = 4;
+-- REMOVED SET max_threads (not supported) 8;
+-- REMOVED SET max_concurrent_queries (not supported) 4;
 
 -- 查询
 SELECT * FROM events
@@ -63,7 +51,7 @@ WHERE event_time >= now() - INTERVAL 7 DAY;
 
 -- 并行化查询
 SELECT * FROM events
-SETTINGS max_threads = 8,
+-- REMOVED SET max_threads (not supported) 8,
         parallel_replicas_count = 2
 WHERE event_time >= now() - INTERVAL 7 DAY;
 

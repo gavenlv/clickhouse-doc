@@ -1,15 +1,3 @@
--- ================================================
--- 06_update_monitoring_examples.sql
--- 从 06_update_monitoring.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 1. 更新操作监控
--- ========================================
-
--- 查看 Mutation 列表
 SELECT 
     database,
     table,
@@ -168,11 +156,11 @@ ORDER BY latest_fail_time DESC;
 
 -- 监控 TTL 删除/更新操作
 -- 注意：system.ttl_tables 在某些配置中可能不可用
--- 替代方案：使用 SHOW CREATE TABLE 或查询 system.parts 查看分区变化
+-- 替代方案：使用 SHOW CREATE TABLE IF NOT EXISTS 或查询 system.parts 查看分区变化
 SELECT
     database,
     table,
-    partition,
+    '',
     sum(rows) AS total_rows,
     formatReadableSize(sum(bytes_on_disk)) AS total_size,
     min(modification_time) AS oldest_part_time,
@@ -191,7 +179,7 @@ ORDER BY database, table, partition;
 SELECT 
     type,
     partition_id,
-    partition,
+    '',
     part_name,
     rows,
     bytes_on_disk,
@@ -288,7 +276,7 @@ LIMIT 10;
 SELECT 
     database,
     table,
-    partition,
+    '',
     sum(rows) as total_rows,
     sum(bytes_on_disk) as total_bytes,
     formatReadableSize(sum(bytes_on_disk)) as readable_size,
@@ -353,13 +341,14 @@ ORDER BY created DESC;
 
 -- 监控 TTL 执行情况
 -- 注意：system.ttl_tables 在某些配置中可能不可用
--- 替代方案：使用 SHOW CREATE TABLE 查看配置，使用 system.parts 查看分区
-SHOW CREATE TABLE test_data_deletion.test_events_ttl;
+-- 替代方案：使用 SHOW CREATE TABLE IF NOT EXISTS 查看配置，使用 system.parts 查看分区
+SHOW DROP TABLE IF EXISTS test_data_deletion.test_events_ttl;
+CREATE TABLE IF NOT EXISTS test_data_deletion.test_events_ttl;
 
 -- 查看分区变化来推断 TTL 执行情况
 SELECT
     table,
-    partition,
+    '',
     sum(rows) AS total_rows,
     formatReadableSize(sum(bytes_on_disk)) AS total_size,
     min(modification_time) AS oldest_part,

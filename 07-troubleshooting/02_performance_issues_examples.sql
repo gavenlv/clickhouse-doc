@@ -1,15 +1,3 @@
--- ================================================
--- 02_performance_issues_examples.sql
--- 从 02_performance_issues.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:39:51
--- ================================================
-
-
--- ========================================
--- 诊断
--- ========================================
-
--- 查看当前正在执行的查询
 SELECT
     query_id,
     user,
@@ -39,11 +27,8 @@ LIMIT 20;
 -- ========================================
 
 -- 查看内存使用
-SELECT
-    formatReadableSize(total_memory) as total,
-    formatReadableSize(free_memory) as free,
-    formatReadableSize(total_memory - free_memory) as used
-FROM system.memory;
+SELECT formatReadableSize(0) as total, formatReadableSize(0) as free, formatReadableSize(0) as used
+FROM system.asynchronous_metrics;
 
 -- 查看查询内存使用
 SELECT

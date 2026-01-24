@@ -1,16 +1,9 @@
--- ================================================
--- 01_numeric_types_examples.sql
--- 从 01_numeric_types.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
+-- 创建数据库（如果存在则不创建）
+CREATE DATABASE IF NOT EXISTS example;
 
 
--- ========================================
--- 基础使用
--- ========================================
-
--- 创建表
-CREATE TABLE example.numeric_types (
+DROP TABLE IF EXISTS example.numeric_types;
+CREATE TABLE IF NOT EXISTS example.numeric_types (
     id UInt64,
     user_id UInt32,
     age UInt8,
@@ -56,7 +49,8 @@ SELECT
 -- ========================================
 
 -- 创建测试表
-CREATE TABLE example.sales (
+DROP TABLE IF EXISTS example.sales;
+CREATE TABLE IF NOT EXISTS example.sales (
     id UInt64,
     product_id UInt32,
     quantity UInt16,
@@ -96,13 +90,13 @@ ORDER BY product_id;
 -- ========================================
 
 -- ❌ 不好：使用 UInt64 存储年龄
-CREATE TABLE users_bad (
+CREATE TABLE IF NOT EXISTS users_bad (
     id UInt64,
     age UInt64      -- 浪费空间
 ) ENGINE = MergeTree ORDER BY id;
 
 -- ✅ 好：使用 UInt8 存储年龄
-CREATE TABLE users_good (
+CREATE TABLE IF NOT EXISTS users_good (
     id UInt64,
     age UInt8       -- 0-255，足够
 ) ENGINE = MergeTree ORDER BY id;
@@ -112,7 +106,7 @@ CREATE TABLE users_good (
 -- ========================================
 
 -- ✅ 推荐：主键使用 UInt64
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     id UInt64,
     user_id UInt64,
     event_time DateTime

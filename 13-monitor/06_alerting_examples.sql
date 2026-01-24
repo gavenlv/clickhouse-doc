@@ -1,15 +1,3 @@
--- ================================================
--- 06_alerting_examples.sql
--- 从 06_alerting.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- CPU 告警
--- ========================================
-
--- CPU 使用率告警
 SELECT
     'CPU' AS resource_type,
     'High Usage' AS alert_type,
@@ -258,7 +246,7 @@ FROM (
         SELECT
             database,
             table,
-            partition,
+            '',
             sum(rows) AS partition_rows
         FROM system.parts
         WHERE active
@@ -288,7 +276,7 @@ FROM (
         SELECT
             database,
             table,
-            partition,
+            '',
             sum(rows) AS partition_rows
         FROM system.parts
         WHERE active
@@ -455,6 +443,7 @@ WHERE is_alert = 1;
 -- ========================================
 
 -- 创建告警配置表
+DROP TABLE IF EXISTS monitoring.alert_config;
 CREATE TABLE IF NOT EXISTS monitoring.alert_config (
     category String,
     resource String,

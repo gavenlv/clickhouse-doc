@@ -1,16 +1,8 @@
--- ================================================
--- 04_skipping_indexes_examples.sql
--- 从 04_skipping_indexes.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
+-- 创建数据库（如果存在则不创建）
+CREATE DATABASE IF NOT EXISTS example;
 
 
--- ========================================
--- 索引粒度
--- ========================================
-
--- 创建表时设置索引粒度
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -29,7 +21,7 @@ SETTINGS index_granularity = 8192;  -- 每个 mark 8192 行
 -- ========================================
 
 -- 创建 minmax 索引
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
@@ -49,7 +41,7 @@ GRANULARITY 4;
 -- ========================================
 
 -- 创建 set 索引
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -69,7 +61,7 @@ GRANULARITY 4;
 -- ========================================
 
 -- 创建 bloom_filter 索引
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     user_email String,
@@ -89,7 +81,7 @@ GRANULARITY 1;
 -- ========================================
 
 -- 创建 ngrambf_v1 索引
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_data String,
@@ -109,7 +101,7 @@ GRANULARITY 1;
 -- ========================================
 
 -- 创建 tokenbf_v1 索引
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_data String,
@@ -129,7 +121,7 @@ GRANULARITY 1;
 -- ========================================
 
 -- 创建表时创建索引
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -192,7 +184,7 @@ WHERE event_type = 'click';
 -- 索引粒度
 -- ========================================
 
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,  -- 低基数（< 100 个值）
@@ -216,7 +208,7 @@ WHERE event_type = 'click'  -- ✅ 使用 set 索引
 -- 索引粒度
 -- ========================================
 
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     user_email String,  -- 高基数（每个用户唯一）
@@ -240,7 +232,7 @@ WHERE user_email = 'user@example.com'  -- ✅ 使用 bloom_filter 索引
 -- 索引粒度
 -- ========================================
 
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_data String,
@@ -264,7 +256,7 @@ WHERE event_data LIKE '%laptop%'  -- ✅ 使用 ngrambf_v1 索引
 -- 索引粒度
 -- ========================================
 
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -362,7 +354,7 @@ GRANULARITY 4;
 -- ========================================
 
 -- ✅ 适量索引
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,

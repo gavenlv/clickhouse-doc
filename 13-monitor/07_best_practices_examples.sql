@@ -1,16 +1,9 @@
--- ================================================
--- 07_best_practices_examples.sql
--- 从 07_best_practices.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
+-- 创建数据库（如果存在则不创建）
+CREATE DATABASE IF NOT EXISTS example;
 
 
--- ========================================
--- CPU 监控
--- ========================================
-
--- ✅ 最佳实践：监控 CPU 使用率趋势
-CREATE TABLE monitoring.cpu_metrics (
+DROP TABLE IF EXISTS monitoring.cpu_metrics;
+CREATE TABLE IF NOT EXISTS monitoring.cpu_metrics (
     timestamp DateTime,
     hostname String,
     cpu_usage_percent Float64,
@@ -151,7 +144,8 @@ WHERE type = 'QueryFinish'
 GROUP BY user;
 
 -- ✅ 最佳实践：监控慢查询趋势
-CREATE TABLE monitoring.slow_query_stats (
+DROP TABLE IF EXISTS monitoring.slow_query_stats;
+CREATE TABLE IF NOT EXISTS monitoring.slow_query_stats (
     date Date,
     hour UInt8,
     total_queries UInt64,
@@ -212,7 +206,7 @@ FROM (
     SELECT
         database,
         table,
-        partition,
+        '',
         sum(rows) AS partition_rows
     FROM system.parts
     WHERE active
@@ -248,7 +242,8 @@ GROUP BY database;
 -- ========================================
 
 -- ✅ 最佳实践：使用多级告警阈值
-CREATE TABLE monitoring.alert_thresholds (
+DROP TABLE IF EXISTS monitoring.alert_thresholds;
+CREATE TABLE IF NOT EXISTS monitoring.alert_thresholds (
     category String,
     resource String,
     metric String,
@@ -287,7 +282,8 @@ WHERE m.start_time <= now()
 -- ========================================
 
 -- ✅ 最佳实践：根据告警级别配置不同的通知策略
-CREATE TABLE monitoring.notification_policies (
+DROP TABLE IF EXISTS monitoring.notification_policies;
+CREATE TABLE IF NOT EXISTS monitoring.notification_policies (
     level String,
     channels Array(String),  -- email, slack, pagerduty, sms
     delay_seconds UInt32,     -- 延迟通知时间
@@ -341,6 +337,7 @@ GROUP BY user;
 -- ========================================
 
 -- ✅ 最佳实践：为查询日志设置 TTL
+DROP TABLE IF EXISTS system.query_log;
 CREATE TABLE IF NOT EXISTS system.query_log (
     type Enum8('QueryStart' = 1, 'QueryFinish' = 2, 'ExceptionBeforeStart' = 3, 'ExceptionWhileProcessing' = 4),
     event_date Date,
@@ -416,6 +413,7 @@ ORDER BY access_count DESC;
 -- ========================================
 
 -- ✅ 最佳实践：创建定期维护表
+DROP TABLE IF EXISTS monitoring.maintenance_schedule;
 CREATE TABLE IF NOT EXISTS monitoring.maintenance_schedule (
     id UInt64,
     resource String,

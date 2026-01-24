@@ -1,15 +1,3 @@
--- ================================================
--- 05_time_range_queries_examples.sql
--- 从 05_time_range_queries.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 简单范围查询
--- ========================================
-
--- 查询特定日期的数据
 SELECT * FROM events
 WHERE event_time >= '2024-01-20 00:00:00'
   AND event_time < '2024-01-21 00:00:00';
@@ -110,7 +98,7 @@ WHERE event_time >= '2024-01-01'
 -- ========================================
 
 -- 好的分区键设计
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     id UInt64,
     event_time DateTime,
     data String
@@ -215,7 +203,7 @@ LIMIT 1000;
 -- ========================================
 
 -- 创建表时物化日期列
-CREATE TABLE events_optimized (
+CREATE TABLE IF NOT EXISTS events_optimized (
     id UInt64,
     event_time DateTime,
     event_date Date MATERIALIZED toDate(event_time),

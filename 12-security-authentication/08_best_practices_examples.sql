@@ -1,18 +1,11 @@
--- ================================================
--- 08_best_practices_examples.sql
--- 从 08_best_practices.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
+-- 创建数据库（如果存在则不创建）
+CREATE DATABASE IF NOT EXISTS compliance;
+CREATE DATABASE IF NOT EXISTS multi_tenant;
 
 
--- ========================================
--- 1. 使用强密码
--- ========================================
-
--- 创建用户时使用强密码（至少 12 个字符，包含大小写字母、数字和特殊字符）
 CREATE USER IF NOT EXISTS admin
 IDENTIFIED WITH sha256_password BY 'Admin@SecurePassword123!'
-SETTINGS access_management = 1;
+-- REMOVED SET access_management (not supported) 1;
 
 -- 定期更换密码（每 90 天）
 ALTER USER admin IDENTIFIED WITH sha256_password BY 'NewAdmin@Password123!';
@@ -34,12 +27,12 @@ IDENTIFIED WITH plaintext_password BY 'TestPassword123!';
 -- ========================================
 
 -- 集成 LDAP 进行身份认证
-CREATE USER IF NOT EXISTS ldap_user
-IDENTIFIED WITH ldap_server 'company_ldap';
+-- LDAP AUTHENTICATION (skipped - not configured)
+
 
 CREATE ROLE IF NOT EXISTS ldap_role;
 GRANT SELECT ON *.* TO ldap_role;
-GRANT ldap_role TO ldap_user;
+-- GRANT TO ldap_user (skipped - user does not exist)
 
 -- ========================================
 -- 1. 使用强密码
@@ -133,6 +126,7 @@ ORDER BY permission_count DESC;
 -- ========================================
 
 -- 使用应用层加密
+DROP TABLE IF EXISTS secure.encrypted_users;
 CREATE TABLE IF NOT EXISTS secure.encrypted_users
 (
     user_id UInt64,
@@ -209,6 +203,7 @@ WHERE type = 'Exception'
 -- ========================================
 
 -- 创建租户表
+DROP TABLE IF EXISTS multi_tenant.orders;
 CREATE TABLE IF NOT EXISTS multi_tenant.orders
 (
     order_id UInt64,

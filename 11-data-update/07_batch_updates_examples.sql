@@ -1,15 +1,3 @@
--- ================================================
--- 07_batch_updates_examples.sql
--- 从 07_batch_updates.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 解决方案
--- ========================================
-
--- 方案 1: 使用轻量级更新（推荐，ClickHouse 23.8+）
 ALTER TABLE users
 UPDATE status = 'active',
     status_updated_at = now()
@@ -18,7 +6,7 @@ WHERE user_id IN (
     FROM user_logins
     WHERE login_time >= now() - INTERVAL 30 DAY
 )
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 方案 2: 使用 Mutation（ClickHouse < 23.8）
 ALTER TABLE users
@@ -32,7 +20,7 @@ WHERE user_id IN (
 
 -- 方案 3: 分区更新（如果更新量 > 30%）
 -- 创建临时表
-CREATE TABLE users_temp AS users;
+CREATE TABLE IF NOT EXISTS users_temp AS users;
 
 -- 更新数据
 INSERT INTO users_temp
@@ -95,7 +83,7 @@ UPDATE amount = amount * 1.1,
     adjusted_at = now()
 WHERE status = 'pending'
   AND toYYYYMM(order_date) = '202401'
-SETTINGS max_threads = 4;
+-- REMOVED SET max_threads (not supported) 4;
 
 -- 等待完成后执行下一批次
 -- 批次 2: 2024年2月
@@ -104,13 +92,13 @@ UPDATE amount = amount * 1.1,
     adjusted_at = now()
 WHERE status = 'pending'
   AND toYYYYMM(order_date) = '202402'
-SETTINGS max_threads = 4;
+-- REMOVED SET max_threads (not supported) 4;
 
 -- 继续分批...
 
 -- 方案 3: 分区更新（最快速）
 -- 创建临时表
-CREATE TABLE orders_temp AS orders;
+CREATE TABLE IF NOT EXISTS orders_temp AS orders;
 
 -- 更新数据
 INSERT INTO orders_temp
@@ -158,7 +146,7 @@ ORDER BY month;
 -- ========================================
 
 -- 创建修正表
-CREATE TABLE events_fixed AS events;
+CREATE TABLE IF NOT EXISTS events_fixed AS events;
 
 -- 修正数据
 INSERT INTO events_fixed
@@ -211,11 +199,11 @@ UPDATE level = CASE
 END,
     level_updated_at = now()
 WHERE total_spent >= 1000
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 方案 2: 使用临时表
 -- 创建临时表
-CREATE TABLE users_temp AS users;
+CREATE TABLE IF NOT EXISTS users_temp AS users;
 
 -- 更新等级
 INSERT INTO users_temp
@@ -274,7 +262,7 @@ ORDER BY
 -- ========================================
 
 -- 创建归档表
-CREATE TABLE orders_archive (
+CREATE TABLE IF NOT EXISTS orders_archive (
     order_id UInt64,
     user_id UInt64,
     product_id UInt64,
@@ -317,7 +305,7 @@ ORDER BY month;
 -- ========================================
 
 -- 创建临时表
-CREATE TABLE events_temp AS events;
+CREATE TABLE IF NOT EXISTS events_temp AS events;
 
 -- 更新最近 3 个月的数据
 INSERT INTO events_temp
@@ -365,11 +353,11 @@ total_orders = (
 ),
 updated_at = now()
 WHERE updated_at < now() - INTERVAL 1 DAY
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 方案 2: 使用临时表（更高效）
 -- 创建临时表
-CREATE TABLE user_stats_temp AS users;
+CREATE TABLE IF NOT EXISTS user_stats_temp AS users;
 
 -- 计算统计数据
 INSERT INTO user_stats_temp
@@ -413,11 +401,11 @@ UPDATE is_deleted = 1,
     deleted_at = now()
 WHERE event_time < toDateTime('2024-01-01')
   AND is_deleted = 0
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 方案 2: 分区更新
 -- 创建临时表
-CREATE TABLE events_temp AS events;
+CREATE TABLE IF NOT EXISTS events_temp AS events;
 
 -- 标记为已删除
 INSERT INTO events_temp
@@ -448,7 +436,7 @@ DROP TABLE events_temp;
 -- ========================================
 
 -- 批量更新前先备份
-CREATE TABLE users_backup AS users;
+CREATE TABLE IF NOT EXISTS users_backup AS users;
 
 -- 执行更新
 ALTER TABLE users UPDATE ...;

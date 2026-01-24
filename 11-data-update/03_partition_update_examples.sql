@@ -1,15 +1,7 @@
--- ================================================
--- 03_partition_update_examples.sql
--- 从 03_partition_update.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
+-- 创建数据库（如果存在则不创建）
+CREATE DATABASE IF NOT EXISTS example;
 
 
--- ========================================
--- REPLACE PARTITION
--- ========================================
-
--- 从另一个表替换分区
 ALTER TABLE table_name
 REPLACE PARTITION partition_expr
 FROM source_table;
@@ -51,7 +43,8 @@ WHERE partition_condition;
 -- ========================================
 
 -- 准备测试表
-CREATE TABLE test_partition.users (
+DROP TABLE IF EXISTS test_partition.users;
+CREATE TABLE IF NOT EXISTS test_partition.users (
     user_id UInt64,
     username String,
     email String,
@@ -71,7 +64,8 @@ INSERT INTO test_partition.users VALUES
 (5, 'user5', 'user5@example.com', 'pending', '2024-02-20 12:00:00', '2024-02-20 12:00:00');
 
 -- 创建临时表
-CREATE TABLE test_partition.users_temp AS test_partition.users;
+DROP TABLE IF EXISTS test_partition.users_temp;
+CREATE TABLE IF NOT EXISTS test_partition.users_temp AS test_partition.users;
 
 -- 更新数据（将 status 改为 active）
 INSERT INTO test_partition.users_temp
@@ -103,7 +97,8 @@ DROP TABLE test_partition.users_temp;
 -- ========================================
 
 -- 创建两个表
-CREATE TABLE test_partition.table1 (
+DROP TABLE IF EXISTS test_partition.table1;
+CREATE TABLE IF NOT EXISTS test_partition.table1 (
     id UInt64,
     value String,
     created_at DateTime
@@ -111,7 +106,8 @@ CREATE TABLE test_partition.table1 (
 PARTITION BY toYYYYMM(created_at)
 ORDER BY id;
 
-CREATE TABLE test_partition.table2 (
+DROP TABLE IF EXISTS test_partition.table2;
+CREATE TABLE IF NOT EXISTS test_partition.table2 (
     id UInt64,
     value String,
     created_at DateTime
@@ -145,7 +141,8 @@ SELECT * FROM test_partition.table2 WHERE toYYYYMM(created_at) = '202401';
 -- ========================================
 
 -- 备份分区数据
-CREATE TABLE test_partition.users_backup AS test_partition.users;
+DROP TABLE IF EXISTS test_partition.users_backup;
+CREATE TABLE IF NOT EXISTS test_partition.users_backup AS test_partition.users;
 
 -- 删除旧分区
 ALTER TABLE test_partition.users
@@ -176,7 +173,8 @@ DROP TABLE test_partition.users_backup;
 -- ========================================
 
 -- 创建临时表
-CREATE TABLE test_partition.users_temp AS test_partition.users;
+DROP TABLE IF EXISTS test_partition.users_temp;
+CREATE TABLE IF NOT EXISTS test_partition.users_temp AS test_partition.users;
 
 -- 更新多个分区的数据
 INSERT INTO test_partition.users_temp
@@ -208,7 +206,8 @@ GROUP BY month;
 -- ========================================
 
 -- 创建源表和目标表
-CREATE TABLE test_partition.source_table (
+DROP TABLE IF EXISTS test_partition.source_table;
+CREATE TABLE IF NOT EXISTS test_partition.source_table (
     id UInt64,
     value String,
     created_at DateTime
@@ -216,7 +215,8 @@ CREATE TABLE test_partition.source_table (
 PARTITION BY toYYYYMM(created_at)
 ORDER BY id;
 
-CREATE TABLE test_partition.target_table (
+DROP TABLE IF EXISTS test_partition.target_table;
+CREATE TABLE IF NOT EXISTS test_partition.target_table (
     id UInt64,
     value String,
     created_at DateTime
@@ -247,7 +247,8 @@ SELECT * FROM test_partition.target_table;
 -- ========================================
 
 -- 创建归档表
-CREATE TABLE test_partition.users_archive (
+DROP TABLE IF EXISTS test_partition.users_archive;
+CREATE TABLE IF NOT EXISTS test_partition.users_archive (
     user_id UInt64,
     username String,
     email String,
@@ -279,7 +280,8 @@ ORDER BY month;
 -- ========================================
 
 -- 创建新表（优化结构）
-CREATE TABLE test_partition.users_new (
+DROP TABLE IF EXISTS test_partition.users_new;
+CREATE TABLE IF NOT EXISTS test_partition.users_new (
     user_id UInt64,
     username String,
     email String,
@@ -307,7 +309,8 @@ FROM test_partition.users;
 -- ========================================
 
 -- 创建修正后的数据
-CREATE TABLE test_partition.orders_fixed AS test_partition.orders;
+DROP TABLE IF EXISTS test_partition.orders_fixed;
+CREATE TABLE IF NOT EXISTS test_partition.orders_fixed AS test_partition.orders;
 
 -- 修正数据（将所有订单金额增加 10%）
 INSERT INTO test_partition.orders_fixed
@@ -341,7 +344,8 @@ WHERE toYYYYMM(order_date) = '202401'
 -- ========================================
 
 -- 创建临时表
-CREATE TABLE test_partition.events_temp AS test_partition.events;
+DROP TABLE IF EXISTS test_partition.events_temp;
+CREATE TABLE IF NOT EXISTS test_partition.events_temp AS test_partition.events;
 
 -- 更新最近 3 个月的数据
 INSERT INTO test_partition.events_temp
@@ -381,7 +385,8 @@ GROUP BY month;
 -- ========================================
 
 -- 创建测试表
-CREATE TABLE test_partition.users_test AS test_partition.users;
+DROP TABLE IF EXISTS test_partition.users_test;
+CREATE TABLE IF NOT EXISTS test_partition.users_test AS test_partition.users;
 
 -- 在测试表上测试更新逻辑
 INSERT INTO test_partition.users_test
@@ -411,7 +416,7 @@ DROP TABLE test_partition.users_test;
 -- ========================================
 
 -- 按月分区（推荐）
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
@@ -455,7 +460,7 @@ INSERT INTO table1 SELECT * FROM table2 WHERE ...;
 -- ========================================
 
 -- 使用临时表存储更新后的数据
-CREATE TABLE temp_users AS users;
+CREATE TABLE IF NOT EXISTS temp_users AS users;
 
 -- 更新数据
 INSERT INTO temp_users
@@ -475,7 +480,7 @@ DROP TABLE temp_users;
 
 -- 查看表的分区
 SELECT 
-    partition,
+    '',
     sum(rows) as total_rows,
     sum(bytes_on_disk) as total_bytes,
     formatReadableSize(sum(bytes_on_disk)) as readable_size
@@ -517,7 +522,7 @@ GROUP BY month, status;
 SELECT 
     type,
     partition_id,
-    partition,
+    '',
     part_name,
     rows,
     bytes_on_disk,
@@ -533,7 +538,7 @@ LIMIT 20;
 -- ========================================
 
 -- 检查分区是否存在
-SELECT distinct partition
+SELECT distinct ''
 FROM system.parts
 WHERE database = 'test_partition' 
   AND table = 'users'

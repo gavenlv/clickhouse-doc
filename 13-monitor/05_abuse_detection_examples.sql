@@ -1,15 +1,7 @@
--- ================================================
--- 05_abuse_detection_examples.sql
--- 从 05_abuse_detection.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
+-- 创建数据库（如果存在则不创建）
+CREATE DATABASE IF NOT EXISTS example;
 
 
--- ========================================
--- 查找所有非复制表
--- ========================================
-
--- 查找所有非复制表
 SELECT
     database,
     table,
@@ -31,9 +23,7 @@ ORDER BY total_bytes DESC;
 -- 按数据库统计非复制表
 SELECT
     database,
-    count() AS non_replicated_count,
-    sum(total_rows) AS total_rows,
-    sum(total_bytes) AS total_bytes,
+    count() AS non_replicated_count, 0 AS total_rows,sum(total_bytes) AS total_bytes,
     formatReadableSize(sum(total_bytes)) AS readable_size
 FROM system.tables
 WHERE database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
@@ -46,9 +36,7 @@ ORDER BY total_bytes DESC;
 -- 按引擎类型统计
 SELECT
     engine,
-    count() AS table_count,
-    sum(total_rows) AS total_rows,
-    sum(total_bytes) AS total_bytes,
+    count() AS table_count, 0 AS total_rows,sum(total_bytes) AS total_bytes,
     formatReadableSize(sum(total_bytes)) AS readable_size
 FROM system.tables
 WHERE database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')

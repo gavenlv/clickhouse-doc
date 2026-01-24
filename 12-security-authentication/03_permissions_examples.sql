@@ -1,15 +1,3 @@
--- ================================================
--- 03_permissions_examples.sql
--- 从 03_permissions.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 授予全局权限
--- ========================================
-
--- 授予全局 SELECT 权限（只读）
 GRANT SELECT ON *.* TO readonly_role;
 
 -- 授予全局 INSERT 和 SELECT 权限（读写）
@@ -354,7 +342,7 @@ DEFAULT ROLE analyzer_role;
 CREATE USER IF NOT EXISTS admin
 IDENTIFIED WITH sha256_password BY 'Admin123!'
 DEFAULT ROLE admin_role
-SETTINGS access_management = 1;
+-- REMOVED SET access_management (not supported) 1;
 
 -- ========================================
 -- 授予全局权限
@@ -427,15 +415,15 @@ GRANT SELECT ON finance.* TO finance_reader;
 -- 创建用户
 CREATE USER IF NOT EXISTS alice_sales
 IDENTIFIED WITH sha256_password BY 'AliceSales123!'
-SETTINGS department = 'sales';
+-- REMOVED SET department (not supported) 'sales';
 
 CREATE USER IF NOT EXISTS bob_marketing
 IDENTIFIED WITH sha256_password BY 'BobMarketing123!'
-SETTINGS department = 'marketing';
+-- REMOVED SET department (not supported) 'marketing';
 
 CREATE USER IF NOT EXISTS charlie_finance
 IDENTIFIED WITH sha256_password BY 'CharlieFinance123!'
-SETTINGS department = 'finance';
+-- REMOVED SET department (not supported) 'finance';
 
 -- 分配角色
 GRANT sales_reader TO alice_sales;
@@ -454,9 +442,7 @@ AS RESTRICTIVE TO sales_reader, marketing_reader, finance_reader;
 
 -- 创建临时角色（24 小时有效期）
 CREATE ROLE IF NOT EXISTS temp_access_role
-SETTINGS
-    max_execution_time = 86400,  -- 24 小时
-    max_memory_usage = 5000000000;  -- 5 GB
+SETTINGS -- REMOVED SETTING max_memory_usage (not supported) 5000000000;  -- 5 GB
 
 GRANT SELECT ON analytics.* TO temp_access_role;
 

@@ -1,16 +1,4 @@
--- ================================================
--- 07_time_series_analysis_examples.sql
--- 从 07_time_series_analysis.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 时间序列数据特征
--- ========================================
-
--- 创建时间序列表
-CREATE TABLE time_series (
+CREATE TABLE IF NOT EXISTS time_series (
     timestamp DateTime,
     metric_name String,
     value Float64,

@@ -1,16 +1,4 @@
--- ================================================
--- 08_case_studies_examples.sql
--- 从 08_case_studies.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 方案设计
--- ========================================
-
--- 订单表结构
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
     order_id UInt64,
     user_id UInt64,
     product_id UInt64,
@@ -23,7 +11,7 @@ PARTITION BY toYYYYMM(order_time)
 ORDER BY (order_id, order_time);
 
 -- 订单事件表（记录状态变更）
-CREATE TABLE order_events (
+CREATE TABLE IF NOT EXISTS order_events (
     event_id UInt64,
     order_id UInt64,
     from_status String,
@@ -45,7 +33,7 @@ UPDATE order_status = 'cancelled',
     updated_at = now()
 WHERE order_status = 'pending'
   AND order_time < now() - INTERVAL 30 MINUTE
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 2. 使用物化视图自动计算
 -- 创建订单状态统计物化视图
@@ -62,7 +50,7 @@ GROUP BY month, order_status;
 
 -- 3. 使用分区更新（每日归档）
 -- 将已完成的订单移动到归档表
-CREATE TABLE orders_archive AS orders;
+CREATE TABLE IF NOT EXISTS orders_archive AS orders;
 
 ALTER TABLE orders_archive
 EXCHANGE PARTITION toYYYYMM(now() - INTERVAL 3 MONTH)
@@ -84,7 +72,7 @@ UPDATE order_status = 'cancelled'
 WHERE order_status = 'pending'
   AND order_time >= now() - INTERVAL 1 HOUR
   AND order_time < now() - INTERVAL 30 MINUTE
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- ========================================
 -- 方案设计
@@ -116,7 +104,7 @@ GROUP BY order_status;
 -- ========================================
 
 -- 交易表结构
-CREATE TABLE transactions (
+CREATE TABLE IF NOT EXISTS transactions (
     transaction_id UInt64,
     user_id UInt64,
     account_id UInt64,
@@ -135,7 +123,7 @@ ORDER BY (transaction_id, transaction_time);
 -- ========================================
 
 -- 1. 创建临时表
-CREATE TABLE transactions_temp AS transactions;
+CREATE TABLE IF NOT EXISTS transactions_temp AS transactions;
 
 -- 2. 逐月修正数据（每月独立处理）
 -- 2023年1月
@@ -206,7 +194,7 @@ ORDER BY month;
 -- ========================================
 
 -- 更新前备份
-CREATE TABLE transactions_backup_202301 AS transactions
+CREATE TABLE IF NOT EXISTS transactions_backup_202301 AS transactions
 SELECT *
 FROM transactions
 WHERE toYYYYMM(transaction_time) = '202301';
@@ -226,7 +214,7 @@ FROM transactions_backup;
 -- ========================================
 
 -- 日志表结构
-CREATE TABLE logs (
+CREATE TABLE IF NOT EXISTS logs (
     log_id UInt64,
     user_id UInt64,
     log_type String,
@@ -239,7 +227,7 @@ PARTITION BY toYYYYMM(log_time)
 ORDER BY (user_id, log_time);
 
 -- 处理统计表
-CREATE TABLE log_processing_stats (
+CREATE TABLE IF NOT EXISTS log_processing_stats (
     stat_date Date,
     processed_count UInt64,
     unprocessed_count UInt64,
@@ -257,8 +245,7 @@ UPDATE processed = 1,
     processed_at = now()
 WHERE processed = 0
   AND log_time < now() - INTERVAL 1 HOUR
-SETTINGS 
-    lightweight_update = 1,
+-- REMOVED SET lightweight_update (not supported) 1,
     max_threads = 8;
 
 -- 2. 更新统计表
@@ -282,7 +269,7 @@ ON DUPLICATE KEY UPDATE
 
 -- 重新设计为追加模式
 -- 原始日志表（只追加，不更新）
-CREATE TABLE logs_raw (
+CREATE TABLE IF NOT EXISTS logs_raw (
     log_id UInt64,
     user_id UInt64,
     log_type String,
@@ -293,7 +280,7 @@ PARTITION BY toYYYYMM(log_time)
 ORDER BY (user_id, log_time);
 
 -- 处理事件表（记录处理状态）
-CREATE TABLE log_processing_events (
+CREATE TABLE IF NOT EXISTS log_processing_events (
     event_id UInt64,
     log_id UInt64,
     event_type String,  -- processed, error
@@ -334,7 +321,7 @@ LIMIT 1000;
 -- ========================================
 
 -- 用户基本信息表（稳定数据）
-CREATE TABLE users_base (
+CREATE TABLE IF NOT EXISTS users_base (
     user_id UInt64,
     username String,
     email String,
@@ -343,7 +330,7 @@ CREATE TABLE users_base (
 ORDER BY user_id;
 
 -- 用户画像表（频繁更新）
-CREATE TABLE user_profiles (
+CREATE TABLE IF NOT EXISTS user_profiles (
     user_id UInt64,
     tags Array(String),
     interests Array(String),
@@ -354,7 +341,7 @@ CREATE TABLE user_profiles (
 ORDER BY user_id;
 
 -- 用户画像变更日志
-CREATE TABLE user_profile_changes (
+CREATE TABLE IF NOT EXISTS user_profile_changes (
     change_id UInt64,
     user_id UInt64,
     change_type String,  -- add_tag, remove_tag, update_level
@@ -376,7 +363,7 @@ UPDATE tags = arrayAppend(tags, 'premium'),
     last_active = now(),
     updated_at = now()
 WHERE user_id IN (1, 2, 3, ..., 1000)
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 2. 记录变更日志
 INSERT INTO user_profile_changes
@@ -417,7 +404,7 @@ GROUP BY user_id, tags, interests, activity_level;
 -- ========================================
 
 -- 事实表
-CREATE TABLE sales_facts (
+CREATE TABLE IF NOT EXISTS sales_facts (
     sale_id UInt64,
     product_id UInt64,
     customer_id UInt64,
@@ -431,7 +418,7 @@ PARTITION BY toYYYYMM(sale_date)
 ORDER BY (sale_id, sale_date);
 
 -- ETL 日志表
-CREATE TABLE etl_logs (
+CREATE TABLE IF NOT EXISTS etl_logs (
     log_id UInt64,
     source_system String,
     target_table String,
@@ -450,7 +437,7 @@ ORDER BY (start_time, source_system);
 -- ========================================
 
 -- 1. 创建临时表
-CREATE TABLE sales_facts_temp AS sales_facts;
+CREATE TABLE IF NOT EXISTS sales_facts_temp AS sales_facts;
 
 -- 2. 从外部数据源加载数据
 -- 假设数据已导出到 CSV 文件

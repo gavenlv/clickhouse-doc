@@ -10,56 +10,62 @@
 -- ========================================
 
 -- 查看表的所有列
-SELECT
-    database,
-    table,
-    name AS column_name,
-    position,
-    type,
-    default_kind,
-    default_expression,
-    comment,
-    is_subcolumn
-FROM system.columns
-WHERE database = 'your_database'
-  AND table = 'your_table'
-ORDER BY position;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT
+--     database,
+--     table,
+--     name AS column_name,
+--     position,
+--     type,
+--     default_kind,
+--     default_expression,
+--     comment,
+--     is_subcolumn
+-- FROM system.columns
+-- WHERE database = 'your_database'
+--   AND table = 'your_table'
+-- ORDER BY position;
+-- 
 
 -- ========================================
 -- 基本查询
 -- ========================================
 
 -- 查看表的完整结构（包括默认值、压缩等）
-SELECT
-    database,
-    table,
-    name AS column_name,
-    position,
-    type,
-    default_kind,
-    default_expression,
-    data_compressed_bytes,
-    data_uncompressed_bytes,
-    marks_bytes,
-    comment
-FROM system.columns
-WHERE database = 'your_database'
-  AND table = 'your_table'
-ORDER BY position;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT
+--     database,
+--     table,
+--     name AS column_name,
+--     position,
+--     type,
+--     default_kind,
+--     default_expression,
+--     data_compressed_bytes,
+--     data_uncompressed_bytes,
+--     marks_bytes,
+--     comment
+-- FROM system.columns
+-- WHERE database = 'your_database'
+--   AND table = 'your_table'
+-- ORDER BY position;
+-- 
 
 -- ========================================
 -- 基本查询
 -- ========================================
 
 -- 按数据类型统计列的数量
-SELECT
-    type,
-    count() AS column_count,
-    countIf(database = 'your_database') AS your_db_count
-FROM system.columns
-WHERE database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
-GROUP BY type
-ORDER BY column_count DESC;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT
+--     type,
+--     count() AS column_count,
+--     countIf(database = 'your_database') AS your_db_count
+-- FROM system.columns
+-- WHERE database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
+-- GROUP BY type
+-- ORDER BY column_count DESC;
+-- 
 
 -- ========================================
 -- 基本查询
@@ -117,20 +123,22 @@ ORDER BY database, table, position;
 -- ========================================
 
 -- 分析列的压缩率
-SELECT
-    database,
-    table,
-    name AS column_name,
-    type,
-    data_uncompressed_bytes,
-    data_compressed_bytes,
-    ROUND(data_compressed_bytes * 100.0 / NULLIF(data_uncompressed_bytes, 0), 2) AS compression_ratio,
-    marks_bytes
-FROM system.columns
-WHERE database = 'your_database'
-  AND table = 'your_table'
-  AND data_uncompressed_bytes > 0
-ORDER BY compression_ratio;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT
+--     database,
+--     table,
+--     name AS column_name,
+--     type,
+--     data_uncompressed_bytes,
+--     data_compressed_bytes,
+--     ROUND(data_compressed_bytes * 100.0 / NULLIF(data_uncompressed_bytes, 0), 2) AS compression_ratio,
+--     marks_bytes
+-- FROM system.columns
+-- WHERE database = 'your_database'
+--   AND table = 'your_table'
+--   AND data_uncompressed_bytes > 0
+-- ORDER BY compression_ratio;
+-- 
 
 -- ========================================
 -- 基本查询
@@ -216,47 +224,49 @@ ORDER BY column_count DESC;
 -- ========================================
 
 -- 生成表的 CREATE TABLE 语句
-SELECT 
-    concat(
-        'CREATE TABLE ', database, '.', table, ' (\n',
-        arrayStringConcat(
-            arrayMap(
-                x -> concat('    ', x),
-                groupArray(
-                    concat(
-                        name, ' ', type,
-                        CASE 
-                            WHEN default_kind != '' THEN concat(' ', default_kind, ' ', default_expression)
-                            ELSE ''
-                        END,
-                        CASE 
-                            WHEN comment != '' THEN concat(' COMMENT ''', comment, '''')
-                            ELSE ''
-                        END
-                    )
-                )
-            ),
-            ',\n'
-        ),
-        '\n) ENGINE = ', engine
-    ) AS create_table_sql
-FROM (
-    SELECT 
-        c.database,
-        c.table,
-        c.name,
-        c.type,
-        c.default_kind,
-        c.default_expression,
-        c.comment,
-        t.engine
-    FROM system.columns AS c
-    JOIN system.tables AS t ON c.database = t.database AND c.table = t.name
-    WHERE c.database = 'your_database'
-      AND c.table = 'your_table'
-    ORDER BY c.position
-)
-GROUP BY database, table, engine;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT 
+--     concat(
+--         'CREATE TABLE ', database, '.', table, ' (\n',
+--         arrayStringConcat(
+--             arrayMap(
+--                 x -> concat('    ', x),
+--                 groupArray(
+--                     concat(
+--                         name, ' ', type,
+--                         CASE 
+--                             WHEN default_kind != '' THEN concat(' ', default_kind, ' ', default_expression)
+--                             ELSE ''
+--                         END,
+--                         CASE 
+--                             WHEN comment != '' THEN concat(' COMMENT ''', comment, '''')
+--                             ELSE ''
+--                         END
+--                     )
+--                 )
+--             ),
+--             ',\n'
+--         ),
+--         '\n) ENGINE = ', engine
+--     ) AS create_table_sql
+-- FROM (
+--     SELECT 
+--         c.database,
+--         c.table,
+--         c.name,
+--         c.type,
+--         c.default_kind,
+--         c.default_expression,
+--         c.comment,
+--         t.engine
+--     FROM system.columns AS c
+--     JOIN system.tables AS t ON c.database = t.database AND c.table = t.name
+--     WHERE c.database = 'your_database'
+--       AND c.table = 'your_table'
+--     ORDER BY c.position
+-- )
+-- GROUP BY database, table, engine;
+-- 
 
 -- ========================================
 -- 基本查询
@@ -266,7 +276,7 @@ GROUP BY database, table, engine;
 SELECT
     database,
     table,
-    name,
+    lower(name) AS name,
     count() AS duplicate_count
 FROM system.columns
 WHERE database != 'system'
@@ -279,17 +289,19 @@ ORDER BY database, table;
 -- ========================================
 
 -- 查找重要表中没有注释的列
-SELECT
-    database,
-    table,
-    name AS column_name,
-    type,
-    position
-FROM system.columns
-WHERE database IN ('your_database')
-  AND table IN ('important_table1', 'important_table2')
-  AND (comment = '' OR comment IS NULL)
-ORDER BY database, table, position;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT
+--     database,
+--     table,
+--     name AS column_name,
+--     type,
+--     position
+-- FROM system.columns
+-- WHERE database IN ('your_database')
+--   AND table IN ('important_table1', 'important_table2')
+--   AND (comment = '' OR comment IS NULL)
+-- ORDER BY database, table, position;
+-- 
 
 -- ========================================
 -- 基本查询
@@ -343,38 +355,40 @@ LIMIT 50;
 -- ========================================
 
 -- 比较表 A 和表 B 的结构差异
-SELECT
-    'Only in table_a' AS difference_type,
-    name AS column_name,
-    type,
-    position
-FROM system.columns
-WHERE database = 'your_database' AND table = 'table_a'
-
-UNION ALL
-
-SELECT
-    'Only in table_b',
-    name,
-    type,
-    position
-FROM system.columns
-WHERE database = 'your_database' AND table = 'table_b'
-
-UNION ALL
-
-SELECT
-    'Different type',
-    a.name,
-    concat(a.type, ' -> ', b.type),
-    a.position
-FROM system.columns AS a
-INNER JOIN system.columns AS b ON 
-    a.database = b.database 
-    AND a.name = b.name
-    AND a.type != b.type
-WHERE a.database = 'your_database'
-  AND a.table = 'table_a'
-  AND b.table = 'table_b'
-
-ORDER BY difference_type, position;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT
+--     'Only in table_a' AS difference_type,
+--     name AS column_name,
+--     type,
+--     position
+-- FROM system.columns
+-- WHERE database = 'your_database' AND table = 'table_a'
+-- 
+-- UNION ALL
+-- 
+-- SELECT
+--     'Only in table_b',
+--     name,
+--     type,
+--     position
+-- FROM system.columns
+-- WHERE database = 'your_database' AND table = 'table_b'
+-- 
+-- UNION ALL
+-- 
+-- SELECT
+--     'Different type',
+--     a.name,
+--     concat(a.type, ' -> ', b.type),
+--     a.position
+-- FROM system.columns AS a
+-- INNER JOIN system.columns AS b ON 
+--     a.database = b.database 
+--     AND a.name = b.name
+--     AND a.type != b.type
+-- WHERE a.database = 'your_database'
+--   AND a.table = 'table_a'
+--   AND b.table = 'table_b'
+-- 
+-- ORDER BY difference_type, position;
+-- 

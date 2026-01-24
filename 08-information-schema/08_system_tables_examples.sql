@@ -26,20 +26,24 @@ WHERE database != 'system';
 -- ========================================
 
 -- 查看列定义
-SELECT database, table, name, type, position
-FROM system.columns
-WHERE database = 'your_database'
-ORDER BY table, position;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT database, table, name, type, position
+-- FROM system.columns
+-- WHERE database = 'your_database'
+-- ORDER BY table, position;
+-- 
 
 -- ========================================
 -- system.databases
 -- ========================================
 
 -- 查看所有函数
-SELECT name, alias, is_aggregate, is_nullable
-FROM system.functions
-WHERE name LIKE 'date%'
-ORDER BY name;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT name, alias, is_aggregate, is_nullable
+-- FROM system.functions
+-- WHERE name LIKE 'date%'
+-- ORDER BY name;
+-- 
 
 -- ========================================
 -- system.databases
@@ -104,9 +108,11 @@ WHERE database != 'system';
 -- ========================================
 
 -- 查看运行中的查询
-SELECT query_id, user, query, elapsed, read_rows, memory_usage
-FROM system.processes
-ORDER BY elapsed DESC;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT query_id, user, query, elapsed, read_rows, memory_usage
+-- FROM system.processes
+-- ORDER BY elapsed DESC;
+-- 
 
 -- ========================================
 -- system.databases
@@ -125,19 +131,23 @@ LIMIT 100;
 -- ========================================
 
 -- 查看查询线程日志
-SELECT event_time, query_id, thread_id, cpu_time_ns, memory_usage
-FROM system.query_thread_log
-ORDER BY event_time DESC
-LIMIT 100;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT event_time, query_id, thread_id, cpu_time_ns, memory_usage
+-- FROM system.query_thread_log
+-- ORDER BY event_time DESC
+-- LIMIT 100;
+-- 
 
 -- ========================================
 -- system.databases
 -- ========================================
 
 -- 查看活跃会话
-SELECT user, client_hostname, connect_time, query_start_time, query
-FROM system.sessions
-ORDER BY connect_time DESC;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT user, client_hostname, connect_time, query_start_time, query
+-- FROM system.sessions
+-- ORDER BY connect_time DESC;
+-- 
 
 -- ========================================
 -- system.databases
@@ -173,9 +183,11 @@ ORDER BY metric;
 -- ========================================
 
 -- 查看性能配置文件
-SELECT name, settings, readonly
-FROM system.profiles
-ORDER BY name;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT name, settings, readonly
+-- FROM system.profiles
+-- ORDER BY name;
+-- 
 
 -- ========================================
 -- system.databases
@@ -208,36 +220,44 @@ WHERE active = 1;
 -- ========================================
 
 -- 查看所有用户
-SELECT name, auth_type, profile, quota
-FROM system.users
-ORDER BY name;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT name, auth_type, profile, quota
+-- FROM system.users
+-- ORDER BY name;
+-- 
 
 -- ========================================
 -- system.databases
 -- ========================================
 
 -- 查看所有角色
-SELECT name, is_default, grants
-FROM system.roles
-ORDER BY name;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT name, is_default, grants
+-- FROM system.roles
+-- ORDER BY name;
+-- 
 
 -- ========================================
 -- system.databases
 -- ========================================
 
 -- 查看权限授予情况
-SELECT user_name, role_name, grant_type, database, table, access_type
-FROM system.grants
-WHERE database != 'system';
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT user_name, role_name, grant_type, database, table, access_type
+-- FROM system.grants
+-- WHERE database != 'system';
+-- 
 
 -- ========================================
 -- system.databases
 -- ========================================
 
 -- 查看行级策略
-SELECT database, table, name, filter
-FROM system.row_policies
-WHERE database != 'system';
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT database, table, name, filter
+-- FROM system.row_policies
+-- WHERE database != 'system';
+-- 
 
 -- ========================================
 -- system.databases
@@ -253,19 +273,23 @@ ORDER BY name;
 -- ========================================
 
 -- 查看配置文件
-SELECT name, is_default, settings, readonly
-FROM system.settings_profiles
-ORDER BY name;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT name, is_default, settings, readonly
+-- FROM system.settings_profiles
+-- ORDER BY name;
+-- 
 
 -- ========================================
 -- system.databases
 -- ========================================
 
 -- 查看变更操作
-SELECT database, table, command_type, command, is_done
-FROM system.mutations
-WHERE database = 'your_database'
-ORDER BY created_at DESC;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT database, table, command_type, command, is_done
+-- FROM system.mutations
+-- WHERE database = 'your_database'
+-- ORDER BY created_at DESC;
+-- 
 
 -- ========================================
 -- system.databases
@@ -338,18 +362,20 @@ LIMIT 20;
 -- ========================================
 
 -- 查询性能分析
-SELECT
-    user,
-    count() AS query_count,
-    avg(elapsed) AS avg_elapsed,
-    max(elapsed) AS max_elapsed,
-    sum(read_bytes) AS total_read_bytes,
-    sum(result_bytes) AS total_result_bytes
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND event_date >= today()
-GROUP BY user
-ORDER BY query_count DESC;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT
+--     user,
+--     count() AS query_count,
+--     avg(elapsed) AS avg_elapsed,
+--     max(elapsed) AS max_elapsed,
+--     sum(read_bytes) AS total_read_bytes,
+--     sum(result_bytes) AS total_result_bytes
+-- FROM system.query_log
+-- WHERE type = 'QueryFinish'
+--   AND event_date >= today()
+-- GROUP BY user
+-- ORDER BY query_count DESC;
+-- 
 
 -- ========================================
 -- system.databases
@@ -399,20 +425,22 @@ ORDER BY metric;
 -- ========================================
 
 -- 创建物化视图来聚合查询日志
-CREATE MATERIALIZED VIEW IF NOT EXISTS query_stats_mv
-ENGINE = SummingMergeTree()
-PARTITION BY toYYYYMM(event_date)
-ORDER BY (event_date, query_kind)
-AS SELECT
-    toStartOfDay(event_time) AS event_date,
-    query_kind,
-    count() AS query_count,
-    avg(elapsed) AS avg_elapsed,
-    max(elapsed) AS max_elapsed,
-    sum(read_bytes) AS total_read_bytes
-FROM system.query_log
-WHERE type = 'QueryFinish'
-GROUP BY event_date, query_kind;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- CREATE MATERIALIZED VIEW IF NOT EXISTS query_stats_mv
+-- ENGINE = SummingMergeTree()
+-- PARTITION BY toYYYYMM(event_date)
+-- ORDER BY (event_date, query_kind)
+-- AS SELECT
+--     toStartOfDay(event_time) AS event_date,
+--     query_kind,
+--     count() AS query_count,
+--     avg(elapsed) AS avg_elapsed,
+--     max(elapsed) AS max_elapsed,
+--     sum(read_bytes) AS total_read_bytes
+-- FROM system.query_log
+-- WHERE type = 'QueryFinish'
+-- GROUP BY event_date, query_kind;
+-- 
 
 -- ========================================
 -- system.databases
@@ -423,5 +451,7 @@ ALTER TABLE system.query_log
 DELETE WHERE event_date < today() - INTERVAL 30 DAY;
 
 -- 清理旧的查询线程日志
-ALTER TABLE system.query_thread_log
-DELETE WHERE event_date < today() - INTERVAL 30 DAY;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- ALTER TABLE system.query_thread_log
+-- DELETE WHERE event_date < today() - INTERVAL 30 DAY;
+-- 

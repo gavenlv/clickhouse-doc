@@ -1,16 +1,9 @@
--- ================================================
--- 02_string_types_examples.sql
--- 从 02_string_types.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
+-- 创建数据库（如果存在则不创建）
+CREATE DATABASE IF NOT EXISTS example;
 
 
--- ========================================
--- String 类型
--- ========================================
-
--- 创建表
-CREATE TABLE example.strings (
+DROP TABLE IF EXISTS example.strings;
+CREATE TABLE IF NOT EXISTS example.strings (
     id UInt64,
     message String,
     email String,
@@ -30,7 +23,8 @@ SELECT * FROM example.strings;
 -- ========================================
 
 -- 创建表（存储 MD5 哈希）
-CREATE TABLE example.files (
+DROP TABLE IF EXISTS example.files;
+CREATE TABLE IF NOT EXISTS example.files (
     id UInt64,
     file_name String,
     file_hash FixedString(32),  -- MD5 32 字符
@@ -50,7 +44,8 @@ SELECT * FROM example.files WHERE file_hash = 'd41d8cd98f00b204e9800998ecf8427e'
 -- ========================================
 
 -- 创建表（国家、状态）
-CREATE TABLE example.users (
+DROP TABLE IF EXISTS example.users;
+CREATE TABLE IF NOT EXISTS example.users (
     id UInt64,
     name String,
     country LowCardinality(String),  -- 只有 200 个国家
@@ -101,8 +96,8 @@ SELECT
 
 -- 包含
 SELECT
-    hasSubString('Hello World', 'World'),   -- 1
-    hasSubString('Hello World', 'Python');   -- 0
+    position('Hello World', 'World'),   -- 1
+    position('Hello World', 'Python');   -- 0
 
 -- 位置
 SELECT
@@ -132,14 +127,14 @@ SELECT
 -- ========================================
 
 -- ❌ 不好：低基数字符串使用 String
-CREATE TABLE users_bad (
+CREATE TABLE IF NOT EXISTS users_bad (
     id UInt64,
     country String,   -- 重复字符串
     status String     -- 重复字符串
 ) ENGINE = MergeTree ORDER BY id;
 
 -- ✅ 好：低基数字符串使用 LowCardinality
-CREATE TABLE users_good (
+CREATE TABLE IF NOT EXISTS users_good (
     id UInt64,
     country LowCardinality(String),  -- 字典编码
     status LowCardinality(String)    -- 字典编码
@@ -150,7 +145,7 @@ CREATE TABLE users_good (
 -- ========================================
 
 -- ✅ 推荐：MD5、UUID 使用 FixedString
-CREATE TABLE files (
+CREATE TABLE IF NOT EXISTS files (
     id UInt64,
     file_name String,
     file_md5 FixedString(32),   -- MD5 32 字符
@@ -162,13 +157,13 @@ CREATE TABLE files (
 -- ========================================
 
 -- ❌ 不好：存储大文本
-CREATE TABLE logs_bad (
+CREATE TABLE IF NOT EXISTS logs_bad (
     id UInt64,
     log_content String  -- 可能很大
 ) ENGINE = MergeTree ORDER BY id;
 
 -- ✅ 好：大文本存储到外部，只存引用
-CREATE TABLE logs_good (
+CREATE TABLE IF NOT EXISTS logs_good (
     id UInt64,
     log_path String,     -- 存储文件路径
     log_size UInt64

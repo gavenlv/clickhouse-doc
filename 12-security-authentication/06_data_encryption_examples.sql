@@ -1,15 +1,8 @@
--- ================================================
--- 06_data_encryption_examples.sql
--- 从 06_data_encryption.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
+-- 创建数据库（如果存在则不创建）
+CREATE DATABASE IF NOT EXISTS example;
 
 
--- ========================================
--- 使用 AES 加密函数
--- ========================================
-
--- 创建加密表
+DROP TABLE IF EXISTS secure.encrypted_users;
 CREATE TABLE IF NOT EXISTS secure.encrypted_users
 ON CLUSTER 'treasurycluster'
 (
@@ -53,6 +46,7 @@ WHERE user_id = 1;
 -- 3. 查询时在应用层解密
 
 -- 示例：存储加密的 JSON 数据
+DROP TABLE IF EXISTS secure.encrypted_events;
 CREATE TABLE IF NOT EXISTS secure.encrypted_events
 ON CLUSTER 'treasurycluster'
 (
@@ -82,6 +76,7 @@ FROM secure.encrypted_events;
 -- ========================================
 
 -- 1. 只加密必要列
+DROP TABLE IF EXISTS secure.optimized_users;
 CREATE TABLE IF NOT EXISTS secure.optimized_users
 ON CLUSTER 'treasurycluster'
 (
@@ -122,6 +117,7 @@ WHERE user_id = 1;
 -- ========================================
 
 -- 第 1 层：公开数据（无加密）
+DROP TABLE IF EXISTS secure.public_data;
 CREATE TABLE IF NOT EXISTS secure.public_data
 ON CLUSTER 'treasurycluster'
 (
@@ -134,6 +130,7 @@ PARTITION BY toYYYYMM(event_time)
 ORDER BY (event_id, event_time);
 
 -- 第 2 层：内部数据（传输加密）
+DROP TABLE IF EXISTS secure.internal_data;
 CREATE TABLE IF NOT EXISTS secure.internal_data
 ON CLUSTER 'treasurycluster'
 (
@@ -147,6 +144,7 @@ PARTITION BY toYYYYMM(event_time)
 ORDER BY (event_id, event_time);
 
 -- 第 3 层：敏感数据（列级加密）
+DROP TABLE IF EXISTS secure.sensitive_data;
 CREATE TABLE IF NOT EXISTS secure.sensitive_data
 ON CLUSTER 'treasurycluster'
 (
@@ -161,6 +159,7 @@ ORDER BY (event_id, event_time);
 
 -- 第 4 层：绝密数据（磁盘加密 + 列级加密）
 -- 表存储在加密的磁盘上
+DROP TABLE IF EXISTS secure.top_secret_data;
 CREATE TABLE IF NOT EXISTS secure.top_secret_data
 ON CLUSTER 'treasurycluster'
 (

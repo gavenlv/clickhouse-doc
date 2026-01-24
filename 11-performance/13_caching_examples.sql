@@ -1,15 +1,3 @@
--- ================================================
--- 13_caching_examples.sql
--- 从 13_caching.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 1. 查询缓存
--- ========================================
-
--- 启用查询缓存
 SET use_query_cache = 1;
 SET query_cache_max_size_bytes = 10737418240;  -- 10 GB
 
@@ -46,10 +34,6 @@ WHERE event_time >= now() - INTERVAL 7 DAY
 -- ========================================
 
 -- 配置用户空间页缓存（在 config.xml 中）
-<clickhouse>
-    <user_defined_fetches_cache_size>5368709120</user_defined_fetches_cache_size>  <!-- 500 MB -->
-    <user_defined_fetches_cache_elements_count>1024</user_defined_fetches_cache_elements_count>
-</clickhouse>
 
 -- 使用用户空间页缓存
 SELECT 

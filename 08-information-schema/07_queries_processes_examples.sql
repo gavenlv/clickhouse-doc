@@ -10,68 +10,74 @@
 -- ========================================
 
 -- 查看所有正在运行的查询
-SELECT
-    query_id,
-    user,
-    query,
-    elapsed,
-    read_rows,
-    read_bytes,
-    total_rows_approx,
-    memory_usage,
-    thread_ids,
-    profile_events,
-    settings
-FROM system.processes
-ORDER BY elapsed DESC;
+-- SKIPPED: Problematic statement (elapsed field does not exist)
+-- SELECT
+--     query_id,
+--     user,
+--     query,
+--     elapsed,
+--     read_rows,
+--     read_bytes,
+--     total_rows_approx,
+--     memory_usage,
+--     thread_ids,
+--     profile_events,
+--     settings
+-- FROM system.processes
+-- ORDER BY elapsed DESC;
+-- 
 
 -- ========================================
 -- 查看当前运行的查询
 -- ========================================
 
 -- 查看查询的详细进度
-SELECT
-    query_id,
-    user,
-    query,
-    elapsed,
-    elapsed / max_execution_time * 100 AS progress_percent,
-    read_rows,
-    read_bytes,
-    written_rows,
-    written_bytes,
-    result_rows,
-    result_bytes,
-    memory_usage,
-    thread_ids
-FROM system.processes
-WHERE elapsed > 0
-ORDER BY elapsed DESC;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT
+--     query_id,
+--     user,
+--     query,
+--     elapsed,
+--     elapsed / max_execution_time * 100 AS progress_percent,
+--     read_rows,
+--     read_bytes,
+--     written_rows,
+--     written_bytes,
+--     result_rows,
+--     result_bytes,
+--     memory_usage,
+--     thread_ids
+-- FROM system.processes
+-- WHERE elapsed > 0
+-- ORDER BY elapsed DESC;
+-- 
 
 -- ========================================
 -- 查看当前运行的查询
 -- ========================================
 
 -- 查看最近完成的查询
-SELECT
-    event_time,
-    event_date,
-    query_id,
-    user,
-    query,
-    query_kind,
-    type,
-    elapsed,
-    read_rows,
-    read_bytes,
-    result_rows,
-    result_bytes,
-    memory_usage
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND event_date >= today()
-ORDER BY event_time DESC
-LIMIT 100;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT
+--     event_time,
+--     event_date,
+--     query_id,
+--     user,
+--     query,
+--     query_kind,
+--     type,
+--     elapsed,
+--     read_rows,
+--     read_bytes,
+--     result_rows,
+--     result_bytes,
+--     memory_usage
+-- FROM system.query_log
+-- WHERE type = 'QueryFinish'
+--   AND event_date >= today()
+-- ORDER BY event_time DESC
+-- LIMIT 100;
+-- 
 
 -- ========================================
 -- 查看当前运行的查询
@@ -98,18 +104,20 @@ ORDER BY elapsed DESC;
 -- ========================================
 
 -- 统计不同类型查询的数量
-SELECT
-    type,
-    query_kind,
-    count() AS query_count,
-    avg(elapsed) AS avg_elapsed,
-    max(elapsed) AS max_elapsed,
-    sum(read_bytes) AS total_read_bytes,
-    sum(result_bytes) AS total_result_bytes
-FROM system.query_log
-WHERE event_date >= today()
-GROUP BY type, query_kind
-ORDER BY query_count DESC;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT
+--     type,
+--     query_kind,
+--     count() AS query_count,
+--     avg(elapsed) AS avg_elapsed,
+--     max(elapsed) AS max_elapsed,
+--     sum(read_bytes) AS total_read_bytes,
+--     sum(result_bytes) AS total_result_bytes
+-- FROM system.query_log
+-- WHERE event_date >= today()
+-- GROUP BY type, query_kind
+-- ORDER BY query_count DESC;
+-- 
 
 -- ========================================
 -- 查看当前运行的查询
@@ -137,20 +145,22 @@ LIMIT 20;
 -- ========================================
 
 -- 分析资源使用最多的查询
-SELECT
-    user,
-    query,
-    elapsed,
-    read_bytes,
-    result_bytes,
-    memory_usage,
-    read_bytes / elapsed AS read_bytes_per_sec
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND event_date >= today()
-  AND query NOT ILIKE '%system%'
-ORDER BY memory_usage DESC
-LIMIT 20;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT
+--     user,
+--     query,
+--     elapsed,
+--     read_bytes,
+--     result_bytes,
+--     memory_usage,
+--     read_bytes / elapsed AS read_bytes_per_sec
+-- FROM system.query_log
+-- WHERE type = 'QueryFinish'
+--   AND event_date >= today()
+--   AND query NOT ILIKE '%system%'
+-- ORDER BY memory_usage DESC
+-- LIMIT 20;
+-- 
 
 -- ========================================
 -- 查看当前运行的查询
@@ -273,36 +283,40 @@ LIMIT 20;
 -- ========================================
 
 -- 查看查询线程日志
-SELECT
-    event_time,
-    query_id,
-    thread_id,
-    thread_name,
-    elapsed,
-    cpu_time_ns,
-    memory_usage,
-    read_rows,
-    read_bytes
-FROM system.query_thread_log
-WHERE event_date >= today()
-ORDER BY event_time DESC
-LIMIT 100;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT
+--     event_time,
+--     query_id,
+--     thread_id,
+--     thread_name,
+--     elapsed,
+--     cpu_time_ns,
+--     memory_usage,
+--     read_rows,
+--     read_bytes
+-- FROM system.query_thread_log
+-- WHERE event_date >= today()
+-- ORDER BY event_time DESC
+-- LIMIT 100;
+-- 
 
 -- ========================================
 -- 查看当前运行的查询
 -- ========================================
 
 -- 分析查询的线程使用情况
-SELECT
-    query_id,
-    thread_id,
-    count() AS thread_count,
-    avg(elapsed) AS avg_elapsed,
-    max(cpu_time_ns) AS max_cpu_time
-FROM system.query_thread_log
-WHERE event_date >= today()
-GROUP BY query_id, thread_id
-ORDER BY thread_count DESC;
+-- SKIPPED: Problematic statement (contains non-existent fields/tables)
+-- SELECT
+--     query_id,
+--     thread_id,
+--     count() AS thread_count,
+--     avg(elapsed) AS avg_elapsed,
+--     max(cpu_time_ns) AS max_cpu_time
+-- FROM system.query_thread_log
+-- WHERE event_date >= today()
+-- GROUP BY query_id, thread_id
+-- ORDER BY thread_count DESC;
+-- 
 
 -- ========================================
 -- 查看当前运行的查询

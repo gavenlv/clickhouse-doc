@@ -1,15 +1,3 @@
--- ================================================
--- 07_audit_log_examples.sql
--- 从 07_audit_log.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 查看所有查询
--- ========================================
-
--- 查看最近 100 条查询
 SELECT 
     event_time,
     user,
@@ -149,11 +137,11 @@ ORDER BY total_queries DESC;
 -- 用户访问模式
 SELECT 
     user,
-    countIf(contains(query, 'SELECT')) as select_count,
-    countIf(contains(query, 'INSERT')) as insert_count,
-    countIf(contains(query, 'ALTER')) as alter_count,
-    countIf(contains(query, 'DROP')) as drop_count,
-    countIf(contains(query, 'CREATE')) as create_count
+    countIf(position(query, 'SELECT')) as select_count,
+    countIf(position(query, 'INSERT')) as insert_count,
+    countIf(position(query, 'ALTER')) as alter_count,
+    countIf(position(query, 'DROP')) as drop_count,
+    countIf(position(query, 'CREATE')) as create_count
 FROM system.query_log
 WHERE type = 'QueryFinish'
   AND event_time >= now() - INTERVAL 7 DAY
@@ -244,6 +232,7 @@ ORDER BY total_memory_gb DESC;
 -- ========================================
 
 -- 1. 创建告警表
+DROP TABLE IF EXISTS security.alerts;
 CREATE TABLE IF NOT EXISTS security.alerts
 ON CLUSTER 'treasurycluster'
 (

@@ -1,18 +1,11 @@
--- ================================================
--- 02_lightweight_update_examples.sql
--- 从 02_lightweight_update.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
+-- 创建数据库（如果存在则不创建）
+CREATE DATABASE IF NOT EXISTS example;
 
-
--- ========================================
--- 启用轻量级更新
--- ========================================
 
 ALTER TABLE table_name
 UPDATE column = value
 WHERE condition
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- ========================================
 -- 启用轻量级更新
@@ -27,20 +20,21 @@ SETTINGS lightweight_update = 1;
 -- ========================================
 
 -- 创建表时指定
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     user_id UInt64,
     username String,
     status String
 ) ENGINE = MergeTree()
 ORDER BY user_id
-SETTINGS allow_lightweight_update = 1;
+SETTINGS -- REMOVED SETTING lightweight_update (not supported) 1;
 
 -- ========================================
 -- 启用轻量级更新
 -- ========================================
 
 -- 准备测试表
-CREATE TABLE test_lightweight.users (
+DROP TABLE IF EXISTS test_lightweight.users;
+CREATE TABLE IF NOT EXISTS test_lightweight.users (
     user_id UInt64,
     username String,
     email String,
@@ -50,7 +44,7 @@ CREATE TABLE test_lightweight.users (
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(created_at)
 ORDER BY user_id
-SETTINGS allow_lightweight_update = 1;
+SETTINGS -- REMOVED SETTING lightweight_update (not supported) 1;
 
 -- 插入测试数据
 INSERT INTO test_lightweight.users (user_id, username, email, status, created_at, last_login) VALUES
@@ -64,7 +58,7 @@ INSERT INTO test_lightweight.users (user_id, username, email, status, created_at
 ALTER TABLE test_lightweight.users
 UPDATE status = 'active'
 WHERE user_id IN (1, 2, 4, 5)
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 验证更新结果
 SELECT user_id, username, status FROM test_lightweight.users;
@@ -77,7 +71,7 @@ SELECT user_id, username, status FROM test_lightweight.users;
 ALTER TABLE test_lightweight.users
 UPDATE status = 'inactive'
 WHERE last_login < now() - INTERVAL 90 DAY
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 批量更新用户等级
 ALTER TABLE test_lightweight.users
@@ -88,7 +82,7 @@ UPDATE level = CASE
     ELSE 'normal'
 END
 WHERE created_at >= '2024-01-01'
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- ========================================
 -- 启用轻量级更新
@@ -98,20 +92,20 @@ SETTINGS lightweight_update = 1;
 ALTER TABLE test_lightweight.users
 UPDATE email = lower(trim(email))
 WHERE email != lower(email)
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 使用日期函数
 ALTER TABLE test_lightweight.users
 UPDATE last_login = toDateTime(toStartOfDay(last_login))
 WHERE last_login >= now() - INTERVAL 30 DAY
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 使用数学函数
 ALTER TABLE test_lightweight.orders
 UPDATE amount = round(amount * 1.1, 2)
 WHERE order_date >= '2024-01-01'
   AND status = 'pending'
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- ========================================
 -- 启用轻量级更新
@@ -124,7 +118,7 @@ UPDATE
     last_login = now(),
     login_count = login_count + 1
 WHERE user_id = 123
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- ========================================
 -- 启用轻量级更新
@@ -139,14 +133,15 @@ UPDATE premium_status = CASE
 END
 WHERE status = 'active'
   AND total_spent > 0
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- ========================================
 -- 启用轻量级更新
 -- ========================================
 
 -- 创建测试表
-CREATE TABLE test_lightweight.compare_table (
+DROP TABLE IF EXISTS test_lightweight.compare_table;
+CREATE TABLE IF NOT EXISTS test_lightweight.compare_table (
     id UInt64,
     value String,
     status String,
@@ -154,7 +149,7 @@ CREATE TABLE test_lightweight.compare_table (
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(created_at)
 ORDER BY id
-SETTINGS allow_lightweight_update = 1;
+SETTINGS -- REMOVED SETTING lightweight_update (not supported) 1;
 
 -- 插入 100 万条测试数据
 INSERT INTO test_lightweight.compare_table
@@ -183,7 +178,7 @@ SELECT now() as start_time;
 ALTER TABLE test_lightweight.compare_table
 UPDATE status = 'processed'
 WHERE id % 10 = 1
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 记录结束时间
 SELECT now() as end_time;
@@ -250,14 +245,13 @@ SETTINGS mutations_sync = 1;
 -- ========================================
 
 -- 创建表时指定设置
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     user_id UInt64,
     username String,
     status String
 ) ENGINE = MergeTree()
 ORDER BY user_id
-SETTINGS 
-    allow_lightweight_update = 1,
+SETTINGS -- REMOVED SETTING lightweight_update (not supported) 1,
     lightweight_update_min_rows_to_delay = 100000,
     lightweight_update_max_delay_in_seconds = 3600;
 
@@ -269,13 +263,13 @@ SETTINGS
 ALTER TABLE users
 UPDATE status = 'active'
 WHERE user_id = 123
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 禁用轻量级更新（使用传统 Mutation）
 ALTER TABLE users
 UPDATE status = 'active'
 WHERE user_id = 123
-SETTINGS lightweight_update = 0;
+-- REMOVED SET lightweight_update (not supported) 0;
 
 -- ========================================
 -- 启用轻量级更新
@@ -288,7 +282,7 @@ UPDATE orders_count = (
     FROM test_lightweight.orders
     WHERE orders.user_id = users.user_id
 )
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- ========================================
 -- 启用轻量级更新
@@ -310,7 +304,7 @@ WHERE user_id IN (
     SELECT DISTINCT user_id
     FROM test_lightweight.orders
 )
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- ========================================
 -- 启用轻量级更新
@@ -331,7 +325,7 @@ rank = CASE
     ELSE 'D'
 END
 WHERE updated_at >= now() - INTERVAL 7 DAY
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- ========================================
 -- 启用轻量级更新
@@ -342,13 +336,13 @@ SETTINGS lightweight_update = 1;
 ALTER TABLE test_lightweight.users
 UPDATE status = 'active'
 WHERE user_id BETWEEN 1 AND 1000
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 批次 2: 更新 ID 1001-2000
 ALTER TABLE test_lightweight.users
 UPDATE status = 'active'
 WHERE user_id BETWEEN 1001 AND 2000
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 继续分批...
 
@@ -357,14 +351,14 @@ SETTINGS lightweight_update = 1;
 -- ========================================
 
 -- 使用合适的分区键
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     user_id UInt64,
     created_at DateTime,
     -- 其他字段
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(created_at)  -- 按月分区
 ORDER BY user_id
-SETTINGS allow_lightweight_update = 1;
+SETTINGS -- REMOVED SETTING lightweight_update (not supported) 1;
 
 -- ========================================
 -- 启用轻量级更新
@@ -376,7 +370,7 @@ UPDATE status = 'active'
 WHERE user_id IN (1, 2, 3)
   AND created_at >= '2024-01-01'
   AND created_at < '2024-02-01'
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- ========================================
 -- 启用轻量级更新
@@ -386,13 +380,13 @@ SETTINGS lightweight_update = 1;
 ALTER TABLE users
 UPDATE status = 'active'
 WHERE user_id IN (1, 2, 3)  -- 快速
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 避免低选择性条件
 ALTER TABLE users
 UPDATE status = 'active'
 WHERE status = 'pending'  -- 慢速
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- ========================================
 -- 启用轻量级更新
@@ -402,8 +396,7 @@ SETTINGS lightweight_update = 1;
 ALTER TABLE users
 UPDATE status = 'active'
 WHERE user_id IN (1, 2, 3)
-SETTINGS 
-    lightweight_update = 1,
+-- REMOVED SET lightweight_update (not supported) 1,
     max_threads = 2;
 
 -- ========================================
@@ -434,7 +427,7 @@ ALTER TABLE users
 UPDATE status = 'active'
 WHERE user_id IN (1, 2, 3)
   AND created_at >= '2024-01-01'
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 3. 分批处理
 -- 将大更新拆分为多个小批次

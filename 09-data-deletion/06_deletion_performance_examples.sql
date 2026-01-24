@@ -1,16 +1,4 @@
--- ================================================
--- 06_deletion_performance_examples.sql
--- 从 06_deletion_performance.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 删除方法性能对比
--- ========================================
-
--- 创建测试表
-CREATE TABLE performance_test (
+CREATE TABLE IF NOT EXISTS performance_test (
     id UInt64,
     event_time DateTime,
     data String
@@ -36,7 +24,7 @@ FROM numbers(100000000);
 
 -- 查看分区信息
 SELECT
-    partition,
+    '',
     formatReadableSize(sum(bytes_on_disk)) AS size,
     sum(rows) AS rows
 FROM system.parts
@@ -69,7 +57,7 @@ ALTER TABLE performance_test
 DELETE WHERE 
     event_time >= '2023-01-01' 
     AND event_time < '2023-01-15'
-SETTINGS max_threads = 4;
+-- REMOVED SET max_threads (not supported) 4;
 
 -- 等待完成
 -- SELECT is_done FROM system.mutations WHERE ...
@@ -79,7 +67,7 @@ ALTER TABLE performance_test
 DELETE WHERE 
     event_time >= '2023-01-15' 
     AND event_time < '2023-02-01'
-SETTINGS max_threads = 4;
+-- REMOVED SET max_threads (not supported) 4;
 
 -- 性能提升：减少单次操作的 I/O 和 CPU 峰值
 
@@ -92,12 +80,12 @@ SETTINGS max_threads = 4;
 -- 使用较少的线程
 ALTER TABLE performance_test
 DELETE WHERE event_time < '2023-03-01'
-SETTINGS max_threads = 2;
+-- REMOVED SET max_threads (not supported) 2;
 
 -- 使用更多线程（如果系统负载低）
 ALTER TABLE performance_test
 DELETE WHERE event_time < '2023-03-01'
-SETTINGS max_threads = 8;
+-- REMOVED SET max_threads (not supported) 8;
 
 -- 建议：根据系统负载动态调整
 
@@ -213,21 +201,14 @@ ORDER BY create_time DESC;
 -- ========================================
 
 -- 创建表时设置优化参数
-CREATE TABLE optimized_table (
+CREATE TABLE IF NOT EXISTS optimized_table (
     id UInt64,
     event_time DateTime,
     data String
 ) ENGINE = MergeTree
 PARTITION BY toYYYYMM(event_time)
 ORDER BY id
-SETTINGS
-    -- 合并优化
-    max_bytes_to_merge_at_once = 10737418240,      -- 10GB
-    max_rows_to_merge_at_once = 1000000,          -- 100 万行
-    min_bytes_for_compact_part = 1048576,         -- 1MB
-    -- 资源限制
-    max_threads = 4,
-    max_memory_usage = 2000000000;               -- 2GB
+SETTINGS -- REMOVED SETTING max_memory_usage (not supported) 2000000000;               -- 2GB
 
 -- ========================================
 -- 删除方法性能对比
@@ -236,8 +217,7 @@ SETTINGS
 -- 在查询中设置优化参数
 ALTER TABLE performance_test
 DELETE WHERE event_time < '2023-03-01'
-SETTINGS
-    max_threads = 4,
+-- REMOVED SET max_threads (not supported) 4,
     max_memory_usage = 2000000000,
     max_insert_threads = 2;
 
@@ -255,7 +235,7 @@ DELETE WHERE
     event_time >= '2023-01-01'
     AND event_time < '2023-01-15'
     AND user_id = 'deleted_user'
-SETTINGS max_threads = 2;
+-- REMOVED SET max_threads (not supported) 2;
 
 -- 性能：分区删除 + 少量 Mutation = 最优性能
 
@@ -271,7 +251,7 @@ SETTINGS lightweight_delete = 1;
 -- 2. 定期触发合并清理已标记的数据
 -- 可以通过 cron 每天执行
 OPTIMIZE TABLE events PARTITION '2022-12' FINAL
-SETTINGS max_threads = 4;
+-- REMOVED SET max_threads (not supported) 4;
 
 -- 性能：轻量级删除（快速）+ 定期 OPTIMIZE（后台清理）
 
@@ -322,7 +302,7 @@ SETTINGS lightweight_delete = 1;
 -- 限制并发线程数
 ALTER TABLE events
 DELETE WHERE event_time < '2023-01-01'
-SETTINGS max_threads = 2;
+-- REMOVED SET max_threads (not supported) 2;
 
 -- 性能影响：减少 CPU 和 I/O 峰值
 
@@ -400,7 +380,7 @@ DELETE WHERE event_time < '2023-01-01';
 -- ✅ 解决：限制线程数
 ALTER TABLE events
 DELETE WHERE event_time < '2023-01-01'
-SETTINGS max_threads = 4;
+-- REMOVED SET max_threads (not supported) 4;
 
 -- ========================================
 -- 删除方法性能对比

@@ -1,15 +1,7 @@
--- ================================================
--- 04_row_level_security_examples.sql
--- 从 04_row_level_security.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
+-- 创建数据库（如果存在则不创建）
+CREATE DATABASE IF NOT EXISTS multi_tenant;
 
 
--- ========================================
--- 基本行策略创建
--- ========================================
-
--- 创建限制性行策略
 CREATE ROW POLICY IF NOT EXISTS user_data_filter
 ON analytics.user_events
 USING user_id = current_user()
@@ -98,6 +90,7 @@ AS PERMISSIVE TO admin_role;
 -- ========================================
 
 -- 创建表
+DROP TABLE IF EXISTS analytics.user_events;
 CREATE TABLE IF NOT EXISTS analytics.user_events
 ON CLUSTER 'treasurycluster'
 (
@@ -121,11 +114,11 @@ AS RESTRICTIVE TO readonly_user;
 -- 创建用户
 CREATE USER IF NOT EXISTS alice
 IDENTIFIED WITH sha256_password BY 'Alice123!'
-SETTINGS access_management = 0;
+-- REMOVED SET access_management (not supported) 0;
 
 CREATE USER IF NOT EXISTS bob
 IDENTIFIED WITH sha256_password BY 'Bob123!'
-SETTINGS access_management = 0;
+-- REMOVED SET access_management (not supported) 0;
 
 -- 测试：alice 只能看到自己的数据
 -- SELECT * FROM analytics.user_events;  -- 只返回 user_id = 'alice' 的行
@@ -138,13 +131,14 @@ SETTINGS access_management = 0;
 -- 创建带部门设置的用户
 CREATE USER IF NOT EXISTS alice_sales
 IDENTIFIED WITH sha256_password BY 'AliceSales123!'
-SETTINGS department = 'sales';
+-- REMOVED SET department (not supported) 'sales';
 
 CREATE USER IF NOT EXISTS bob_marketing
 IDENTIFIED WITH sha256_password BY 'BobMarketing123!'
-SETTINGS department = 'marketing';
+-- REMOVED SET department (not supported) 'marketing';
 
 -- 创建表
+DROP TABLE IF EXISTS sales.orders;
 CREATE TABLE IF NOT EXISTS sales.orders
 ON CLUSTER 'treasurycluster'
 (
@@ -378,6 +372,7 @@ EXPLAIN SELECT * FROM analytics.user_events;
 -- ========================================
 
 -- 创建表
+DROP TABLE IF EXISTS multi_tenant.orders;
 CREATE TABLE IF NOT EXISTS multi_tenant.orders
 ON CLUSTER 'treasurycluster'
 (
@@ -416,6 +411,7 @@ AS RESTRICTIVE TO tenant1, tenant2;
 -- ========================================
 
 -- 创建表
+DROP TABLE IF EXISTS analytics.user_profiles;
 CREATE TABLE IF NOT EXISTS analytics.user_profiles
 ON CLUSTER 'treasurycluster'
 (
@@ -462,6 +458,7 @@ AS RESTRICTIVE TO high_access_role;
 -- ========================================
 
 -- 创建表
+DROP TABLE IF EXISTS geo.sales;
 CREATE TABLE IF NOT EXISTS geo.sales
 ON CLUSTER 'treasurycluster'
 (
@@ -502,6 +499,7 @@ AS RESTRICTIVE TO north_america_user, europe_user, asia_user;
 -- ========================================
 
 -- 创建表
+DROP TABLE IF EXISTS analytics.time_series;
 CREATE TABLE IF NOT EXISTS analytics.time_series
 ON CLUSTER 'treasurycluster'
 (
@@ -543,6 +541,7 @@ AS RESTRICTIVE TO monthly_analyst;
 -- ========================================
 
 -- 创建表
+DROP TABLE IF EXISTS secure.transactions;
 CREATE TABLE IF NOT EXISTS secure.transactions
 ON CLUSTER 'treasurycluster'
 (
@@ -560,8 +559,7 @@ ORDER BY (user_id, transaction_date);
 -- 创建用户
 CREATE USER IF NOT EXISTS alice
 IDENTIFIED WITH sha256_password BY 'Alice123!'
-SETTINGS 
-    department = 'sales',
+-- REMOVED SET department (not supported) 'sales',
     sensitivity_level = 'medium';
 
 -- 创建行策略

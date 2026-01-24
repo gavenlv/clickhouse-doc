@@ -1,15 +1,3 @@
--- ================================================
--- 03_partitioning_examples.sql
--- 从 03_partitioning.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 分区类型
--- ========================================
-
--- 按日期分区
 PARTITION BY toYYYYMM(event_time)
 
 -- 按月份分区
@@ -29,7 +17,7 @@ PARTITION BY status
 -- ========================================
 
 -- ✅ 按月分区（推荐）
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
@@ -39,7 +27,7 @@ PARTITION BY toYYYYMM(event_time)  -- ✅ 按月
 ORDER BY (user_id, event_time);
 
 -- ❌ 按天分区（分区过多）
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
@@ -76,7 +64,7 @@ PARTITION BY toYYYYMMDD(event_time)  -- 365 天/年
 -- ========================================
 
 -- 如果查询主要按时间范围
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime
@@ -85,7 +73,7 @@ PARTITION BY toYYYYMM(event_time)  -- ✅ 匹配查询模式
 ORDER BY (user_id, event_time);
 
 -- 如果查询主要按用户
-CREATE TABLE user_events (
+CREATE TABLE IF NOT EXISTS user_events (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime
@@ -137,7 +125,7 @@ GROUP BY _partition_id;
 
 -- 查看表的分区
 SELECT 
-    partition,
+    '',
     name,
     sum(rows) as total_rows,
     sum(bytes_on_disk) as total_bytes,
@@ -170,7 +158,7 @@ DROP PARTITION '202301', '202302', '202303', '202304', '202305';
 -- ========================================
 
 -- 复制分区到另一个表
-CREATE TABLE events_new AS events;
+CREATE TABLE IF NOT EXISTS events_new AS events;
 
 ALTER TABLE events_new
 REPLACE PARTITION '202401'
@@ -189,7 +177,7 @@ WITH events;
 -- 分区类型
 -- ========================================
 
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -208,7 +196,7 @@ WHERE event_time >= '2024-01-01'
 -- 分区类型
 -- ========================================
 
-CREATE TABLE user_events (
+CREATE TABLE IF NOT EXISTS user_events (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
@@ -225,7 +213,7 @@ WHERE user_id = 123;  -- ✅ 只扫描一个分区
 -- 分区类型
 -- ========================================
 
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
     order_id UInt64,
     user_id UInt64,
     amount Float64,
@@ -243,7 +231,7 @@ WHERE status = 'pending';  -- ✅ 只扫描一个分区
 -- 分区类型
 -- ========================================
 
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -263,7 +251,7 @@ WHERE event_time >= '2024-01-01'
 -- 分区类型
 -- ========================================
 
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
@@ -278,7 +266,7 @@ TTL event_time + INTERVAL 90 DAY;  -- ✅ 90 天后自动删除
 -- ========================================
 
 -- 活跃数据：按天分区
-CREATE TABLE events_active (
+CREATE TABLE IF NOT EXISTS events_active (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
@@ -288,7 +276,7 @@ PARTITION BY toDate(event_time)  -- 按天
 ORDER BY (user_id, event_time);
 
 -- 历史数据：按月分区
-CREATE TABLE events_history (
+CREATE TABLE IF NOT EXISTS events_history (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
@@ -316,7 +304,7 @@ WITH events;
 
 -- 监控分区大小
 SELECT 
-    partition,
+    '',
     sum(rows) as total_rows,
     sum(bytes_on_disk) as total_bytes,
     formatReadableSize(sum(bytes_on_disk)) as readable_size

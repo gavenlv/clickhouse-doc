@@ -1,19 +1,11 @@
--- ================================================
--- 05_update_performance_examples.sql
--- 从 05_update_performance.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
+-- 创建数据库（如果存在则不创建）
+CREATE DATABASE IF NOT EXISTS example;
 
 
--- ========================================
--- 1. 数据量
--- ========================================
-
--- 小数据量（< 10%）: 轻量级更新最快
 ALTER TABLE users
 UPDATE status = 'active'
 WHERE user_id IN (1, 2, 3, ..., 1000)
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 大数据量（> 30%）: 分区更新最快
 ALTER TABLE users
@@ -29,7 +21,7 @@ FROM users_temp;
 
 -- 查看分区数量
 SELECT 
-    count(DISTINCT partition) as partition_count
+    count(DISTINCT '') as partition_count
 FROM system.parts
 WHERE table = 'users'
   AND active = 1;
@@ -63,7 +55,7 @@ UPDATE event_data = 'new data'  -- String, 高 cardinality
 -- ========================================
 
 -- 创建临时表
-CREATE TABLE users_temp AS users;
+CREATE TABLE IF NOT EXISTS users_temp AS users;
 
 -- 更新数据
 INSERT INTO users_temp
@@ -93,7 +85,7 @@ DROP TABLE users_temp;
 ALTER TABLE users
 UPDATE status = 'active'
 WHERE user_id IN (1, 2, 3)
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- ========================================
 -- 1. 数据量
@@ -120,16 +112,14 @@ WHERE user_id BETWEEN 100001 AND 200000;
 ALTER TABLE users
 UPDATE status = 'active'
 WHERE user_id IN (1, 2, 3)
-SETTINGS 
-    lightweight_update = 1,
+-- REMOVED SET lightweight_update (not supported) 1,
     max_threads = 2;  -- 限制为 2 个线程
 
 -- 限制内存使用
 ALTER TABLE users
 UPDATE status = 'active'
 WHERE user_id IN (1, 2, 3)
-SETTINGS 
-    lightweight_update = 1,
+-- REMOVED SET lightweight_update (not supported) 1,
     max_memory_usage = 10000000000;  -- 10GB
 
 -- ========================================
@@ -190,7 +180,7 @@ WHERE created_at >= '2024-01-01'
 -- ========================================
 
 -- 创建表时指定配置
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     user_id UInt64,
     username String,
     status String,
@@ -198,8 +188,7 @@ CREATE TABLE users (
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(created_at)
 ORDER BY user_id
-SETTINGS 
-    allow_lightweight_update = 1,
+SETTINGS -- REMOVED SETTING lightweight_update (not supported) 1,
     index_granularity = 8192,
     min_bytes_for_wide_part = 10485760;
 
@@ -211,8 +200,7 @@ SETTINGS
 ALTER TABLE users
 UPDATE status = 'active'
 WHERE user_id IN (1, 2, 3)
-SETTINGS 
-    lightweight_update = 1,
+-- REMOVED SET lightweight_update (not supported) 1,
     max_threads = 4,
     max_memory_usage = 5000000000,  -- 5GB
     priority = 8;
@@ -291,7 +279,7 @@ ORDER BY event_time DESC;
 -- ========================================
 
 -- 1. 创建临时表
-CREATE TABLE orders_temp AS orders;
+CREATE TABLE IF NOT EXISTS orders_temp AS orders;
 
 -- 2. 更新数据
 INSERT INTO orders_temp
@@ -321,10 +309,10 @@ DROP TABLE orders_temp;
 ALTER TABLE users
 UPDATE status = 'active'
 WHERE last_login >= now() - INTERVAL 7 DAY
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 旧数据使用分区更新
-CREATE TABLE users_temp AS users;
+CREATE TABLE IF NOT EXISTS users_temp AS users;
 INSERT INTO users_temp
 SELECT 
     user_id,
@@ -366,7 +354,7 @@ WHERE created_at >= now() - INTERVAL 30 DAY;
 ALTER TABLE users
 UPDATE status = 'active'
 WHERE created_at >= now() - INTERVAL 7 DAY
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 历史数据: 分区更新
 ALTER TABLE users
@@ -378,7 +366,7 @@ FROM users_temp;
 -- ========================================
 
 -- 原始表设计
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -389,7 +377,7 @@ CREATE TABLE events (
 ORDER BY event_time;
 
 -- 优化后表设计（追加模式）
-CREATE TABLE events_raw (
+CREATE TABLE IF NOT EXISTS events_raw (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -398,7 +386,7 @@ CREATE TABLE events_raw (
 ) ENGINE = MergeTree()
 ORDER BY (user_id, event_time);
 
-CREATE TABLE event_updates (
+CREATE TABLE IF NOT EXISTS event_updates (
     event_id UInt64,
     user_id UInt64,
     update_type String,
@@ -452,7 +440,7 @@ WHERE event_time >= now() - INTERVAL 7 DAY;
 -- ========================================
 
 -- 创建带 TTL 的表
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -473,7 +461,7 @@ WHERE event_time >= now() - INTERVAL 7 DAY;
 -- ========================================
 
 -- 创建跳数索引
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -571,4 +559,4 @@ WHERE user_id IN (1, 2, 3, ..., 100);
 ALTER TABLE users
 UPDATE status = 'inactive'
 WHERE last_login < now() - INTERVAL 90 DAY
-SETTINGS max_threads = 2;
+-- REMOVED SET max_threads (not supported) 2;

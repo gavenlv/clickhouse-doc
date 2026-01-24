@@ -1,16 +1,4 @@
--- ================================================
--- 04_update_strategies_examples.sql
--- 从 04_update_strategies.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- SQL Block 1
--- ========================================
-
--- 创建临时表
-CREATE TABLE logs_temp AS logs;
+CREATE TABLE IF NOT EXISTS logs_temp AS logs;
 
 -- 更新数据
 INSERT INTO logs_temp
@@ -41,7 +29,7 @@ ALTER TABLE users
 UPDATE status = 'active',
     last_updated = now()
 WHERE user_id IN (1, 2, 3, 4, 5)
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 或使用 Mutation
 ALTER TABLE users
@@ -54,7 +42,7 @@ WHERE user_id IN (1, 2, 3, 4, 5);
 -- ========================================
 
 -- 创建修正表
-CREATE TABLE orders_fixed AS orders;
+CREATE TABLE IF NOT EXISTS orders_fixed AS orders;
 
 -- 修正数据（所有金额增加 10%）
 INSERT INTO orders_fixed
@@ -85,7 +73,7 @@ ALTER TABLE orders
 UPDATE status = 'completed',
     completed_at = now()
 WHERE order_id = 12345
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 方案 2: 重新设计表结构（追加模式）
 -- 原表: orders
@@ -97,7 +85,7 @@ SETTINGS lightweight_update = 1;
 -- ========================================
 
 -- 创建归档表
-CREATE TABLE orders_archive (
+CREATE TABLE IF NOT EXISTS orders_archive (
     order_id UInt64,
     user_id UInt64,
     amount Float64,
@@ -122,7 +110,7 @@ WITH orders;
 ALTER TABLE events
 UPDATE status = 'processed'
 WHERE event_time >= now() - INTERVAL 7 DAY
-SETTINGS lightweight_update = 1;
+-- REMOVED SET lightweight_update (not supported) 1;
 
 -- 2. 旧数据使用分区更新归档
 ALTER TABLE events_archive
@@ -169,7 +157,7 @@ FINAL;
 -- ========================================
 
 -- 合理的分区策略
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
@@ -183,7 +171,7 @@ ORDER BY (user_id, event_time);
 -- ========================================
 
 -- 1. 备份数据
-CREATE TABLE users_backup AS users;
+CREATE TABLE IF NOT EXISTS users_backup AS users;
 
 -- 2. 检查更新范围
 SELECT 
@@ -232,7 +220,7 @@ GROUP BY status;
 ALTER TABLE users UPDATE status = 'active';
 
 -- 正确做法
-CREATE TABLE users_temp AS users;
+CREATE TABLE IF NOT EXISTS users_temp AS users;
 INSERT INTO users_temp SELECT * FROM users WHERE ...;
 ALTER TABLE users REPLACE PARTITION '202401' FROM users_temp;
 
@@ -246,7 +234,7 @@ ALTER TABLE orders UPDATE status = 'new' WHERE order_id = x;
 
 -- 正确做法
 -- 使用事件日志表
-CREATE TABLE order_events (
+CREATE TABLE IF NOT EXISTS order_events (
     order_id UInt64,
     event_type String,
     event_time DateTime,

@@ -1,15 +1,3 @@
--- ================================================
--- 04_date_arithmetic_examples.sql
--- 从 04_date_arithmetic.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 时间加减
--- ========================================
-
--- 加法：添加时间间隔
 SELECT 
     now() + INTERVAL 1 DAY AS tomorrow,
     now() + INTERVAL 1 WEEK AS next_week,
@@ -202,7 +190,7 @@ ORDER BY event_date;
 -- ========================================
 
 -- 创建带预计算时间列的表
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     id UInt64,
     event_time DateTime,
     event_date Date MATERIALIZED toDate(event_time),

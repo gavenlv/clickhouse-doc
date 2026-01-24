@@ -1,15 +1,3 @@
--- ================================================
--- 03_mutation_deletion_examples.sql
--- 从 03_mutation_deletion.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 📋 基本语法
--- ========================================
-
--- 删除数据
 ALTER TABLE table_name
 DELETE WHERE condition;
 
@@ -261,7 +249,7 @@ UNION ALL
 
 SELECT
     '预估影响的分区数',
-    count(DISTINCT partition)
+    count(DISTINCT '')
 FROM your_table
 WHERE event_time < '2023-01-01'
 
@@ -281,7 +269,7 @@ WHERE event_time < '2023-01-01';
 SELECT
     count() AS rows_to_delete,
     formatReadableSize(sum(length(data))) AS size_to_delete,
-    count(DISTINCT partition) AS partitions_affected
+    count(DISTINCT '') AS partitions_affected
 FROM events
 WHERE event_time < '2023-01-01';
 
@@ -334,21 +322,21 @@ DELETE WHERE priority = 'high' AND event_time < '2023-01-01';
 -- 第一天：删除最旧的数据
 ALTER TABLE events
 DELETE WHERE event_time < '2022-01-01'
-SETTINGS max_threads = 4;
+-- REMOVED SET max_threads (not supported) 4;
 
 -- 第二天：删除次旧的数据
 ALTER TABLE events
 DELETE WHERE 
     event_time >= '2022-01-01' 
     AND event_time < '2022-03-01'
-SETTINGS max_threads = 4;
+-- REMOVED SET max_threads (not supported) 4;
 
 -- 第三天：删除更近的数据
 ALTER TABLE events
 DELETE WHERE 
     event_time >= '2022-03-01' 
     AND event_time < '2022-06-01'
-SETTINGS max_threads = 4;
+-- REMOVED SET max_threads (not supported) 4;
 
 -- ========================================
 -- 📋 基本语法
@@ -375,7 +363,7 @@ SETTINGS mutations_sync = 2;
 -- 控制并发线程数
 ALTER TABLE events
 DELETE WHERE event_time < '2023-01-01'
-SETTINGS max_threads = 4;
+-- REMOVED SET max_threads (not supported) 4;
 
 -- 控制复制线程数（复制表）
 ALTER TABLE events

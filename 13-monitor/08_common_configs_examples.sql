@@ -1,18 +1,4 @@
--- ================================================
--- 08_common_configs_examples.sql
--- 从 08_common_configs.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 3. 基础监控视图
--- ========================================
-
--- 创建监控数据库
-CREATE DATABASE IF NOT EXISTS monitoring;
-
--- 创建基础监控视图
+-- 创建数据库（如果存在则不创建）
 CREATE VIEW monitoring.basic_metrics AS
 SELECT
     now() AS timestamp,
@@ -130,6 +116,7 @@ ORDER BY total_bytes DESC;
 -- ========================================
 
 -- 创建告警配置表
+DROP TABLE IF EXISTS monitoring.alert_config;
 CREATE TABLE IF NOT EXISTS monitoring.alert_config (
     id UInt64,
     category String,        -- System, Query, DataQuality, Operation

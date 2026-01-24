@@ -1,15 +1,3 @@
--- ================================================
--- 03_time_zones_examples.sql
--- 从 03_time_zones.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 获取和设置时区
--- ========================================
-
--- 获取当前时区
 SELECT timezone();  -- 例如：Asia/Shanghai
 
 -- 查看所有可用时区
@@ -41,7 +29,7 @@ SELECT
 
 -- 假设数据库存储 UTC 时间
 -- 创建表时指定 UTC 时区
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     id UInt64,
     event_time DateTime('UTC'),  -- 明确指定 UTC
     event_data String
@@ -81,7 +69,7 @@ ORDER BY beijing_day;
 -- ========================================
 
 -- 存储用户时区
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UInt64,
     name String,
     timezone String,  -- 用户时区，如 'Asia/Shanghai'
@@ -107,7 +95,7 @@ FROM users;
 -- ========================================
 
 -- 记录事件和时区
-CREATE TABLE global_events (
+CREATE TABLE IF NOT EXISTS global_events (
     id UInt64,
     event_time DateTime('UTC'),
     event_timezone String,
@@ -155,7 +143,7 @@ ORDER BY local_day;
 -- ========================================
 
 -- 夏令时地区的事件
-CREATE TABLE dst_events (
+CREATE TABLE IF NOT EXISTS dst_events (
     id UInt64,
     event_time DateTime('UTC'),
     location_timezone String,
@@ -204,7 +192,7 @@ ORDER BY user_timezone, local_hour;
 -- ========================================
 
 -- 创建表时指定时区
-CREATE TABLE events_beijing (
+CREATE TABLE IF NOT EXISTS events_beijing (
     id UInt64,
     event_time DateTime('Asia/Shanghai'),  -- 北京时区
     event_data String
@@ -272,13 +260,13 @@ SELECT
 -- ========================================
 
 -- ❌ 错误：直接存储本地时间
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_time DateTime  -- 使用服务器时区，可能是错误的
 ) ENGINE = MergeTree()
 ORDER BY event_time;
 
 -- ✅ 正确：存储 UTC 时间
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_time DateTime('UTC')  -- 明确指定 UTC
 ) ENGINE = MergeTree()
 ORDER BY event_time;
@@ -304,18 +292,18 @@ FROM events;
 -- ========================================
 
 -- ❌ 错误：不同表使用不同时区
-CREATE TABLE events_utc (
+CREATE TABLE IF NOT EXISTS events_utc (
     event_time DateTime('UTC')
 ) ENGINE = MergeTree()
 ORDER BY event_time;
 
-CREATE TABLE events_local (
+CREATE TABLE IF NOT EXISTS events_local (
     event_time DateTime  -- 服务器时区
 ) ENGINE = MergeTree()
 ORDER BY event_time;
 
 -- ✅ 正确：所有表使用统一时区（UTC）
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_time DateTime('UTC')
 ) ENGINE = MergeTree()
 ORDER BY event_time;

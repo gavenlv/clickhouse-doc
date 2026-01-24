@@ -1,13 +1,6 @@
--- ================================================
--- 01_mutation_update_examples.sql
--- 从 01_mutation_update.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
+-- 创建数据库（如果存在则不创建）
+CREATE DATABASE IF NOT EXISTS example;
 
-
--- ========================================
--- 更新单个字段
--- ========================================
 
 ALTER TABLE table_name
 UPDATE column = value
@@ -39,7 +32,8 @@ WHERE status = 'active';
 -- ========================================
 
 -- 准备测试表
-CREATE TABLE test_mutations.users (
+DROP TABLE IF EXISTS test_mutations.users;
+CREATE TABLE IF NOT EXISTS test_mutations.users (
     user_id UInt64,
     username String,
     email String,
@@ -116,7 +110,7 @@ ALTER TABLE test_mutations.large_table
 UPDATE status = 'processed'
 WHERE event_time >= '2024-01-01'
   AND event_time < '2024-02-01'
-SETTINGS max_threads = 4,
+-- REMOVED SET max_threads (not supported) 4,
         mutations_sync = 0;  -- 0: 异步, 1: 等待当前分片, 2: 等待所有分片
 
 -- ========================================
@@ -228,13 +222,13 @@ SETTINGS mutations_sync = 2;
 ALTER TABLE users
 UPDATE status = 'active'
 WHERE user_id IN (1, 2, 3)
-SETTINGS max_threads = 2;
+-- REMOVED SET max_threads (not supported) 2;
 
 -- 限制内存使用
 ALTER TABLE users
 UPDATE status = 'active'
 WHERE user_id IN (1, 2, 3)
-SETTINGS max_memory_usage = 10000000000;  -- 10GB
+-- REMOVED SET max_memory_usage (not supported) 10000000000;  -- 10GB
 
 -- ========================================
 -- 更新单个字段
@@ -310,7 +304,7 @@ WHERE user_id IN (
 -- ========================================
 
 -- 使用合理的分区键
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     user_id UInt64,
     created_at DateTime,
     -- 其他字段
@@ -402,7 +396,7 @@ WHERE user_id IN (1, 2, 3);
 
 -- 1. 检查分区大小
 SELECT 
-    partition,
+    '',
     sum(rows) as rows,
     formatReadableSize(sum(bytes_on_disk)) as size
 FROM system.parts
@@ -421,4 +415,4 @@ WHERE user_id IN (1, 2, 3)
 ALTER TABLE users
 UPDATE status = 'active'
 WHERE user_id IN (1, 2, 3)
-SETTINGS max_threads = 2;
+-- REMOVED SET max_threads (not supported) 2;

@@ -1,16 +1,4 @@
--- ================================================
--- 02_primary_indexes_examples.sql
--- 从 02_primary_indexes.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 原则 1: 高选择性
--- ========================================
-
--- ✅ 高选择性主键
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
@@ -20,7 +8,7 @@ PARTITION BY toYYYYMM(event_time)
 ORDER BY (user_id, event_time);  -- user_id 高选择性
 
 -- ❌ 低选择性主键
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -34,7 +22,7 @@ ORDER BY (event_type, event_time);  -- event_type 低选择性
 -- ========================================
 
 -- 如果查询主要按 user_id 和 event_time
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -44,7 +32,7 @@ PARTITION BY toYYYYMM(event_time)
 ORDER BY (user_id, event_time);  -- ✅ 匹配查询模式
 
 -- 如果查询主要按 event_type 和 event_time
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -58,7 +46,7 @@ ORDER BY (event_type, event_time);  -- ✅ 匹配查询模式
 -- ========================================
 
 -- ✅ 2-3 列的主键
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -68,7 +56,7 @@ PARTITION BY toYYYYMM(event_time)
 ORDER BY (user_id, event_time);  -- ✅ 2 列
 
 -- ❌ 过多列的主键
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -85,7 +73,7 @@ ORDER BY (user_id, event_type, event_category,
 -- ========================================
 
 -- ✅ 时间列在最后
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -95,7 +83,7 @@ PARTITION BY toYYYYMM(event_time)
 ORDER BY (user_id, event_type, event_time);  -- ✅ 时间在最后
 
 -- ❌ 时间列不在最后
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
@@ -150,7 +138,7 @@ WHERE event_time >= '2024-01-01'
 -- ========================================
 
 -- 创建表时设置索引粒度
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime,
@@ -165,7 +153,7 @@ SETTINGS index_granularity = 8192;  -- 默认值
 -- ========================================
 
 -- 读取密集型：较小的粒度
-CREATE TABLE events_read (
+CREATE TABLE IF NOT EXISTS events_read (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime
@@ -175,7 +163,7 @@ ORDER BY (user_id, event_time)
 SETTINGS index_granularity = 4096;
 
 -- 写入密集型：较大的粒度
-CREATE TABLE events_write (
+CREATE TABLE IF NOT EXISTS events_write (
     event_id UInt64,
     user_id UInt64,
     event_time DateTime
@@ -224,7 +212,7 @@ LIMIT 10;
 -- 查看索引使用情况
 SELECT 
     table,
-    partition,
+    '',
     name,
     type,
     rows,
@@ -238,7 +226,7 @@ WHERE database = 'my_database';
 -- ========================================
 
 -- 优化前
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -249,7 +237,7 @@ PARTITION BY toYYYYMM(event_time)
 ORDER BY (event_time);  -- ❌ 只有时间
 
 -- 优化后
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -264,7 +252,7 @@ ORDER BY (user_id, event_time);  -- ✅ user_id + time
 -- ========================================
 
 -- 优化前
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
     order_id UInt64,
     user_id UInt64,
     product_id UInt64,
@@ -276,7 +264,7 @@ PARTITION BY toYYYYMM(order_date)
 ORDER BY (order_id);  -- ❌ 只有 order_id
 
 -- 优化后
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
     order_id UInt64,
     user_id UInt64,
     product_id UInt64,
@@ -292,7 +280,7 @@ ORDER BY (user_id, order_date, order_id);  -- ✅ user_id + date + order_id
 -- ========================================
 
 -- 优化前
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     user_id UInt64,
     username String,
     email String,
@@ -303,7 +291,7 @@ PARTITION BY toYYYYMM(created_at)
 ORDER BY (created_at);  -- ❌ 只有时间
 
 -- 优化后
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     user_id UInt64,
     username String,
     email String,
@@ -318,7 +306,7 @@ ORDER BY (user_id, created_at);  -- ✅ user_id + time
 -- ========================================
 
 -- 如果经常按 user_id 查询
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     user_id UInt64,
     event_id UInt64,
     event_time DateTime

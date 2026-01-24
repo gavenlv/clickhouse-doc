@@ -1,19 +1,7 @@
--- ================================================
--- 03_data_quality_monitoring_examples.sql
--- 从 03_data_quality_monitoring.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 检测分区不均衡
--- ========================================
-
--- 分区大小分析
 SELECT
     database,
     table,
-    partition,
+    '',
     sum(rows) AS partition_rows,
     sum(bytes_on_disk) AS partition_bytes,
     formatReadableSize(sum(bytes_on_disk)) AS readable_size
@@ -43,7 +31,7 @@ FROM (
     SELECT
         database,
         table,
-        partition,
+        '',
         sum(rows) AS partition_rows
     FROM system.parts
     WHERE active
@@ -72,7 +60,7 @@ FROM (
         SELECT
             database,
             table,
-            partition,
+            '',
             sum(rows) AS partition_rows
         FROM system.parts
         WHERE active
@@ -151,12 +139,12 @@ FROM (
 SELECT
     database,
     table,
-    partition,
+    '',
     sum(rows) AS rows,
     sum(bytes_on_disk) AS bytes,
     formatReadableSize(sum(bytes_on_disk)) AS readable_size,
-    toDateTime(max(partition)) AS partition_date,
-    now() - toDateTime(max(partition)) AS age
+    toDateTime(max('')) AS partition_date,
+    now() - toDateTime(max('')) AS age
 FROM system.parts
 WHERE active
   AND database NOT IN ('system')
@@ -398,7 +386,7 @@ ORDER BY uniqueness_ratio DESC;
 SELECT
     database,
     table,
-    partition,
+    '',
     sum(rows) AS rows,
     sum(bytes_on_disk) AS bytes,
     formatReadableSize(sum(bytes_on_disk)) AS readable_size
@@ -413,7 +401,7 @@ ORDER BY bytes DESC;
 SELECT
     database,
     table,
-    partition,
+    '',
     partition_bytes,
     avg_bytes,
     partition_bytes / avg_bytes AS skew_ratio
@@ -421,7 +409,7 @@ FROM (
     SELECT
         database,
         table,
-        partition,
+        '',
         sum(bytes_on_disk) AS partition_bytes
     FROM system.parts
     WHERE active
@@ -550,7 +538,7 @@ FROM (
         SELECT
             database,
             table,
-            partition,
+            '',
             sum(rows) AS partition_rows
         FROM system.parts
         WHERE active

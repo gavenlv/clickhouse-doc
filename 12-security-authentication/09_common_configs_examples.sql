@@ -1,18 +1,11 @@
--- ================================================
--- 09_common_configs_examples.sql
--- 从 09_common_configs.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
+-- 创建数据库（如果存在则不创建）
+CREATE DATABASE IF NOT EXISTS compliance;
+CREATE DATABASE IF NOT EXISTS multi_tenant;
 
 
--- ========================================
--- SQL Block 1
--- ========================================
-
--- 创建管理员用户
 CREATE USER IF NOT EXISTS admin
 IDENTIFIED WITH sha256_password BY 'Admin@SecurePassword123!'
-SETTINGS access_management = 1;
+-- REMOVED SET access_management (not supported) 1;
 
 -- 创建只读用户
 CREATE ROLE IF NOT EXISTS readonly_role;
@@ -46,7 +39,7 @@ GRANT SELECT, ALTER UPDATE, ALTER DELETE ON *.* TO analyst_role;
 CREATE USER IF NOT EXISTS admin
 IDENTIFIED WITH sha256_password BY 'Admin@SecurePassword123!'
 DEFAULT ROLE admin_role
-SETTINGS access_management = 1;
+-- REMOVED SET access_management (not supported) 1;
 
 CREATE USER IF NOT EXISTS readonly_user
 IDENTIFIED WITH sha256_password BY 'ReadOnly@Password123!'
@@ -104,30 +97,28 @@ GRANT SELECT ON security.* TO audit_role;
 CREATE USER IF NOT EXISTS admin
 IDENTIFIED WITH sha256_password BY 'Admin@SecurePassword123!'
 DEFAULT ROLE admin_role
-SETTINGS access_management = 1;
+-- REMOVED SET access_management (not supported) 1;
 
 CREATE USER IF NOT EXISTS readonly_user
 IDENTIFIED WITH sha256_password BY 'ReadOnly@Password123!'
 DEFAULT ROLE readonly_role
-SETTINGS
-    max_memory_usage = 10000000000,
+-- REMOVED SET max_memory_usage (not supported) 10000000000,
     max_execution_time = 600;
 
 CREATE USER IF NOT EXISTS analyst_user
 IDENTIFIED WITH sha256_password BY 'Analyst@Password123!'
 DEFAULT ROLE analyst_role
-SETTINGS
-    max_memory_usage = 20000000000,
+-- REMOVED SET max_memory_usage (not supported) 20000000000,
     max_execution_time = 1800;
 
 CREATE USER IF NOT EXISTS audit_user
 IDENTIFIED WITH sha256_password BY 'Audit@Password123!'
 DEFAULT ROLE audit_role
-SETTINGS
-    max_memory_usage = 5000000000,
+-- REMOVED SET max_memory_usage (not supported) 5000000000,
     max_execution_time = 300;
 
 -- 4. 创建审计告警
+DROP TABLE IF EXISTS security.alerts;
 CREATE TABLE IF NOT EXISTS security.alerts
 (
     alert_id UUID,
@@ -161,6 +152,7 @@ WHERE exception_code = 516
 -- ========================================
 
 -- 1. 创建租户表
+DROP TABLE IF EXISTS multi_tenant.orders;
 CREATE TABLE IF NOT EXISTS multi_tenant.orders
 ON CLUSTER 'treasurycluster'
 (
@@ -222,22 +214,19 @@ ORDER BY month DESC;
 -- 1. 创建资源受限的角色
 CREATE ROLE IF NOT EXISTS small_tenant_role
 GRANT SELECT, INSERT ON multi_tenant.* TO small_tenant_role
-SETTINGS
-    max_memory_usage = 5000000000,      -- 5 GB
+-- REMOVED SET max_memory_usage (not supported) 5000000000,      -- 5 GB
     max_execution_time = 600,          -- 10 分钟
     max_concurrent_queries_for_user = 3;
 
 CREATE ROLE IF NOT EXISTS medium_tenant_role
 GRANT SELECT, INSERT ON multi_tenant.* TO medium_tenant_role
-SETTINGS
-    max_memory_usage = 10000000000,     -- 10 GB
+-- REMOVED SET max_memory_usage (not supported) 10000000000,     -- 10 GB
     max_execution_time = 1800,         -- 30 分钟
     max_concurrent_queries_for_user = 5;
 
 CREATE ROLE IF NOT EXISTS large_tenant_role
 GRANT SELECT, INSERT ON multi_tenant.* TO large_tenant_role
-SETTINGS
-    max_memory_usage = 20000000000,     -- 20 GB
+-- REMOVED SET max_memory_usage (not supported) 20000000000,     -- 20 GB
     max_execution_time = 3600,         -- 60 分钟
     max_concurrent_queries_for_user = 10;
 
@@ -277,6 +266,7 @@ ORDER BY total_memory_gb DESC;
 -- ========================================
 
 -- 1. 创建数据访问日志表
+DROP TABLE IF EXISTS compliance.data_access_log;
 CREATE TABLE IF NOT EXISTS compliance.data_access_log
 ON CLUSTER 'treasurycluster'
 (
@@ -295,6 +285,7 @@ PARTITION BY toYYYYMM(access_time)
 ORDER BY (access_id, access_time);
 
 -- 2. 创建 PII 数据表
+DROP TABLE IF EXISTS compliance.user_pii;
 CREATE TABLE IF NOT EXISTS compliance.user_pii
 ON CLUSTER 'treasurycluster'
 (
@@ -330,8 +321,8 @@ AS SELECT
     generateUUIDv4() as access_id,
     user,
     '' as accessed_user_id,
-    if(contains(query, 'SELECT'), 'read', 
-       if(contains(query, 'INSERT'), 'write', 'delete'))::Enum8('read' = 1, 'write' = 2, 'delete' = 3) as access_type,
+    if(position(query, 'SELECT'), 'read', 
+       if(position(query, 'INSERT'), 'write', 'delete'))::Enum8('read' = 1, 'write' = 2, 'delete' = 3) as access_type,
     database,
     columns_accessed,
     event_time as access_time,
@@ -346,6 +337,7 @@ WHERE type = 'QueryFinish'
 -- ========================================
 
 -- 1. 创建 PHI 数据表
+DROP TABLE IF EXISTS compliance.patient_phi;
 CREATE TABLE IF NOT EXISTS compliance.patient_phi
 ON CLUSTER 'treasurycluster'
 (

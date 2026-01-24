@@ -1,15 +1,3 @@
--- ================================================
--- 09_date_performance_examples.sql
--- 从 09_date_performance.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 存储效率
--- ========================================
-
--- 比较不同日期类型的存储效率
 SELECT
     'Date' AS type,
     formatReadableSize(sum(data_compressed_bytes)) AS compressed,
@@ -71,7 +59,7 @@ WHERE toDate(datetime_col) = '2024-01-20';
 -- ========================================
 
 -- ✅ 优化：只存储日期时使用 Date 类型
-CREATE TABLE events_optimized (
+CREATE TABLE IF NOT EXISTS events_optimized (
     id UInt64,
     event_date Date,  -- 只需要日期
     event_data String
@@ -88,7 +76,7 @@ WHERE event_date = '2024-01-20';
 -- ========================================
 
 -- ✅ 优化：物化常用的时间列
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     id UInt64,
     event_time DateTime,
     event_date Date MATERIALIZED toDate(event_time),
@@ -116,7 +104,7 @@ ORDER BY event_date;
 -- ========================================
 
 -- ✅ 优化：使用时间作为分区键
-CREATE TABLE events_partitioned (
+CREATE TABLE IF NOT EXISTS events_partitioned (
     id UInt64,
     event_time DateTime,
     event_data String
@@ -164,7 +152,7 @@ ORDER BY event_date, event_type;
 -- ========================================
 
 -- ✅ 优化：为时间列创建跳数索引
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     id UInt64,
     event_time DateTime,
     event_date Date MATERIALIZED toDate(event_time),
@@ -263,7 +251,7 @@ LIMIT 10;
 -- ========================================
 
 -- 优化的时间序列表设计
-CREATE TABLE time_series_optimized (
+CREATE TABLE IF NOT EXISTS time_series_optimized (
     metric_name String,
     timestamp DateTime64(3),
     value Float64,
@@ -364,7 +352,7 @@ WHERE event_time >= toStartOfDay(now() - INTERVAL 30 DAY)
 GROUP BY day;
 
 -- ✅ 快：使用物化列
-CREATE TABLE events_optimized (
+CREATE TABLE IF NOT EXISTS events_optimized (
     id UInt64,
     event_time DateTime,
     event_date Date MATERIALIZED toDate(event_time),

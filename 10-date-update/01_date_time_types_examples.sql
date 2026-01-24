@@ -1,16 +1,4 @@
--- ================================================
--- 01_date_time_types_examples.sql
--- 从 01_date_time_types.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- Date 类型
--- ========================================
-
--- Date 类型：精确到天，2 字节
-CREATE TABLE date_demo (
+CREATE TABLE IF NOT EXISTS date_demo (
     id UInt64,
     date_col Date
 ) ENGINE = MergeTree()
@@ -33,7 +21,7 @@ FROM date_demo;
 -- ========================================
 
 -- Date32 类型：扩展范围，4 字节
-CREATE TABLE date32_demo (
+CREATE TABLE IF NOT EXISTS date32_demo (
     id UInt64,
     date_col Date32
 ) ENGINE = MergeTree()
@@ -56,7 +44,7 @@ FROM date32_demo;
 -- ========================================
 
 -- DateTime 类型：精确到秒，4 字节
-CREATE TABLE datetime_demo (
+CREATE TABLE IF NOT EXISTS datetime_demo (
     id UInt64,
     datetime_col DateTime
 ) ENGINE = MergeTree()
@@ -79,7 +67,7 @@ FROM datetime_demo;
 -- ========================================
 
 -- DateTime64 类型：可配置精度，8 字节
-CREATE TABLE datetime64_demo (
+CREATE TABLE IF NOT EXISTS datetime64_demo (
     id UInt64,
     datetime_col DateTime64(3)  -- 毫秒精度
 ) ENGINE = MergeTree()
@@ -102,7 +90,7 @@ FROM datetime64_demo;
 -- ========================================
 
 -- 使用 Date 类型存储生日
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UInt64,
     name String,
     birth_date Date
@@ -120,7 +108,7 @@ WHERE
 -- ========================================
 
 -- 使用 DateTime 存储事件时间
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     id UInt64,
     event_time DateTime,
     event_type String,
@@ -138,7 +126,7 @@ WHERE event_time >= now() - INTERVAL 1 HOUR;
 -- ========================================
 
 -- 使用 DateTime64 存储微秒级时间
-CREATE TABLE sensor_data (
+CREATE TABLE IF NOT EXISTS sensor_data (
     sensor_id UInt64,
     reading_time DateTime64(6),
     value Float64
@@ -156,7 +144,7 @@ INSERT INTO sensor_data VALUES
 -- ========================================
 
 -- 使用 DateTime 处理多时区数据
-CREATE TABLE global_events (
+CREATE TABLE IF NOT EXISTS global_events (
     id UInt64,
     event_time DateTime,  -- UTC 时间
     event_timezone String,
@@ -211,7 +199,7 @@ SELECT now() > '2024-01-20';  -- 字符串自动转 DateTime
 -- ========================================
 
 -- 比较不同类型的存储效率
-CREATE TABLE storage_test (
+CREATE TABLE IF NOT EXISTS storage_test (
     id UInt64,
     date_col Date,
     datetime_col DateTime,
@@ -284,7 +272,7 @@ WHERE event_time = toDateTime('2024-01-20 12:00:00', 'UTC');
 -- 读取时：2024-01-20 12:34:56
 
 -- ✅ 正确：使用 DateTime64
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_time DateTime64(3)
 ) ENGINE = MergeTree()
 ORDER BY event_time;
@@ -297,7 +285,7 @@ ORDER BY event_time;
 INSERT INTO date_demo VALUES (1, toDate('1800-01-01'));  -- 失败
 
 -- ✅ 正确：使用 Date32
-CREATE TABLE wide_date_range (
+CREATE TABLE IF NOT EXISTS wide_date_range (
     date_col Date32
 ) ENGINE = MergeTree()
 ORDER BY date_col;

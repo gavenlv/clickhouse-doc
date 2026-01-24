@@ -1,15 +1,3 @@
--- ================================================
--- 10_common_patterns_examples.sql
--- 从 10_common_patterns.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 解决方案
--- ========================================
-
--- ❌ 避免
 SELECT * FROM events
 WHERE event_time >= now() - INTERVAL 7 DAY;
 
@@ -79,7 +67,7 @@ GROUP BY toDate(event_time);
 
 -- ✅ 推荐
 -- 方法 1: 使用物化列
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt32,
     event_time DateTime,
@@ -229,7 +217,7 @@ SELECT * FROM events
 WHERE hasToken(event_data, 'keyword');
 
 -- 方法 2: 使用 ngrambf_v1 索引
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt32,
     event_data String,

@@ -1,15 +1,3 @@
--- ================================================
--- 04_lightweight_deletion_examples.sql
--- 从 04_lightweight_deletion.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
-
-
--- ========================================
--- 📋 基本语法
--- ========================================
-
--- 轻量级删除
 ALTER TABLE table_name
 DELETE WHERE condition
 SETTINGS lightweight_delete = 1;
@@ -170,7 +158,7 @@ SETTINGS allow_experimental_lightweight_delete = 1;
 
 -- 从用户删除列表中读取要删除的用户 ID
 -- 假设有一个表存储了要删除的用户
-CREATE TABLE users_to_delete (
+CREATE TABLE IF NOT EXISTS users_to_delete (
     user_id String
 ) ENGINE = MergeTree()
 ORDER BY user_id;
@@ -233,7 +221,7 @@ OPTIMIZE TABLE events FINAL;
 -- 查看合并进度
 SELECT
     table,
-    partition,
+    '',
     sum(rows) as rows,
     count() as parts
 FROM system.parts
@@ -299,6 +287,6 @@ SELECT
     rows_to_delete * 100.0 / total_rows as delete_percentage,
     CASE 
         WHEN rows_to_delete * 100.0 / total_rows < 30 THEN 'Use lightweight delete'
-        ELSE 'Use partition deletion'
+        ELSE 'Use '' deletion'
     END as recommendation
 FROM events;

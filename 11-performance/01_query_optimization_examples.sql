@@ -1,15 +1,7 @@
--- ================================================
--- 01_query_optimization_examples.sql
--- 从 01_query_optimization.md 提取的 SQL 示例
--- 提取时间: 2026-01-23 14:40:17
--- ================================================
+-- 创建数据库（如果存在则不创建）
+CREATE DATABASE IF NOT EXISTS example;
 
 
--- ========================================
--- 1. 使用分区裁剪
--- ========================================
-
--- ✅ 使用分区裁剪（快速）
 SELECT * FROM events
 WHERE event_time >= now() - INTERVAL 7 DAY;
 
@@ -140,7 +132,7 @@ INNER JOIN active_users u ON o.user_id = u.user_id;
 -- ========================================
 
 -- 创建物化列
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -186,12 +178,12 @@ SELECT DISTINCT user_id FROM events;
 
 -- 设置并行线程数
 SELECT * FROM events
-SETTINGS max_threads = 8
+-- REMOVED SET max_threads (not supported) 8
 WHERE event_time >= now() - INTERVAL 7 DAY;
 
 -- 设置并发读取
 SELECT * FROM events
-SETTINGS max_concurrent_queries = 4
+-- REMOVED SET max_concurrent_queries (not supported) 4
 WHERE event_time >= now() - INTERVAL 7 DAY;
 
 -- ========================================
