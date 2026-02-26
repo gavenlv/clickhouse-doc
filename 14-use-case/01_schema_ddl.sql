@@ -349,6 +349,23 @@ ORDER BY customer_id;
 -- ========================================
 -- 10. 创建字典 (用于JOIN优化)
 -- ========================================
+-- ⚠️ 重要：生产环境不要使用 default 用户！
+-- 建议创建一个专用用户用于字典访问，例如：
+--
+--   CREATE USER IF NOT EXISTS dict_reader ON CLUSTER 'treasurycluster'
+--   IDENTIFIED WITH sha256_password BY 'StrongPassword123!';
+--
+--   GRANT SELECT ON prediction_analytics.metric_metadata TO dict_reader;
+--   GRANT SELECT ON prediction_analytics.month_mapping TO dict_reader;
+--
+-- 然后在字典定义中使用该用户：
+--   SOURCE(CLICKHOUSE(
+--       TABLE 'metric_metadata'
+--       DB 'prediction_analytics'
+--       USER 'dict_reader'
+--       PASSWORD 'StrongPassword123!'
+--   ))
+-- ========================================
 
 -- 指标元数字典
 CREATE DICTIONARY IF NOT EXISTS prediction_analytics.dict_metric_metadata ON CLUSTER 'treasurycluster' (
