@@ -12,7 +12,7 @@ volumes:
 services:
   # ClickHouse Keeper ensemble (3 nodes for quorum)
   keeper1:
-    image: zlsmshoqvwt6q1.xuanyuan.run/clickhouse/clickhouse-keeper:latest
+    image: clickhouse/clickhouse-keeper:latest
     container_name: clickhouse-keeper-1
     hostname: keeper1
     networks:
@@ -25,7 +25,7 @@ services:
     restart: unless-stopped
 
   keeper2:
-    image: zlsmshoqvwt6q1.xuanyuan.run/clickhouse/clickhouse-keeper:latest
+    image: clickhouse/clickhouse-keeper:latest
     container_name: clickhouse-keeper-2
     hostname: keeper2
     networks:
@@ -38,7 +38,7 @@ services:
     restart: unless-stopped
 
   keeper3:
-    image: zlsmshoqvwt6q1.xuanyuan.run/clickhouse/clickhouse-keeper:latest
+    image: clickhouse/clickhouse-keeper:latest
     container_name: clickhouse-keeper-3
     hostname: keeper3
     networks:
@@ -52,7 +52,7 @@ services:
 
   # ClickHouse server instances (2 replicas)
   clickhouse1:
-    image: zlsmshoqvwt6q1.xuanyuan.run/clickhouse/clickhouse-server:latest
+    image: clickhouse/clickhouse-server:latest
     container_name: clickhouse-server-1
     hostname: clickhouse1
     networks:
@@ -77,7 +77,7 @@ services:
       retries: 3
 
   clickhouse2:
-    image: zlsmshoqvwt6q1.xuanyuan.run/clickhouse/clickhouse-server:latest
+    image: clickhouse/clickhouse-server:latest
     container_name: clickhouse-server-2
     hostname: clickhouse2
     networks:
