@@ -1,0 +1,133 @@
+<!-- ========================================
+     方案A：高性能导入配置
+     ========================================
+     说明：单分片优化方案的推荐配置参数
+     用途：复制到ClickHouse配置目录或通过SET命令应用
+     ======================================== -->
+
+<yandex>
+    <!-- ========================================
+         1. 插入优化配置
+         ======================================== -->
+    
+    <!-- 并行插入线程数（32核CPU的75%） -->
+    <max_insert_threads>24</max_insert_threads>
+    
+    <!-- 最大插入块大小（1M行） -->
+    <max_insert_block_size>1048576</max_insert_block_size>
+    
+    <!-- 最小插入块大小 -->
+    <min_insert_block_size_rows>1000000</min_insert_block_size_rows>
+    <min_insert_block_size_bytes>1073741824</min_insert_block_size_bytes>
+    
+    <!-- 异步复制（只等待1个副本） -->
+    <insert_quorum>1</insert_quorum>
+    <insert_quorum_timeout>300000</insert_quorum_timeout>
+    
+    <!-- ========================================
+         2. 内存优化配置
+         ======================================== -->
+    
+    <!-- 单查询最大内存（240GB，256GB的93%） -->
+    <max_memory_usage>240000000000</max_memory_usage>
+    
+    <!-- 所有查询最大总内存 -->
+    <max_memory_usage_for_all_queries>230000000000</max_memory_usage_for_all_queries>
+    
+    <!-- ========================================
+         3. 并行处理配置
+         ======================================== -->
+    
+    <!-- 最大线程数 -->
+    <max_threads>32</max_threads>
+    
+    <!-- 并行解析Parquet -->
+    <input_format_parallel_parsing>1</input_format_parallel_parsing>
+    
+    <!-- Parquet块大小 -->
+    <input_format_parquet_max_block_size>1000000</input_format_parquet_max_block_size>
+    
+    <!-- ========================================
+         4. 网络和超时配置
+         ======================================== -->
+    
+    <!-- 连接超时（10分钟） -->
+    <connect_timeout>600</connect_timeout>
+    <connect_timeout_with_failover_ms>60000</connect_timeout_with_failover_ms>
+    
+    <!-- 接收超时（10分钟） -->
+    <receive_timeout>600</receive_timeout>
+    
+    <!-- 发送超时（10分钟） -->
+    <send_timeout>600</send_timeout>
+    
+    <!-- TCP超时 -->
+    <tcp_keep_alive_timeout>60</tcp_keep_alive_timeout>
+    
+    <!-- 重试次数 -->
+    <max_retry_count>3</max_retry_count>
+    
+    <!-- ========================================
+         5. 查询优化配置
+         ======================================== -->
+    
+    <!-- 最大执行时间（30分钟） -->
+    <max_execution_time>1800</max_execution_time>
+    
+    <!-- 超时模式 -->
+    <timeout_overflow_mode>throw</timeout_overflow_mode>
+    
+    <!-- ========================================
+         6. 磁盘和IO配置
+         ======================================== -->
+    
+    <!-- 最大读取行数 -->
+    <max_read_rows>100000000000</max_read_rows>
+    
+    <!-- 最大读取字节数 -->
+    <max_read_bytes>100000000000000</max_read_bytes>
+    
+    <!-- ========================================
+         7. 压缩配置
+         ======================================== -->
+    
+    <!-- 压缩算法 -->
+    <compression>
+        <case>
+            <method>lz4</method>
+        </case>
+    </compression>
+    
+    <!-- ========================================
+         8. 合并和优化配置
+         ======================================== -->
+    
+    <!-- 后台线程池大小 -->
+    <background_pool_size>16</background_pool_size>
+    
+    <!-- 后台调度线程池大小 -->
+    <background_schedule_pool_size>16</background_schedule_pool_size>
+    
+    <!-- ========================================
+         9. 日志配置
+         ======================================== -->
+    
+    <!-- 查询日志 -->
+    <query_log>
+        <database>system</database>
+        <table>query_log</table>
+        <partition_by>toYYYYMM(event_date)</partition_by>
+        <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+    </query_log>
+    
+    <!-- ========================================
+         10. 性能优化配置
+         ======================================== -->
+    
+    <!-- 允许DDL -->
+    <allow_ddl>1</allow_ddl>
+    
+    <!-- 允许introspection函数 -->
+    <allow_introspection_functions>1</allow_introspection_functions>
+    
+</yandex>
