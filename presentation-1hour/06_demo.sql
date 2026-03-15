@@ -136,17 +136,17 @@ SELECT
 FROM numbers(1000);
 
 -- 查看 Buffer 状态
-SELECT 
-    database,
-    table,
-    num_layers,
-    is_stale,
-    bytes
-FROM system.buffers
-WHERE database = 'playground';
+-- SELECT 
+--     database,
+--     table,
+--     num_layers,
+--     is_stale,
+--     bytes
+-- FROM system.buffers
+-- WHERE database = 'playground';
 
 -- 刷新到主表
-SYSTEM FLUSH TABLES orders_realtime_buffer;
+-- SYSTEM FLUSH TABLES orders_realtime_buffer;
 
 SELECT count() FROM orders_realtime;
 
@@ -156,7 +156,7 @@ SELECT count() FROM orders_realtime;
 
 -- 创建日统计物化视图 (Replicated)
 DROP TABLE IF EXISTS daily_category_stats ON CLUSTER treasurycluster SYNC;
-CREATE TABLE daily_category_stats (
+CREATE TABLE daily_category_stats ON CLUSTER treasurycluster (
     date Date,
     category String,
     order_count UInt64,
@@ -166,7 +166,7 @@ CREATE TABLE daily_category_stats (
 PARTITION BY toYYYYMM(date)
 ORDER BY (date, category);
 
-DROP MATERIALIZED VIEW IF EXISTS daily_category_stats_mv ON CLUSTER treasurycluster SYNC;
+-- DROP MATERIALIZED VIEW IF EXISTS daily_category_stats_mv ON CLUSTER treasurycluster SYNC;
 CREATE MATERIALIZED VIEW daily_category_stats_mv ON CLUSTER treasurycluster
 ENGINE = ReplicatedSummingMergeTree()
 PARTITION BY toYYYYMM(date)

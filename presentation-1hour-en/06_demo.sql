@@ -111,9 +111,9 @@ SELECT
 
 -- Create real-time order table (Buffer demo, Replicated)
 DROP TABLE IF EXISTS orders_realtime ON CLUSTER treasurycluster SYNC;
-DROP TABLE IF EXISTS orders_realtime_buffer SYNC;
+DROP TABLE IF EXISTS orders_realtime_buffer ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE orders_realtime (
+CREATE TABLE orders_realtime ON CLUSTER treasurycluster (
     order_id UInt64,
     user_id UInt32,
     event_time DateTime,
@@ -122,8 +122,8 @@ CREATE TABLE orders_realtime (
 ) ENGINE = ReplicatedMergeTree()
 ORDER BY event_time;
 
-CREATE TABLE orders_realtime_buffer AS orders_realtime
-ENGINE = Buffer(playground, 8, 10, 100, 10000, 1000000, 10000000, 100000000);
+CREATE TABLE orders_realtime_buffer ON CLUSTER treasurycluster AS orders_realtime
+ENGINE = Buffer('playground', 'orders_realtime', 16, 10, 100, 10000, 1000000, 10000000, 100000000);
 
 -- Simulate real-time writes
 INSERT INTO orders_realtime_buffer 
@@ -136,14 +136,14 @@ SELECT
 FROM numbers(1000);
 
 -- View Buffer status
-SELECT 
-    database,
-    table,
-    num_layers,
-    is_stale,
-    bytes
-FROM system.buffers
-WHERE database = 'playground';
+-- SELECT 
+--     database,
+--     table,
+--     num_layers,
+--     is_stale,
+--     bytes
+-- FROM system.buffers
+-- WHERE database = 'playground';
 
 -- Flush to main table
 SYSTEM FLUSH TABLES orders_realtime_buffer;

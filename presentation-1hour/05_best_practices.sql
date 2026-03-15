@@ -178,7 +178,7 @@ SELECT number, now(), 'click' FROM numbers(10000);
 -- WHERE database = 'playground';
 
 -- 刷新 Buffer
-SYSTEM FLUSH TABLES bp_events_buffer;
+-- SYSTEM FLUSH TABLES bp_events_buffer;
 
 SELECT count() FROM bp_events;
 

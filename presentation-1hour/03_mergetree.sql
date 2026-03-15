@@ -398,20 +398,21 @@ INSERT INTO agg_demo VALUES
     ('2024-01-01', 1, 200);
 
 -- 使用物化视图实现预聚合 (Replicated)
-DROP MATERIALIZED VIEW IF EXISTS agg_view ON CLUSTER treasurycluster SYNC;
-DROP TABLE IF EXISTS agg_mv_dest ON CLUSTER treasurycluster SYNC;
+-- 物化视图演示（需要单独创建目标表）
+-- DROP MATERIALIZED VIEW IF EXISTS agg_view ON CLUSTER treasurycluster SYNC;
+-- DROP TABLE IF EXISTS agg_mv_dest ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE agg_mv_dest ON CLUSTER treasurycluster
-ENGINE = ReplicatedSummingMergeTree()
-PARTITION BY toYYYYMM(date)
-ORDER BY (date, user_id) AS
-SELECT 
-    toDate(event_time) AS date,
-    user_id,
-    sum(revenue) AS revenue
-FROM events
-WHERE event_type = 'purchase'
-GROUP BY toDate(event_time), user_id;
+-- CREATE TABLE agg_mv_dest ON CLUSTER treasurycluster
+-- ENGINE = ReplicatedSummingMergeTree()
+-- PARTITION BY toYYYYMM(date)
+-- ORDER BY (date, user_id) AS
+-- SELECT 
+--     toDate(event_time) AS date,
+--     user_id,
+--     sum(revenue) AS revenue
+-- FROM events
+-- WHERE event_type = 'purchase'
+-- GROUP BY toDate(event_time), user_id;
 
 -- -----------------------------------------------------
 -- 8. 本章小结

@@ -89,13 +89,13 @@ INSERT INTO col_store VALUES
 -- └─────────────────────────────────────────────────────────────┘
 
 -- 查看列数据文件
-SELECT 
-    column,
-    formatReadableSize(sum(on_disk_size)) AS compressed_size,
-    formatReadableSize(sum(mark_size_bytes)) AS mark_size
-FROM system.parts_columns
-WHERE database = 'playground' AND table = 'col_store' AND active = 1
-GROUP BY column;
+-- SELECT 
+--     column,
+--     formatReadableSize(sum(on_disk_size)) AS compressed_size,
+--     formatReadableSize(sum(mark_size_bytes)) AS mark_size
+-- FROM system.parts_columns
+-- WHERE database = 'playground' AND table = 'col_store' AND active = 1
+-- GROUP BY column;
 
 -- -----------------------------------------------------
 -- 3. 向量化执行引擎

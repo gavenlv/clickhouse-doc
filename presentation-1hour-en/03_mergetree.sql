@@ -329,16 +329,16 @@ ORDER BY id;
 
 -- Insert test data
 INSERT INTO partition_by_day
-SELECT number, toDateTime('2024-01-01') + number * 3600, 'data'
-FROM numbers(100000);
+SELECT number, toDateTime('2024-01-01') + number * 86400, 'data'
+FROM numbers(100);
 
 INSERT INTO partition_by_month
-SELECT number, toDateTime('2024-01-01') + number * 3600, 'data'
-FROM numbers(100000);
+SELECT number, toDateTime('2024-01-01') + number * 86400, 'data'
+FROM numbers(100);
 
 INSERT INTO no_partition
-SELECT number, toDateTime('2024-01-01') + number * 3600, 'data'
-FROM numbers(100000);
+SELECT number, toDateTime('2024-01-01') + number * 86400, 'data'
+FROM numbers(100);
 
 -- Compare Part count
 SELECT 
@@ -398,18 +398,18 @@ INSERT INTO agg_demo VALUES
     ('2024-01-01', 1, 200);
 
 -- Use materialized view to implement pre-aggregation (Replicated)
-DROP MATERIALIZED VIEW IF EXISTS agg_view ON CLUSTER treasurycluster SYNC;
-CREATE MATERIALIZED VIEW agg_view
-ENGINE = ReplicatedSummingMergeTree()
-PARTITION BY toYYYYMM(date)
-ORDER BY (date, user_id) AS
-SELECT 
-    toDate(event_time) AS date,
-    user_id,
-    sum(revenue) AS revenue
-FROM events
-WHERE event_type = 'purchase'
-GROUP BY toDate(event_time), user_id;
+-- DROP MATERIALIZED VIEW IF EXISTS agg_view ON CLUSTER treasurycluster SYNC;
+-- CREATE MATERIALIZED VIEW agg_view
+-- ENGINE = ReplicatedSummingMergeTree()
+-- PARTITION BY toYYYYMM(date)
+-- ORDER BY (date, user_id) AS
+-- SELECT 
+--     toDate(event_time) AS date,
+--     user_id,
+--     sum(revenue) AS revenue
+-- FROM events
+-- WHERE event_type = 'purchase'
+-- GROUP BY toDate(event_time), user_id;
 
 -- -----------------------------------------------------
 -- 8. Chapter Summary

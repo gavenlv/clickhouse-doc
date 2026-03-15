@@ -89,14 +89,14 @@ INSERT INTO col_store VALUES
 -- └─────────────────────────────────────────────────────────────┘
 
 -- View column data files
-SELECT 
-    column,
-    formatReadableSize(sum(compressed_bytes)) AS compressed_size,
-    formatReadableSize(sum(data_uncompressed_bytes)) AS raw_size,
-    round(sum(data_uncompressed_bytes) / sum(compressed_bytes), 1) AS compression_ratio
-FROM system.parts_columns
-WHERE database = 'playground' AND table = 'col_store' AND active = 1
-GROUP BY column;
+-- SELECT 
+--     column,
+--     formatReadableSize(sum(compressed_bytes)) AS compressed_size,
+--     formatReadableSize(sum(data_uncompressed_bytes)) AS raw_size,
+--     round(sum(data_uncompressed_bytes) / sum(compressed_bytes), 1) AS compression_ratio
+-- FROM system.parts_columns
+-- WHERE database = 'playground' AND table = 'col_store' AND active = 1
+-- GROUP BY column;
 
 -- -----------------------------------------------------
 -- 3. Vectorized Execution Engine

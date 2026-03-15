@@ -45,7 +45,10 @@
 -- -----------------------------------------------------
 
 -- Low cardinality string optimization: LowCardinality (Replicated)
-DROP TABLE IF EXISTS users ON CLUSTER treasurycluster SYNC;
+-- DROP TABLE IF EXISTS users ON CLUSTER treasurycluster SYNC;
+
+-- Clean up any existing replicas
+-- DROP TABLE IF EXISTS users ON CLUSTER treasurycluster SYNC;
 
 CREATE TABLE users ON CLUSTER treasurycluster (
     user_id UInt32,

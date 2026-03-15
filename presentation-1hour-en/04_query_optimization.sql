@@ -207,7 +207,9 @@ ADD INDEX idx_country country TYPE bloom_filter GRANULARITY 1;
 
 -- Insert data
 INSERT INTO events_with_skip_idx
-SELECT * FROM opt_events LIMIT 100000;
+SELECT 
+    event_id, user_id, event_time, event_type, category, country, revenue
+FROM opt_events LIMIT 100000;
 
 -- View skip index
 SELECT 
@@ -233,7 +235,9 @@ CREATE TABLE events_sampled (
 ORDER BY event_id
 SAMPLE BY event_id;
 
-INSERT INTO events_sampled SELECT * FROM opt_events LIMIT 100000;
+INSERT INTO events_sampled 
+SELECT event_id, user_id, event_time, event_type
+FROM opt_events LIMIT 100000;
 
 -- Use SAMPLE (requires SAMPLE BY)
 -- SAMPLE 1000000: Sample approximately 1M rows
@@ -319,7 +323,7 @@ CREATE TABLE mv_daily_stats (
 PARTITION BY toYYYYMM(date)
 ORDER BY (date, event_type, category);
 
-DROP MATERIALIZED VIEW IF EXISTS mv_daily_stats_mv ON CLUSTER treasurycluster SYNC;
+-- DROP MATERIALIZED VIEW IF EXISTS mv_daily_stats_mv ON CLUSTER treasurycluster SYNC;
 CREATE MATERIALIZED VIEW mv_daily_stats_mv
 ENGINE = ReplicatedSummingMergeTree()
 PARTITION BY toYYYYMM(date)
