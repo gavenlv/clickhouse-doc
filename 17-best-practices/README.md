@@ -6,10 +6,11 @@
 
 ### 核心实践
 - [01_overview.sql](./01_overview.sql) - 最佳实践概述与原则
-- [02_schema_design.sql](./02_schema_design.sql) - 表设计最佳实践
+- [02_schema_design.sql](./02_schema_design.sql) - 表设计最佳实践 (含分片键选择)
 - [03_query_optimization.sql](./03_query_optimization.sql) - 查询优化最佳实践
-- [04_common_mistakes.sql](./04_common_mistakes.sql) - 常见错误与解决方案
+- [04_common_mistakes.sql](./04_common_mistakes.sql) - 常见错误与解决方案 (含频繁更改后果)
 - [05_dos_and_donts.md](./05_dos_and_donts.md) - 注意事项清单
+- [06_etl_vs_clickhouse.md](./06_etl_vs_clickhouse.md) - ETL vs ClickHouse 职责划分
 
 ## 🎯 快速开始
 
