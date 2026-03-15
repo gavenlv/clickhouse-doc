@@ -14,17 +14,30 @@
 -- │              MergeTree 引擎家族                              │
 -- ├─────────────────────────────────────────────────────────────┤
 -- │                                                             │
--- │  MergeTree (核心)                                          │
--- │  ├── ReplicatedMergeTree - 支持副本复制                     │
--- │  │   ├── ReplicatedMergeTree ZooKeeper                   │
--- │  │   └── ReplicatedMergeTreeS3 - 支持 S3 存储            │
--- │  │                                                      │
+-- │  【MergeTree 系列】不支持副本 (单节点)                       │
+-- │  ├── MergeTree (核心基础)                                   │
 -- │  ├── SummingMergeTree - 自动聚合相同键                      │
 -- │  ├── AggregatingMergeTree - 预聚合                          │
 -- │  ├── CollapsingMergeTree - 删除标记折叠                    │
 -- │  ├── VersionedCollapsingMergeTree - 版本控制折叠            │
--- │  │                                                      │
--- │  └── ReplacingMergeTree - 版本号替换                        │
+-- │  ├── ReplacingMergeTree - 版本号替换                        │
+-- │  ├── VersionedReplacingMergeTree - 版本替换                 │
+-- │  └── GraphiteMergeTree - Graphite 数据优化                │
+-- │                                                             │
+-- │  【ReplicatedMergeTree 系列】支持副本 (集群环境)              │
+-- │  ├── ReplicatedMergeTree - 支持副本复制                     │
+-- │  ├── ReplicatedSummingMergeTree - 副本+自动聚合              │
+-- │  ├── ReplicatedAggregatingMergeTree - 副本+预聚合           │
+-- │  ├── ReplicatedCollapsingMergeTree - 副本+删除标记折叠      │
+-- │  ├── ReplicatedVersionedCollapsingMergeTree - 副本+版本折叠 │
+-- │  ├── ReplicatedReplacingMergeTree - 副本+版本替换           │
+-- │  ├── ReplicatedVersionedReplacingMergeTree - 副本+版本替换  │
+-- │  └── ReplicatedGraphiteMergeTree - 副本+Graphite 优化       │
+-- │                                                             │
+-- │  区别:                                                       │
+-- │  - Replicated* 系列需要 ZooKeeper                          │
+-- │  - Replicated* 系列支持多副本高可用                          │
+-- │  - Replicated* 系列用于生产环境集群                          │
 -- │                                                             │
 -- └─────────────────────────────────────────────────────────────┘
 

@@ -14,17 +14,30 @@
 -- │              MergeTree Engine Family                         │
 -- ├─────────────────────────────────────────────────────────────┤
 -- │                                                             │
--- │  MergeTree (Core)                                           │
--- │  ├── ReplicatedMergeTree - Supports replication            │
--- │  │   ├── ReplicatedMergeTree ZooKeeper                     │
--- │  │   └── ReplicatedMergeTreeS3 - Supports S3 storage       │
--- │  │                                                      │
+-- │  [MergeTree Series] No Replication (Single Node)             │
+-- │  ├── MergeTree (Core Foundation)                            │
 -- │  ├── SummingMergeTree - Auto-aggregate same keys           │
 -- │  ├── AggregatingMergeTree - Pre-aggregation                │
 -- │  ├── CollapsingMergeTree - Delete marker collapse         │
 -- │  ├── VersionedCollapsingMergeTree - Versioned collapse    │
--- │  │                                                      │
--- │  └── ReplacingMergeTree - Version number replacement       │
+-- │  ├── ReplacingMergeTree - Version number replacement       │
+-- │  ├── VersionedReplacingMergeTree - Versioned replacement  │
+-- │  └── GraphiteMergeTree - Graphite data optimization        │
+-- │                                                             │
+-- │  [ReplicatedMergeTree Series] With Replication (Cluster)   │
+-- │  ├── ReplicatedMergeTree - Supports replication            │
+-- │  ├── ReplicatedSummingMergeTree - Replica + Auto-aggregate │
+-- │  ├── ReplicatedAggregatingMergeTree - Replica + Pre-aggregate│
+-- │  ├── ReplicatedCollapsingMergeTree - Replica + Collapse    │
+-- │  ├── ReplicatedVersionedCollapsingMergeTree - Replica + Ver.│
+-- │  ├── ReplicatedReplacingMergeTree - Replica + Replace       │
+-- │  ├── ReplicatedVersionedReplacingMergeTree - Replica + Ver. │
+-- │  └── ReplicatedGraphiteMergeTree - Replica + Graphite opt.  │
+-- │                                                             │
+-- │  Differences:                                                │
+-- │  - Replicated* series requires ZooKeeper                   │
+-- │  - Replicated* series supports multi-replica HA             │
+-- │  - Replicated* series for production clusters              │
 -- │                                                             │
 -- └─────────────────────────────────────────────────────────────┘
 
