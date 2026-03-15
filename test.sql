@@ -1,0 +1,4 @@
+-- Test SQL file
+SHOW DATABASES;
+CREATE DATABASE IF NOT EXISTS playground ON CLUSTER treasurycluster;
+SHOW DATABASES;
