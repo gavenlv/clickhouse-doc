@@ -52,18 +52,20 @@
 -- └─────────────────────────────────────────────────────────────┘
 
 -- 演示: 批量写入 vs 小写入
-CREATE DATABASE IF NOT EXISTS tutorial;
+-- 使用 playground 数据库
+CREATE DATABASE IF NOT EXISTS playground ON CLUSTER treasurycluster;
+USE playground;
 
-DROP TABLE IF EXISTS tutorial.batch_test;
+DROP TABLE IF EXISTS batch_test ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.batch_test (
+CREATE TABLE batch_test ON CLUSTER treasurycluster (
     id UInt64,
     value Float64
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
 -- Good: 批量写入
-INSERT INTO tutorial.batch_test
+INSERT INTO batch_test
 SELECT number, rand() / 100.0
 FROM numbers(100000);
 
@@ -71,8 +73,8 @@ SELECT
     '批量写入' AS type,
     count() AS rows,
     (SELECT count() FROM system.parts 
-     WHERE database = 'tutorial' AND table = 'batch_test' AND active = 1) AS parts
-FROM tutorial.batch_test;
+     WHERE database = 'playground' AND table = 'batch_test' AND active = 1) AS parts
+FROM batch_test;
 
 -- -----------------------------------------------------
 -- 2. 查询相关错误
@@ -124,23 +126,23 @@ FROM tutorial.batch_test;
 SET max_memory_usage = 1000000000;  -- 1GB
 
 -- 创建大文本字段表
-DROP TABLE IF EXISTS tutorial.large_text_test;
+DROP TABLE IF EXISTS large_text_test ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.large_text_test (
+CREATE TABLE large_text_test ON CLUSTER treasurycluster (
     id UInt64,
     large_text String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
-INSERT INTO tutorial.large_text_test
+INSERT INTO large_text_test
 SELECT number, repeat('x', 10000)
 FROM numbers(10000);
 
 -- 尝试读取大量数据
--- SELECT * FROM tutorial.large_text_test;  -- 可能OOM
+-- SELECT * FROM large_text_test;  -- 可能OOM
 
 -- Good: 只选需要的列
-SELECT id FROM tutorial.large_text_test LIMIT 10;
+SELECT id FROM large_text_test LIMIT 10;
 
 -- -----------------------------------------------------
 -- 3. 表设计相关错误
@@ -191,34 +193,34 @@ SELECT id FROM tutorial.large_text_test LIMIT 10;
 -- └─────────────────────────────────────────────────────────────┘
 
 -- 演示: 分区过细的问题
-DROP TABLE IF EXISTS tutorial.fine_partition;
-DROP TABLE IF EXISTS tutorial.coarse_partition;
+DROP TABLE IF EXISTS fine_partition ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS coarse_partition ON CLUSTER treasurycluster SYNC;
 
 -- Bad: 按天分区
-CREATE TABLE IF NOT EXISTS tutorial.fine_partition (
+CREATE TABLE fine_partition ON CLUSTER treasurycluster (
     id UInt64,
     event_date DateTime,
     value Float64
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 PARTITION BY toYYYYMMDD(event_date)
 ORDER BY id;
 
 -- Good: 按月分区
-CREATE TABLE IF NOT EXISTS tutorial.coarse_partition (
+CREATE TABLE coarse_partition ON CLUSTER treasurycluster (
     id UInt64,
     event_date DateTime,
     value Float64
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 PARTITION BY toYYYYMM(event_date)
 ORDER BY id;
 
 -- 插入数据
-INSERT INTO tutorial.fine_partition
+INSERT INTO fine_partition
 SELECT number, toDateTime('2024-01-01') + number * 3600, rand() / 100.0
 FROM numbers(100000);
 
-INSERT INTO tutorial.coarse_partition
-SELECT * FROM tutorial.fine_partition;
+INSERT INTO coarse_partition
+SELECT * FROM fine_partition;
 
 -- 对比分区数量
 SELECT 
@@ -226,14 +228,14 @@ SELECT
     count(DISTINCT partition) AS partitions,
     count() AS parts
 FROM system.parts
-WHERE database = 'tutorial' AND table = 'fine_partition' AND active = 1
+WHERE database = 'playground' AND table = 'fine_partition' AND active = 1
 UNION ALL
 SELECT 
     '按月分区' AS type,
     count(DISTINCT partition) AS partitions,
     count() AS parts
 FROM system.parts
-WHERE database = 'tutorial' AND table = 'coarse_partition' AND active = 1;
+WHERE database = 'playground' AND table = 'coarse_partition' AND active = 1;
 
 -- -----------------------------------------------------
 -- 4. 分布式相关错误
@@ -531,10 +533,10 @@ LIMIT 10;
 -- 8. 清理
 -- -----------------------------------------------------
 
-DROP TABLE IF EXISTS tutorial.batch_test;
-DROP TABLE IF EXISTS tutorial.large_text_test;
-DROP TABLE IF EXISTS tutorial.fine_partition;
-DROP TABLE IF EXISTS tutorial.coarse_partition;
+DROP TABLE IF EXISTS batch_test ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS large_text_test ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS fine_partition ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS coarse_partition ON CLUSTER treasurycluster SYNC;
 
 -- =====================================================
 -- 本章小结

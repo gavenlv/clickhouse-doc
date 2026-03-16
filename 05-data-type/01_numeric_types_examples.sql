@@ -1,16 +1,16 @@
 -- 创建数据库（如果存在则不创建）
-CREATE DATABASE IF NOT EXISTS example;
+CREATE DATABASE IF NOT EXISTS example ON CLUSTER 'treasurycluster';
 
 
-DROP TABLE IF EXISTS example.numeric_types;
-CREATE TABLE IF NOT EXISTS example.numeric_types (
+DROP TABLE IF EXISTS example.numeric_types ON CLUSTER 'treasurycluster' SYNC;
+CREATE TABLE IF NOT EXISTS example.numeric_types ON CLUSTER 'treasurycluster' (
     id UInt64,
     user_id UInt32,
     age UInt8,
     balance Int64,
     temperature Float32,
     price Float64
-) ENGINE = MergeTree ORDER BY id;
+) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- 插入数据
 INSERT INTO example.numeric_types VALUES
@@ -49,15 +49,15 @@ SELECT
 -- ========================================
 
 -- 创建测试表
-DROP TABLE IF EXISTS example.sales;
-CREATE TABLE IF NOT EXISTS example.sales (
+DROP TABLE IF EXISTS example.sales ON CLUSTER 'treasurycluster' SYNC;
+CREATE TABLE IF NOT EXISTS example.sales ON CLUSTER 'treasurycluster' (
     id UInt64,
     product_id UInt32,
     quantity UInt16,
     price UInt32,
     total_price UInt64,
     rating Float32
-) ENGINE = MergeTree ORDER BY id;
+) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- 插入数据
 INSERT INTO example.sales VALUES
@@ -89,28 +89,28 @@ ORDER BY product_id;
 -- 基础使用
 -- ========================================
 
--- ❌ 不好：使用 UInt64 存储年龄
-CREATE TABLE IF NOT EXISTS users_bad (
-    id UInt64,
-    age UInt64      -- 浪费空间
-) ENGINE = MergeTree ORDER BY id;
+-- ❌ 不好：使用 UInt64 存储年龄（示例，已注释）
+-- CREATE TABLE IF NOT EXISTS users_bad ON CLUSTER 'treasurycluster' (
+--     id UInt64,
+--     age UInt64      -- 浪费空间
+-- ) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- ✅ 好：使用 UInt8 存储年龄
-CREATE TABLE IF NOT EXISTS users_good (
+CREATE TABLE IF NOT EXISTS users_good ON CLUSTER 'treasurycluster' (
     id UInt64,
     age UInt8       -- 0-255，足够
-) ENGINE = MergeTree ORDER BY id;
+) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- ========================================
 -- 基础使用
 -- ========================================
 
 -- ✅ 推荐：主键使用 UInt64
-CREATE TABLE IF NOT EXISTS events (
+CREATE TABLE IF NOT EXISTS events ON CLUSTER 'treasurycluster' (
     id UInt64,
     user_id UInt64,
     event_time DateTime
-) ENGINE = MergeTree ORDER BY (id, event_time);
+) ENGINE = ReplicatedMergeTree() ORDER BY (id, event_time);
 
 -- ========================================
 -- 基础使用

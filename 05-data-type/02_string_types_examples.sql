@@ -1,14 +1,14 @@
 -- 创建数据库（如果存在则不创建）
-CREATE DATABASE IF NOT EXISTS example;
+CREATE DATABASE IF NOT EXISTS example ON CLUSTER 'treasurycluster';
 
 
-DROP TABLE IF EXISTS example.strings;
-CREATE TABLE IF NOT EXISTS example.strings (
+DROP TABLE IF EXISTS example.strings ON CLUSTER 'treasurycluster' SYNC;
+CREATE TABLE IF NOT EXISTS example.strings ON CLUSTER 'treasurycluster' (
     id UInt64,
     message String,
     email String,
     url String
-) ENGINE = MergeTree ORDER BY id;
+) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- 插入数据
 INSERT INTO example.strings VALUES
@@ -23,13 +23,13 @@ SELECT * FROM example.strings;
 -- ========================================
 
 -- 创建表（存储 MD5 哈希）
-DROP TABLE IF EXISTS example.files;
-CREATE TABLE IF NOT EXISTS example.files (
+DROP TABLE IF EXISTS example.files ON CLUSTER 'treasurycluster' SYNC;
+CREATE TABLE IF NOT EXISTS example.files ON CLUSTER 'treasurycluster' (
     id UInt64,
     file_name String,
     file_hash FixedString(32),  -- MD5 32 字符
     file_size UInt64
-) ENGINE = MergeTree ORDER BY id;
+) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- 插入数据
 INSERT INTO example.files VALUES
@@ -44,14 +44,14 @@ SELECT * FROM example.files WHERE file_hash = 'd41d8cd98f00b204e9800998ecf8427e'
 -- ========================================
 
 -- 创建表（国家、状态）
-DROP TABLE IF EXISTS example.users;
-CREATE TABLE IF NOT EXISTS example.users (
+DROP TABLE IF EXISTS example.users ON CLUSTER 'treasurycluster' SYNC;
+CREATE TABLE IF NOT EXISTS example.users ON CLUSTER 'treasurycluster' (
     id UInt64,
     name String,
     country LowCardinality(String),  -- 只有 200 个国家
     status LowCardinality(String),    -- 只有少量状态
     gender LowCardinality(String)     -- 只有 'M', 'F', 'U'
-) ENGINE = MergeTree ORDER BY id;
+) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- 插入数据
 INSERT INTO example.users VALUES
@@ -126,45 +126,45 @@ SELECT
 -- String 类型
 -- ========================================
 
--- ❌ 不好：低基数字符串使用 String
-CREATE TABLE IF NOT EXISTS users_bad (
-    id UInt64,
-    country String,   -- 重复字符串
-    status String     -- 重复字符串
-) ENGINE = MergeTree ORDER BY id;
+-- ❌ 不好：低基数字符串使用 String（示例，已注释）
+-- CREATE TABLE IF NOT EXISTS users_bad ON CLUSTER 'treasurycluster' (
+--     id UInt64,
+--     country String,   -- 重复字符串
+--     status String     -- 重复字符串
+-- ) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- ✅ 好：低基数字符串使用 LowCardinality
-CREATE TABLE IF NOT EXISTS users_good (
+CREATE TABLE IF NOT EXISTS users_good ON CLUSTER 'treasurycluster' (
     id UInt64,
     country LowCardinality(String),  -- 字典编码
     status LowCardinality(String)    -- 字典编码
-) ENGINE = MergeTree ORDER BY id;
+) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- ========================================
 -- String 类型
 -- ========================================
 
 -- ✅ 推荐：MD5、UUID 使用 FixedString
-CREATE TABLE IF NOT EXISTS files (
+CREATE TABLE IF NOT EXISTS files ON CLUSTER 'treasurycluster' (
     id UInt64,
     file_name String,
     file_md5 FixedString(32),   -- MD5 32 字符
     file_uuid FixedString(36)    -- UUID 36 字符
-) ENGINE = MergeTree ORDER BY id;
+) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- ========================================
 -- String 类型
 -- ========================================
 
--- ❌ 不好：存储大文本
-CREATE TABLE IF NOT EXISTS logs_bad (
-    id UInt64,
-    log_content String  -- 可能很大
-) ENGINE = MergeTree ORDER BY id;
+-- ❌ 不好：存储大文本（示例，已注释）
+-- CREATE TABLE IF NOT EXISTS logs_bad ON CLUSTER 'treasurycluster' (
+--     id UInt64,
+--     log_content String  -- 可能很大
+-- ) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- ✅ 好：大文本存储到外部，只存引用
-CREATE TABLE IF NOT EXISTS logs_good (
+CREATE TABLE IF NOT EXISTS logs_good ON CLUSTER 'treasurycluster' (
     id UInt64,
     log_path String,     -- 存储文件路径
     log_size UInt64
-) ENGINE = MergeTree ORDER BY id;
+) ENGINE = ReplicatedMergeTree() ORDER BY id;

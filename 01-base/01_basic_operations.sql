@@ -293,9 +293,9 @@ SHOW TABLES;
 -- ========================================
 -- 适用场景：用户资料更新、配置信息、状态变更
 
-DROP TABLE IF EXISTS dedup_user_profiles;
+DROP TABLE IF EXISTS dedup_user_profiles ON CLUSTER 'treasurycluster' SYNC;
 
-CREATE TABLE dedup_user_profiles (
+CREATE TABLE dedup_user_profiles ON CLUSTER 'treasurycluster' (
     user_id UInt64,
     profile_id String,       -- 业务唯一ID
     name String,
@@ -304,7 +304,7 @@ CREATE TABLE dedup_user_profiles (
     updated_at DateTime,
     version UInt64,           -- 版本号（必需）
     inserted_at DateTime DEFAULT now()
-) ENGINE = ReplacingMergeTree(version)  -- version 指定去重字段
+) ENGINE = ReplicatedReplacingMergeTree(version)  -- version 指定去重字段
 PARTITION BY toYYYYMM(updated_at)
 ORDER BY (user_id, profile_id)  -- 唯一键
 SETTINGS index_granularity = 8192;
@@ -371,16 +371,16 @@ ORDER BY user_id, version;
 -- ========================================
 -- 适用场景：库存管理、订单状态、增量计数器
 
-DROP TABLE IF EXISTS dedup_inventory;
+DROP TABLE IF EXISTS dedup_inventory ON CLUSTER 'treasurycluster' SYNC;
 
-CREATE TABLE dedup_inventory (
+CREATE TABLE dedup_inventory ON CLUSTER 'treasurycluster' (
     product_id UInt64,
     product_name String,
     quantity Int32,
     sign Int8,               -- 1 for insert, -1 for delete（必需）
     timestamp DateTime,
     inserted_at DateTime DEFAULT now()
-) ENGINE = CollapsingMergeTree(sign)  -- sign 指定字段
+) ENGINE = ReplicatedCollapsingMergeTree(sign)  -- sign 指定字段
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY product_id
 SETTINGS index_granularity = 8192;

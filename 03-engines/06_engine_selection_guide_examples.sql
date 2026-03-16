@@ -9,8 +9,8 @@
 -- 1. 生产环境配置
 -- ========================================
 
--- 推荐
-CREATE TABLE production.events (
+-- 推荐（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE production.events ON CLUSTER 'treasurycluster' (
     id UInt64,
     data String,
     timestamp DateTime
@@ -18,14 +18,14 @@ CREATE TABLE production.events (
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (id, timestamp);
 
--- 避免
-CREATE TABLE production.events (
-    id UInt64,
-    data String,
-    timestamp DateTime
-) ENGINE = MergeTree()
-PARTITION BY toYYYYMM(timestamp)
-ORDER BY (id, timestamp);
+-- 避免（单节点环境，无复制）
+-- CREATE TABLE production.events (
+--     id UInt64,
+--     data String,
+--     timestamp DateTime
+-- ) ENGINE = MergeTree()
+-- PARTITION BY toYYYYMM(timestamp)
+-- ORDER BY (id, timestamp);
 
 -- ========================================
 -- 1. 生产环境配置
@@ -69,17 +69,17 @@ ADD INDEX idx_user_bloom user_id TYPE bloom_filter(0.01) GRANULARITY 8;
 -- 1. 生产环境配置
 -- ========================================
 
--- 创建源表
-CREATE TABLE events (
+-- 创建源表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE events ON CLUSTER 'treasurycluster' (
     user_id UInt64,
     event_type String,
     timestamp DateTime
 ) ENGINE = ReplicatedMergeTree()
 ORDER BY (user_id, timestamp);
 
--- 创建物化视图
-CREATE MATERIALIZED VIEW events_stats_mv
-ENGINE = AggregatingMergeTree()
+-- 创建物化视图（生产环境：使用复制聚合引擎 + ON CLUSTER）
+CREATE MATERIALIZED VIEW events_stats_mv ON CLUSTER 'treasurycluster'
+ENGINE = ReplicatedAggregatingMergeTree()
 ORDER BY (user_id, toDate(timestamp))
 AS SELECT
     user_id,
@@ -100,11 +100,11 @@ GROUP BY user_id, date;
 -- 1. 生产环境配置
 -- ========================================
 
--- 确保唯一性（业务逻辑去重）
-CREATE TABLE unique_events (
+-- 确保唯一性（业务逻辑去重，生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE unique_events ON CLUSTER 'treasurycluster' (
     event_id UInt64,
     data String
-) ENGINE = ReplacingMergeTree(event_id)
+) ENGINE = ReplicatedReplacingMergeTree(event_id)
 ORDER BY event_id;
 
 -- 查询去重数据
@@ -117,13 +117,13 @@ OPTIMIZE TABLE unique_events FINAL;
 -- 1. 生产环境配置
 -- ========================================
 
--- 创建表
-CREATE TABLE inventory (
+-- 创建表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE inventory ON CLUSTER 'treasurycluster' (
     product_id UInt64,
     quantity Int32,
     sign Int8,  -- 1 for insert, -1 for delete
     timestamp DateTime
-) ENGINE = CollapsingMergeTree(sign)
+) ENGINE = ReplicatedCollapsingMergeTree(sign)
 ORDER BY product_id;
 
 -- 插入库存
@@ -157,34 +157,36 @@ ENGINE = Distributed(cluster, db, local_events, intHash32(timestamp));
 -- 分片键：user_id
 
 -- ========================================
--- 1. 生产环境配置
+-- TTL 配置示例
 -- ========================================
 
--- 30 天后删除数据
-CREATE TABLE events (
-    id UInt64,
-    data String,
-    timestamp DateTime
-) ENGINE = ReplicatedMergeTree()
-ORDER BY timestamp
-TTL timestamp + INTERVAL 30 DAY;
+-- 30 天后删除数据（生产环境：使用复制引擎 + ON CLUSTER）
+-- 注意：此表与前面的 events 表同名，实际执行时需先清理或使用不同表名
+-- DROP TABLE IF EXISTS events ON CLUSTER 'treasurycluster' SYNC;
+-- CREATE TABLE events ON CLUSTER 'treasurycluster' (
+--     id UInt64,
+--     data String,
+--     timestamp DateTime
+-- ) ENGINE = ReplicatedMergeTree()
+-- ORDER BY timestamp
+-- TTL timestamp + INTERVAL 30 DAY;
 
--- 7 天后移到冷存储
-CREATE TABLE events (
-    id UInt64,
-    data String,
-    timestamp DateTime
-) ENGINE = ReplicatedMergeTree()
-ORDER BY timestamp
-TTL timestamp + INTERVAL 7 DAY TO DISK 'cold';
+-- 7 天后移到冷存储（需要配置存储卷）
+-- CREATE TABLE events_ttl_cold ON CLUSTER 'treasurycluster' (
+--     id UInt64,
+--     data String,
+--     timestamp DateTime
+-- ) ENGINE = ReplicatedMergeTree()
+-- ORDER BY timestamp
+-- TTL timestamp + INTERVAL 7 DAY TO DISK 'cold';
 
--- 7 天后删除，30 天后归档
-CREATE TABLE events (
-    id UInt64,
-    data String,
-    timestamp DateTime
-) ENGINE = ReplicatedMergeTree()
-ORDER BY timestamp
-TTL
-    timestamp + INTERVAL 7 DAY DELETE,
-    timestamp + INTERVAL 30 DAY TO VOLUME 'archive';
+-- 7 天后删除，30 天后归档（需要配置存储卷）
+-- CREATE TABLE events_ttl_archive ON CLUSTER 'treasurycluster' (
+--     id UInt64,
+--     data String,
+--     timestamp DateTime
+-- ) ENGINE = ReplicatedMergeTree()
+-- ORDER BY timestamp
+-- TTL
+--     timestamp + INTERVAL 7 DAY DELETE,
+--     timestamp + INTERVAL 30 DAY TO VOLUME 'archive';

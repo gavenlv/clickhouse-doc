@@ -71,11 +71,13 @@
 -- 2. 创建测试数据
 -- -----------------------------------------------------
 
-CREATE DATABASE IF NOT EXISTS tutorial;
+-- 使用 playground 数据库
+CREATE DATABASE IF NOT EXISTS playground ON CLUSTER treasurycluster;
+USE playground;
 
-DROP TABLE IF EXISTS tutorial.orders;
+DROP TABLE IF EXISTS orders ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.orders (
+CREATE TABLE orders ON CLUSTER treasurycluster (
     order_id UInt64,
     user_id UInt32,
     order_date DateTime,
@@ -83,13 +85,13 @@ CREATE TABLE IF NOT EXISTS tutorial.orders (
     total_amount Decimal(10, 2),
     product_count UInt16,
     notes String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 PARTITION BY toYYYYMM(order_date)
 ORDER BY (order_date, user_id)
 SETTINGS index_granularity = 8192;
 
 -- 插入 100万条测试数据
-INSERT INTO tutorial.orders
+INSERT INTO orders
 SELECT 
     number AS order_id,
     number % 50000 AS user_id,
@@ -142,14 +144,14 @@ SET max_threads = 1;
 
 -- Bad
 EXPLAIN PLAN
-SELECT * FROM tutorial.orders
+SELECT * FROM orders
 WHERE order_date >= '2024-01-01' AND order_date < '2024-01-02'
 LIMIT 100;
 
 -- Good
 EXPLAIN PLAN
 SELECT user_id, count() AS cnt, sum(total_amount) AS total
-FROM tutorial.orders
+FROM orders
 WHERE order_date >= '2024-01-01' AND order_date < '2024-01-02'
 GROUP BY user_id
 LIMIT 100;
@@ -189,7 +191,7 @@ LIMIT 100;
 -- 查看 PREWHERE 优化
 EXPLAIN PIPELINE
 SELECT user_id, notes
-FROM tutorial.orders
+FROM orders
 WHERE user_id = 123;
 
 -- -----------------------------------------------------
@@ -223,12 +225,12 @@ WHERE user_id = 123;
 
 -- Bad: 使用函数
 EXPLAIN ESTIMATE
-SELECT * FROM tutorial.orders
+SELECT * FROM orders
 WHERE toYYYYMM(order_date) = 202401;
 
 -- Good: 直接比较
 EXPLAIN ESTIMATE
-SELECT * FROM tutorial.orders
+SELECT * FROM orders
 WHERE order_date >= '2024-01-01' AND order_date < '2024-02-01';
 
 -- -----------------------------------------------------
@@ -261,7 +263,7 @@ WHERE order_date >= '2024-01-01' AND order_date < '2024-02-01';
 SELECT 
     count() / sample_factor AS estimated_total,
     uniqExact(user_id) / sample_factor AS estimated_users
-FROM tutorial.orders
+FROM orders
 SAMPLE 0.1;
 
 -- 6.2 近似聚合函数
@@ -292,9 +294,9 @@ SAMPLE 0.1;
 -- └─────────────────────────────────────────────────────────────┘
 
 -- 精确 vs 近似
-SELECT 'uniqExact' AS func, uniqExact(user_id) AS result FROM tutorial.orders
+SELECT 'uniqExact' AS func, uniqExact(user_id) AS result FROM orders
 UNION ALL
-SELECT 'uniq' AS func, uniq(user_id) AS result FROM tutorial.orders;
+SELECT 'uniq' AS func, uniq(user_id) AS result FROM orders;
 
 -- -----------------------------------------------------
 -- 7. 物化视图优化
@@ -333,32 +335,32 @@ SELECT 'uniq' AS func, uniq(user_id) AS result FROM tutorial.orders;
 -- └─────────────────────────────────────────────────────────────┘
 
 -- 创建物化视图
-DROP TABLE IF EXISTS tutorial.orders_daily_mv;
-DROP TABLE IF EXISTS tutorial.orders_daily;
+DROP TABLE IF EXISTS orders_daily_mv ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS orders_daily ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.orders_daily (
+CREATE TABLE orders_daily ON CLUSTER treasurycluster (
     order_date Date,
     user_id UInt32,
     order_count UInt64,
     total_amount Decimal(20, 2)
-) ENGINE = SummingMergeTree()
+) ENGINE = ReplicatedSummingMergeTree()
 ORDER BY (order_date, user_id);
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS tutorial.orders_daily_mv
-TO tutorial.orders_daily
+CREATE MATERIALIZED VIEW orders_daily_mv ON CLUSTER treasurycluster
+TO orders_daily
 AS SELECT 
     toDate(order_date) AS order_date,
     user_id,
     count() AS order_count,
     sum(total_amount) AS total_amount
-FROM tutorial.orders
+FROM orders
 GROUP BY toDate(order_date), user_id;
 
 -- 等待物化视图填充
 SYSTEM FLUSH LOGS;
 
 -- 查询物化视图
-SELECT * FROM tutorial.orders_daily
+SELECT * FROM orders_daily
 WHERE order_date = '2024-01-01'
 LIMIT 10;
 
@@ -388,23 +390,23 @@ LIMIT 10;
 -- └─────────────────────────────────────────────────────────────┘
 
 -- 创建带跳数索引的表
-DROP TABLE IF EXISTS tutorial.orders_with_idx;
+DROP TABLE IF EXISTS orders_with_idx ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.orders_with_idx (
+CREATE TABLE orders_with_idx ON CLUSTER treasurycluster (
     order_id UInt64,
     user_id UInt32,
     order_date DateTime,
     status Enum8('pending' = 1, 'paid' = 2, 'shipped' = 3, 'completed' = 4, 'cancelled' = 5),
     total_amount Decimal(10, 2)
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 PARTITION BY toYYYYMM(order_date)
 ORDER BY (order_date, user_id)
 INDEX idx_user user_id TYPE minmax() GRANULARITY 4
 INDEX idx_status status TYPE set(1000) GRANULARITY 4;
 
 -- 插入数据
-INSERT INTO tutorial.orders_with_idx
-SELECT * FROM tutorial.orders
+INSERT INTO orders_with_idx
+SELECT * FROM orders
 LIMIT 100000;
 
 -- -----------------------------------------------------
@@ -442,10 +444,10 @@ LIMIT 100000;
 -- 10. 清理
 -- -----------------------------------------------------
 
-DROP TABLE IF EXISTS tutorial.orders;
-DROP TABLE IF EXISTS tutorial.orders_with_idx;
-DROP TABLE IF EXISTS tutorial.orders_daily;
-DROP TABLE IF EXISTS tutorial.orders_daily_mv;
+DROP TABLE IF EXISTS orders ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS orders_with_idx ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS orders_daily ON CLUSTER treasurycluster SYNC;
+DROP MATERIALIZED VIEW IF EXISTS orders_daily_mv ON CLUSTER treasurycluster SYNC;
 
 -- =====================================================
 -- 本章小结

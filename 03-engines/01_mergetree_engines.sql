@@ -210,13 +210,13 @@ ORDER BY user_id, event_date;
 -- 5. CollapsingMergeTree（折叠引擎）
 -- ========================================
 
--- 创建 CollapsingMergeTree 表
-CREATE TABLE IF NOT EXISTS engine_test.collapsing_inventory (
+-- 创建 CollapsingMergeTree 表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS engine_test.collapsing_inventory ON CLUSTER 'treasurycluster' (
     product_id UInt64,
     quantity_change Int32,
     sign Int8, -- 1 for insert, -1 for delete
     timestamp DateTime
-) ENGINE = CollapsingMergeTree(sign)
+) ENGINE = ReplicatedCollapsingMergeTree(sign)
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY product_id;
 
@@ -251,14 +251,14 @@ ORDER BY product_id;
 -- 6. VersionedCollapsingMergeTree（版本折叠引擎）
 -- ========================================
 
--- 创建 VersionedCollapsingMergeTree 表
-CREATE TABLE IF NOT EXISTS engine_test.versioned_collapsing_user_scores (
+-- 创建 VersionedCollapsingMergeTree 表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS engine_test.versioned_collapsing_user_scores ON CLUSTER 'treasurycluster' (
     user_id UInt64,
     score_change Int32,
     sign Int8,
     version UInt64,
     timestamp DateTime
-) ENGINE = VersionedCollapsingMergeTree(sign, version)
+) ENGINE = ReplicatedVersionedCollapsingMergeTree(sign, version)
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY user_id;
 

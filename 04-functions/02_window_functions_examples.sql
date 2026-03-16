@@ -14,9 +14,9 @@ CREATE DATABASE IF NOT EXISTS window_functions_test;
 USE window_functions_test;
 
 -- Sales table for window function demonstrations
-DROP TABLE IF EXISTS sales_window;
+DROP TABLE IF EXISTS sales_window ON CLUSTER 'treasurycluster' SYNC;
 
-CREATE TABLE sales_window (
+CREATE TABLE sales_window ON CLUSTER 'treasurycluster' (
     id UInt64,
     sale_date Date,
     product_id UInt32,
@@ -26,7 +26,7 @@ CREATE TABLE sales_window (
     price Decimal(10, 2),
     region String,
     salesperson String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 PARTITION BY toYYYYMM(sale_date)
 ORDER BY (product_id, sale_date);
 

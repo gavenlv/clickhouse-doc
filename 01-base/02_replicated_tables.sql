@@ -41,7 +41,7 @@ ORDER BY name;
 -- 注意：不需要手动指定 ZooKeeper 路径
 -- 系统会自动使用 {default_replica_path} 和 {default_replica_name}
 
-CREATE TABLE IF NOT EXISTS test_replicated_events (
+CREATE TABLE IF NOT EXISTS test_replicated_events ON CLUSTER 'treasurycluster' (
     event_id UInt64,
     user_id UInt64,
     event_type String,
@@ -141,7 +141,7 @@ SELECT 'Replica 1 - Total events:' as info, count() as count FROM test_replicate
 -- ========================================
 -- 8. 创建另一个复制表（使用分区）
 -- ========================================
-CREATE TABLE IF NOT EXISTS test_replicated_logs (
+CREATE TABLE IF NOT EXISTS test_replicated_logs ON CLUSTER 'treasurycluster' (
     log_id UInt64,
     level String,
     message String,
@@ -183,7 +183,7 @@ ORDER BY toYYYYMM(timestamp), log_count DESC;
 -- ========================================
 -- 9. 创建带 TTL 的复制表
 -- ========================================
-CREATE TABLE IF NOT EXISTS test_replicated_metrics (
+CREATE TABLE IF NOT EXISTS test_replicated_metrics ON CLUSTER 'treasurycluster' (
     metric_id UInt64,
     metric_name String,
     metric_value Float64,
@@ -214,7 +214,7 @@ ORDER BY timestamp DESC;
 -- ========================================
 -- 10. 测试 ReplacingMergeTree（复制）
 -- ========================================
-CREATE TABLE IF NOT EXISTS test_replicated_user_state (
+CREATE TABLE IF NOT EXISTS test_replicated_user_state ON CLUSTER 'treasurycluster' (
     user_id UInt64,
     state String,
     last_updated DateTime,
@@ -242,7 +242,7 @@ SELECT * FROM test_replicated_user_state FINAL ORDER BY user_id;
 -- ========================================
 -- 11. 测试 CollapsingMergeTree（复制）
 -- ========================================
-CREATE TABLE IF NOT EXISTS test_replicated_inventory (
+CREATE TABLE IF NOT EXISTS test_replicated_inventory ON CLUSTER 'treasurycluster' (
     product_id UInt64,
     quantity_change Int32,
     sign Int8, -- 1 for insert, -1 for delete

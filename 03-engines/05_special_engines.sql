@@ -12,14 +12,14 @@ CREATE DATABASE IF NOT EXISTS engine_test ON CLUSTER 'treasurycluster';
 -- 1. Distributed（分布式表引擎）
 -- ========================================
 
--- 创建本地表
+-- 创建本地表（生产环境：使用复制引擎 + ON CLUSTER）
 CREATE TABLE IF NOT EXISTS engine_test.local_orders ON CLUSTER 'treasurycluster' (
     order_id UInt64,
     user_id UInt64,
     product_id UInt32,
     amount Decimal(10, 2),
     order_date DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 PARTITION BY toYYYYMM(order_date)
 ORDER BY (user_id, order_id);
 
@@ -54,19 +54,19 @@ ORDER BY total_amount DESC;
 -- 2. MaterializedView（物化视图引擎）
 -- ========================================
 
--- 创建源表
+-- 创建源表（生产环境：使用复制引擎 + ON CLUSTER）
 CREATE TABLE IF NOT EXISTS engine_test.source_events ON CLUSTER 'treasurycluster' (
     event_id UInt64,
     user_id UInt64,
     event_type String,
     event_value Float64,
     timestamp DateTime
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY (user_id, timestamp);
 
--- 创建物化视图
+-- 创建物化视图（生产环境：使用复制聚合引擎 + ON CLUSTER）
 CREATE MATERIALIZED VIEW IF NOT EXISTS engine_test.event_stats_mv ON CLUSTER 'treasurycluster'
-ENGINE = AggregatingMergeTree()
+ENGINE = ReplicatedAggregatingMergeTree()
 ORDER BY (user_id, toDate(timestamp))
 AS SELECT
     user_id,
@@ -154,12 +154,12 @@ WHERE e.user_id IN (1, 2, 3);
 -- 5. Buffer（缓冲表引擎）
 -- ========================================
 
--- 创建目标表
-CREATE TABLE IF NOT EXISTS engine_test.buffer_target (
+-- 创建目标表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS engine_test.buffer_target ON CLUSTER 'treasurycluster' (
     id UInt64,
     data String,
     timestamp DateTime
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
 -- 创建缓冲表
@@ -194,21 +194,21 @@ SELECT * FROM engine_test.buffer_target;
 -- 6. Merge（合并表引擎）
 -- ========================================
 
--- 创建多个源表
-CREATE TABLE IF NOT EXISTS engine_test.merge_src1 (
+-- 创建多个源表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS engine_test.merge_src1 ON CLUSTER 'treasurycluster' (
     id UInt64,
     data String,
     source String DEFAULT 'src1',
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
-CREATE TABLE IF NOT EXISTS engine_test.merge_src2 (
+CREATE TABLE IF NOT EXISTS engine_test.merge_src2 ON CLUSTER 'treasurycluster' (
     id UInt64,
     data String,
     source String DEFAULT 'src2',
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
 -- 插入数据
@@ -268,12 +268,12 @@ WHERE e.user_id IN engine_test.user_set;
 -- 9. Join（连接表引擎）
 -- ========================================
 
--- 创建右表
-CREATE TABLE IF NOT EXISTS engine_test.user_profiles (
+-- 创建右表（生产环境：使用复制引擎 + ON CLUSTER）
+CREATE TABLE IF NOT EXISTS engine_test.user_profiles ON CLUSTER 'treasurycluster' (
     user_id UInt64,
     name String,
     email String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY user_id;
 
 -- 插入用户数据
@@ -353,23 +353,23 @@ SELECT * FROM engine_test.archive_all;
 -- 见前面 Distributed 示例
 
 -- ========================================
--- 12. 清理测试表
+-- 12. 清理测试表（生产环境：使用 ON CLUSTER SYNC 确保集群范围删除）
 -- ========================================
-DROP TABLE IF EXISTS engine_test.local_orders;
-DROP TABLE IF EXISTS engine_test.distributed_orders;
-DROP TABLE IF EXISTS engine_test.source_events;
-DROP TABLE IF EXISTS engine_test.event_stats_mv;
-DROP TABLE IF EXISTS engine_test.active_users;
-DROP TABLE IF EXISTS engine_test.click_events;
-DROP TABLE IF EXISTS engine_test.buffer_target;
-DROP TABLE IF EXISTS engine_test.buffer_table;
-DROP TABLE IF EXISTS engine_test.merge_src1;
-DROP TABLE IF EXISTS engine_test.merge_src2;
-DROP TABLE IF EXISTS engine_test.merge_all;
-DROP TABLE IF EXISTS engine_test.null_sink;
-DROP TABLE IF EXISTS engine_test.user_set;
-DROP TABLE IF EXISTS engine_test.user_profiles;
-DROP TABLE IF EXISTS engine_test.user_join;
+DROP TABLE IF EXISTS engine_test.local_orders ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.distributed_orders ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.source_events ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.event_stats_mv ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.active_users ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.click_events ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.buffer_target ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.buffer_table ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.merge_src1 ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.merge_src2 ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.merge_all ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.null_sink ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.user_set ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.user_profiles ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.user_join ON CLUSTER 'treasurycluster' SYNC;
 
 -- ========================================
 -- 13. 特殊引擎最佳实践总结

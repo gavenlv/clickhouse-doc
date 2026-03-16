@@ -10,12 +10,12 @@
 -- ============================================================================
 
 -- Create test data for aggregation
-CREATE DATABASE IF NOT EXISTS functions_test;
+CREATE DATABASE IF NOT EXISTS functions_test ON CLUSTER 'treasurycluster';
 USE functions_test;
 
-DROP TABLE IF EXISTS sales_data;
+DROP TABLE IF EXISTS sales_data ON CLUSTER 'treasurycluster' SYNC;
 
-CREATE TABLE sales_data (
+CREATE TABLE sales_data ON CLUSTER 'treasurycluster' (
     id UInt64,
     product_id UInt32,
     category String,
@@ -23,7 +23,7 @@ CREATE TABLE sales_data (
     price Decimal(10, 2),
     sale_date Date,
     region String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 PARTITION BY toYYYYMM(sale_date)
 ORDER BY (product_id, sale_date);
 
@@ -100,16 +100,16 @@ GROUP BY category;
 -- 2. STRING FUNCTIONS
 -- ============================================================================
 
-DROP TABLE IF EXISTS users_data;
+DROP TABLE IF EXISTS users_data ON CLUSTER 'treasurycluster' SYNC;
 
-CREATE TABLE users_data (
+CREATE TABLE users_data ON CLUSTER 'treasurycluster' (
     id UInt64,
     username String,
     email String,
     full_name String,
     bio String,
     signup_date Date
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
 INSERT INTO users_data VALUES
@@ -176,15 +176,15 @@ FROM users_data;
 -- 3. DATE/TIME FUNCTIONS
 -- ============================================================================
 
-DROP TABLE IF EXISTS events_data;
+DROP TABLE IF EXISTS events_data ON CLUSTER 'treasurycluster' SYNC;
 
-CREATE TABLE events_data (
+CREATE TABLE events_data ON CLUSTER 'treasurycluster' (
     id UInt64,
     event_name String,
     event_time DateTime,
     duration_seconds UInt32,
     user_id UInt64
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (user_id, event_time);
 
@@ -260,14 +260,14 @@ SELECT
 -- 4. MATH FUNCTIONS
 -- ============================================================================
 
-DROP TABLE IF EXISTS numeric_data;
+DROP TABLE IF EXISTS numeric_data ON CLUSTER 'treasurycluster' SYNC;
 
-CREATE TABLE numeric_data (
+CREATE TABLE numeric_data ON CLUSTER 'treasurycluster' (
     id UInt64,
     value1 Float32,
     value2 Float32,
     value3 Int32
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
 INSERT INTO numeric_data VALUES
@@ -304,16 +304,16 @@ FROM numeric_data;
 -- 5. CONDITIONAL FUNCTIONS
 -- ============================================================================
 
-DROP TABLE IF EXISTS product_inventory;
+DROP TABLE IF EXISTS product_inventory ON CLUSTER 'treasurycluster' SYNC;
 
-CREATE TABLE product_inventory (
+CREATE TABLE product_inventory ON CLUSTER 'treasurycluster' (
     id UInt64,
     product_name String,
     stock UInt32,
     reorder_point UInt32,
     price Decimal(10, 2),
     category String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
 INSERT INTO product_inventory VALUES
@@ -361,14 +361,14 @@ FROM product_inventory;
 -- 6. ARRAY FUNCTIONS
 -- ============================================================================
 
-DROP TABLE IF EXISTS tags_data;
+DROP TABLE IF EXISTS tags_data ON CLUSTER 'treasurycluster' SYNC;
 
-CREATE TABLE tags_data (
+CREATE TABLE tags_data ON CLUSTER 'treasurycluster' (
     id UInt64,
     item_name String,
     tags Array(String),
     scores Array(UInt8)
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
 INSERT INTO tags_data VALUES
@@ -418,14 +418,14 @@ FROM tags_data;
 -- 7. TYPE CONVERSION FUNCTIONS
 -- ============================================================================
 
-DROP TABLE IF EXISTS mixed_data;
+DROP TABLE IF EXISTS mixed_data ON CLUSTER 'treasurycluster' SYNC;
 
-CREATE TABLE mixed_data (
+CREATE TABLE mixed_data ON CLUSTER 'treasurycluster' (
     id UInt64,
     string_num String,
     date_str String,
     bool_str String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
 INSERT INTO mixed_data VALUES
@@ -453,14 +453,14 @@ FROM mixed_data;
 -- 8. HASH FUNCTIONS
 -- ============================================================================
 
-DROP TABLE IF EXISTS user_sessions;
+DROP TABLE IF EXISTS user_sessions ON CLUSTER 'treasurycluster' SYNC;
 
-CREATE TABLE user_sessions (
+CREATE TABLE user_sessions ON CLUSTER 'treasurycluster' (
     id UInt64,
     user_id UInt64,
     session_id String,
     ip_address String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
 INSERT INTO user_sessions VALUES
@@ -498,14 +498,14 @@ GROUP BY ip_hash;
 -- 9. IP ADDRESS FUNCTIONS
 -- ============================================================================
 
-DROP TABLE IF EXISTS access_logs;
+DROP TABLE IF EXISTS access_logs ON CLUSTER 'treasurycluster' SYNC;
 
-CREATE TABLE access_logs (
+CREATE TABLE access_logs ON CLUSTER 'treasurycluster' (
     id UInt64,
     client_ip String,
     server_ip String,
     access_time DateTime
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY access_time;
 
 INSERT INTO access_logs VALUES
@@ -540,13 +540,13 @@ FROM access_logs;
 -- 10. JSON FUNCTIONS (Basic)
 -- ============================================================================
 
-DROP TABLE IF EXISTS json_data;
+DROP TABLE IF EXISTS json_data ON CLUSTER 'treasurycluster' SYNC;
 
-CREATE TABLE json_data (
+CREATE TABLE json_data ON CLUSTER 'treasurycluster' (
     id UInt64,
     json_string String,
     user_info String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
 INSERT INTO json_data VALUES
