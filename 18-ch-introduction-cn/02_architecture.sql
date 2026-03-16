@@ -48,7 +48,7 @@ USE playground;
 -- 创建列式存储示例表 (Replicated)
 DROP TABLE IF EXISTS col_store ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE col_store (
+CREATE TABLE col_store ON CLUSTER treasurycluster (
     id UInt32,
     name String,
     age UInt8,

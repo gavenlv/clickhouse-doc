@@ -15,7 +15,7 @@ USE playground;
 -- Create e-commerce analytics table (Replicated)
 DROP TABLE IF EXISTS orders ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE orders (
+CREATE TABLE orders ON CLUSTER treasurycluster (
     order_id UInt64,
     user_id UInt32,
     order_time DateTime,
@@ -156,7 +156,7 @@ SELECT count() FROM orders_realtime;
 
 -- Create daily statistics materialized view (Replicated)
 DROP TABLE IF EXISTS daily_category_stats ON CLUSTER treasurycluster SYNC;
-CREATE TABLE daily_category_stats (
+CREATE TABLE daily_category_stats ON CLUSTER treasurycluster (
     date Date,
     category String,
     order_count UInt64,
@@ -215,7 +215,7 @@ GROUP BY order_date, category;
 
 -- Create user behavior log (Replicated)
 DROP TABLE IF EXISTS user_funnel ON CLUSTER treasurycluster SYNC;
-CREATE TABLE user_funnel (
+CREATE TABLE user_funnel ON CLUSTER treasurycluster (
     user_id UInt32,
     event_time DateTime,
     event_type LowCardinality(String),
@@ -280,7 +280,7 @@ SELECT
 
 -- Create orders table with geographic location (Replicated)
 DROP TABLE IF EXISTS orders_geo ON CLUSTER treasurycluster SYNC;
-CREATE TABLE orders_geo (
+CREATE TABLE orders_geo ON CLUSTER treasurycluster (
     order_id UInt64,
     user_id UInt32,
     order_time DateTime,

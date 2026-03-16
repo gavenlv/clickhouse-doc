@@ -42,7 +42,7 @@ USE playground;
 -- 创建测试表 (Replicated)
 DROP TABLE IF EXISTS opt_events ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE opt_events (
+CREATE TABLE opt_events ON CLUSTER treasurycluster (
     event_id UInt64,
     user_id UInt32,
     event_time DateTime,
@@ -307,7 +307,7 @@ FROM opt_events;
 
 -- 创建聚合物化视图 (Replicated)
 DROP TABLE IF EXISTS mv_daily_stats ON CLUSTER treasurycluster SYNC;
-CREATE TABLE mv_daily_stats (
+CREATE TABLE mv_daily_stats ON CLUSTER treasurycluster (
     date Date,
     event_type Enum8('click' = 1, 'view' = 2, 'purchase' = 3),
     category String,

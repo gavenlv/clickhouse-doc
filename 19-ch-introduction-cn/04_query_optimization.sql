@@ -185,7 +185,7 @@ WHERE toDayOfWeek(event_time) = 1;
 -- Create table with skip index (Replicated)
 DROP TABLE IF EXISTS events_with_skip_idx ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE events_with_skip_idx (
+CREATE TABLE events_with_skip_idx ON CLUSTER treasurycluster (
     event_id UInt64,
     user_id UInt32,
     event_time DateTime,
@@ -226,7 +226,7 @@ WHERE database = 'playground' AND table = 'events_with_skip_idx';
 -- Create table that supports sampling (Replicated)
 DROP TABLE IF EXISTS events_sampled ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE events_sampled (
+CREATE TABLE events_sampled ON CLUSTER treasurycluster (
     event_id UInt64,
     user_id UInt32,
     event_time DateTime,
@@ -312,7 +312,7 @@ FROM opt_events;
 
 -- Create aggregated materialized view (Replicated)
 DROP TABLE IF EXISTS mv_daily_stats ON CLUSTER treasurycluster SYNC;
-CREATE TABLE mv_daily_stats (
+CREATE TABLE mv_daily_stats ON CLUSTER treasurycluster (
     date Date,
     event_type Enum8('click' = 1, 'view' = 2, 'purchase' = 3),
     category String,

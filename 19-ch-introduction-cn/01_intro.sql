@@ -187,7 +187,7 @@ GROUP BY type;
 -- Exercise: Create user events table (Replicated)
 DROP TABLE IF EXISTS user_events ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS user_events (
+CREATE TABLE IF NOT EXISTS user_events ON CLUSTER treasurycluster (
     event_id UInt64,
     user_id UInt32,
     event_type Enum8('click' = 1, 'view' = 2, 'purchase' = 3, 'login' = 4),

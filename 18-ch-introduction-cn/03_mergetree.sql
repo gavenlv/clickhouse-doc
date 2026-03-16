@@ -237,7 +237,7 @@ ORDER BY partition, name;
 -- 创建不同主键的表进行对比 (Replicated)
 DROP TABLE IF EXISTS good_key ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE good_key (
+CREATE TABLE good_key ON CLUSTER treasurycluster (
     event_time DateTime,
     user_id UInt32,
     event_type String,
@@ -247,7 +247,7 @@ ORDER BY (event_type, user_id, event_time);
 
 DROP TABLE IF EXISTS bad_key ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE bad_key (
+CREATE TABLE bad_key ON CLUSTER treasurycluster (
     event_time DateTime,
     user_id UInt32,
     event_type String,

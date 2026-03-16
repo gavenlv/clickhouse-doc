@@ -48,7 +48,7 @@ USE playground;
 -- Create columnar storage example table (Replicated)
 DROP TABLE IF EXISTS col_store ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE col_store (
+CREATE TABLE col_store ON CLUSTER treasurycluster (
     id UInt32,
     name String,
     age UInt8,
@@ -129,7 +129,7 @@ INSERT INTO col_store VALUES
 -- Create large table for vectorized performance test (Replicated)
 DROP TABLE IF EXISTS vector_test ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE vector_test (
+CREATE TABLE vector_test ON CLUSTER treasurycluster (
     id UInt64,
     value Float64,
     category UInt8
@@ -199,7 +199,7 @@ WHERE name = 'index_granularity';
 -- Create table with composite primary key (Replicated)
 DROP TABLE IF EXISTS sparse_index_demo ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE sparse_index_demo (
+CREATE TABLE sparse_index_demo ON CLUSTER treasurycluster (
     event_date Date,
     user_id UInt32,
     event_type String,

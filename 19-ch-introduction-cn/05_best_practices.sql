@@ -152,17 +152,17 @@ WHERE database = 'playground' AND table = 'users' AND column IN ('username', 'co
 
 -- Create Buffer table demo (Replicated)
 DROP TABLE IF EXISTS bp_events ON CLUSTER treasurycluster SYNC;
-DROP TABLE IF EXISTS bp_events_buffer SYNC;
+DROP TABLE IF EXISTS bp_events_buffer ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE bp_events (
+CREATE TABLE bp_events ON CLUSTER treasurycluster (
     event_id UInt64,
     event_time DateTime,
     event_type String
 ) ENGINE = ReplicatedMergeTree()
 ORDER BY event_time;
 
-CREATE TABLE bp_events_buffer AS bp_events
-ENGINE = Buffer(playground, 4, 10, 100, 10000, 1000000, 10000000, 100000000);
+CREATE TABLE bp_events_buffer ON CLUSTER treasurycluster AS bp_events
+ENGINE = Buffer('playground', 'bp_events', 16, 10, 100, 10000, 1000000, 10000000, 100000000);
 
 -- Write to Buffer table
 INSERT INTO bp_events_buffer 

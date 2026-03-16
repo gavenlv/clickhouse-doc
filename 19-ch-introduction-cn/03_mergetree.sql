@@ -237,7 +237,7 @@ ORDER BY partition, name;
 -- Create tables with different primary keys for comparison (Replicated)
 DROP TABLE IF EXISTS good_key ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE good_key (
+CREATE TABLE good_key ON CLUSTER treasurycluster (
     event_time DateTime,
     user_id UInt32,
     event_type String,
@@ -247,7 +247,7 @@ ORDER BY (event_type, user_id, event_time);
 
 DROP TABLE IF EXISTS bad_key ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE bad_key (
+CREATE TABLE bad_key ON CLUSTER treasurycluster (
     event_time DateTime,
     user_id UInt32,
     event_type String,
@@ -315,7 +315,7 @@ EXPLAIN PLAN SELECT count() FROM bad_key WHERE event_type = 'A';
 
 -- Create tables with different partition strategies (Replicated)
 DROP TABLE IF EXISTS partition_by_day ON CLUSTER treasurycluster SYNC;
-CREATE TABLE partition_by_day (
+CREATE TABLE partition_by_day ON CLUSTER treasurycluster (
     id UInt64,
     created_at DateTime,
     data String
@@ -324,7 +324,7 @@ PARTITION BY toYYYYMMDD(created_at)
 ORDER BY id;
 
 DROP TABLE IF EXISTS partition_by_month ON CLUSTER treasurycluster SYNC;
-CREATE TABLE partition_by_month (
+CREATE TABLE partition_by_month ON CLUSTER treasurycluster (
     id UInt64,
     created_at DateTime,
     data String
@@ -333,7 +333,7 @@ PARTITION BY toYYYYMM(created_at)
 ORDER BY id;
 
 DROP TABLE IF EXISTS no_partition ON CLUSTER treasurycluster SYNC;
-CREATE TABLE no_partition (
+CREATE TABLE no_partition ON CLUSTER treasurycluster (
     id UInt64,
     created_at DateTime,
     data String
@@ -376,7 +376,7 @@ FROM system.parts WHERE database = 'playground' AND table = 'no_partition' AND a
 -- SummingMergeTree: Auto-aggregate (Replicated)
 DROP TABLE IF EXISTS summing_demo ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE summing_demo (
+CREATE TABLE summing_demo ON CLUSTER treasurycluster (
     date Date,
     user_id UInt32,
     revenue Float64,
@@ -398,7 +398,7 @@ SELECT * FROM summing_demo;
 -- AggregatingMergeTree: Pre-aggregate (Replicated)
 DROP TABLE IF EXISTS agg_demo ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE agg_demo (
+CREATE TABLE agg_demo ON CLUSTER treasurycluster (
     date Date,
     user_id UInt32,
     revenue SimpleAggregateFunction(sum, Float64)
