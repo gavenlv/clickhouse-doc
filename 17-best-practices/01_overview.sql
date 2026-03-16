@@ -60,7 +60,9 @@
 -- 2. 性能对比演示
 -- -----------------------------------------------------
 
-CREATE DATABASE IF NOT EXISTS tutorial;
+-- 使用 playground 数据库
+CREATE DATABASE IF NOT EXISTS playground ON CLUSTER treasurycluster;
+USE playground;
 
 -- 2.1 写入性能对比
 --
@@ -94,23 +96,23 @@ CREATE DATABASE IF NOT EXISTS tutorial;
 -- └─────────────────────────────────────────────────────────────┘
 
 -- 创建测试表
-DROP TABLE IF EXISTS tutorial.write_test_small;
+DROP TABLE IF EXISTS write_test_small ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.write_test_small (
+CREATE TABLE write_test_small ON CLUSTER treasurycluster (
     id UInt64,
     value Float64,
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
 -- Bad Practice: 小批量写入
 SET async_insert = 0;
-SYSTEM STOP MERGES tutorial.write_test_small;
+SYSTEM STOP MERGES write_test_small;
 
 -- 模拟 1000 次小写入 (实际只做 10 次演示)
 SET max_block_size = 100;
 FOR i IN 1..10:
-    INSERT INTO tutorial.write_test_small 
+    INSERT INTO write_test_small 
     SELECT number + (i - 1) * 100, rand() / 100.0
     FROM numbers(100);
 
@@ -120,21 +122,21 @@ SELECT
     count() AS rows,
     count(DISTINCT _partition) AS partitions,
     (SELECT count() FROM system.parts 
-     WHERE database = 'tutorial' AND table = 'write_test_small' AND active = 1) AS active_parts
-FROM tutorial.write_test_small;
+     WHERE database = 'playground' AND table = 'write_test_small' AND active = 1) AS active_parts
+FROM write_test_small;
 
 -- Good Practice: 批量写入
-DROP TABLE IF EXISTS tutorial.write_test_batch;
+DROP TABLE IF EXISTS write_test_batch ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.write_test_batch (
+CREATE TABLE write_test_batch ON CLUSTER treasurycluster (
     id UInt64,
     value Float64,
     created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
 -- 单次批量写入
-INSERT INTO tutorial.write_test_batch 
+INSERT INTO write_test_batch 
 SELECT number, rand() / 100.0
 FROM numbers(100000);
 
@@ -143,28 +145,28 @@ SELECT
     '批量写入' AS type,
     count() AS rows,
     (SELECT count() FROM system.parts 
-     WHERE database = 'tutorial' AND table = 'write_test_batch' AND active = 1) AS active_parts
-FROM tutorial.write_test_batch;
+     WHERE database = 'playground' AND table = 'write_test_batch' AND active = 1) AS active_parts
+FROM write_test_batch;
 
 -- -----------------------------------------------------
 -- 3. 查询性能对比
 -- -----------------------------------------------------
 
 -- 创建测试数据
-DROP TABLE IF EXISTS tutorial.query_test;
+DROP TABLE IF EXISTS query_test ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.query_test (
+CREATE TABLE query_test ON CLUSTER treasurycluster (
     id UInt64,
     user_id UInt32,
     event_type String,
     event_date Date,
     value Float64,
     description String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 PARTITION BY toYYYYMM(event_date)
 ORDER BY (event_date, user_id);
 
-INSERT INTO tutorial.query_test
+INSERT INTO query_test
 SELECT 
     number,
     number % 10000,
@@ -206,14 +208,14 @@ FROM numbers(1000000);
 
 -- Bad: SELECT *
 EXPLAIN PLAN
-SELECT * FROM tutorial.query_test
+SELECT * FROM query_test
 WHERE event_date = '2024-01-01'
 LIMIT 1;
 
 -- Good: 只选需要的列
 EXPLAIN PLAN
 SELECT user_id, count() AS cnt 
-FROM tutorial.query_test
+FROM query_test
 WHERE event_date = '2024-01-01'
 GROUP BY user_id;
 
@@ -244,11 +246,11 @@ GROUP BY user_id;
 
 -- 无分区条件
 EXPLAIN ESTIMATE
-SELECT count() FROM tutorial.query_test;
+SELECT count() FROM query_test;
 
 -- 有分区条件
 EXPLAIN ESTIMATE
-SELECT count() FROM tutorial.query_test
+SELECT count() FROM query_test
 WHERE event_date = '2024-01-01';
 
 -- -----------------------------------------------------
@@ -382,9 +384,9 @@ LIMIT 10;
 -- 6. 清理
 -- -----------------------------------------------------
 
-DROP TABLE IF EXISTS tutorial.write_test_small;
-DROP TABLE IF EXISTS tutorial.write_test_batch;
-DROP TABLE IF EXISTS tutorial.query_test;
+DROP TABLE IF EXISTS write_test_small ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS write_test_batch ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS query_test ON CLUSTER treasurycluster SYNC;
 
 -- =====================================================
 -- 本章小结

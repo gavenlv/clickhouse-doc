@@ -55,34 +55,36 @@
 -- 2. 主键设计演示
 -- -----------------------------------------------------
 
-CREATE DATABASE IF NOT EXISTS tutorial;
+-- 使用 playground 数据库
+CREATE DATABASE IF NOT EXISTS playground ON CLUSTER treasurycluster;
+USE playground;
 
 -- 2.1 Good vs Bad 主键对比
 --
 -- Bad Practice: 低选择性列放前面
-DROP TABLE IF EXISTS tutorial.bad_primary_key;
+DROP TABLE IF EXISTS bad_primary_key ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.bad_primary_key (
+CREATE TABLE bad_primary_key ON CLUSTER treasurycluster (
     event_type String,
     event_date Date,
     user_id UInt32,
     id UInt64
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY (event_type, event_date, user_id);
 
 -- Good Practice: 高选择性列放前面
-DROP TABLE IF EXISTS tutorial.good_primary_key;
+DROP TABLE IF EXISTS good_primary_key ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.good_primary_key (
+CREATE TABLE good_primary_key ON CLUSTER treasurycluster (
     event_type String,
     event_date Date,
     user_id UInt32,
     id UInt64
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY (user_id, event_date, event_type);
 
 -- 插入测试数据
-INSERT INTO tutorial.bad_primary_key
+INSERT INTO bad_primary_key
 SELECT 
     ['click', 'view', 'purchase', 'login'][number % 4 + 1],
     toDate('2024-01-01') + (number % 365),
@@ -90,19 +92,19 @@ SELECT
     number
 FROM numbers(1000000);
 
-INSERT INTO tutorial.good_primary_key
-SELECT * FROM tutorial.bad_primary_key;
+INSERT INTO good_primary_key
+SELECT * FROM bad_primary_key;
 
 -- 对比查询性能
 SET max_threads = 1;
 
 -- 查询: WHERE user_id = 12345
 EXPLAIN PLAN
-SELECT count() FROM tutorial.bad_primary_key
+SELECT count() FROM bad_primary_key
 WHERE user_id = 12345;
 
 EXPLAIN PLAN
-SELECT count() FROM tutorial.good_primary_key
+SELECT count() FROM good_primary_key
 WHERE user_id = 12345;
 
 -- -----------------------------------------------------
@@ -147,46 +149,46 @@ WHERE user_id = 12345;
 -- 3.1 分区演示
 --
 -- 过细分区 (Bad Practice)
-DROP TABLE IF EXISTS tutorial.over_partitioned;
+DROP TABLE IF EXISTS over_partitioned ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.over_partitioned (
+CREATE TABLE over_partitioned ON CLUSTER treasurycluster (
     id UInt64,
     event_date DateTime,
     value Float64
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 PARTITION BY toYYYYMMDD(event_date)  -- 每天一个分区
 ORDER BY id;
 
 -- 适当分区 (Good Practice)
-DROP TABLE IF EXISTS tutorial.proper_partitioned;
+DROP TABLE IF EXISTS proper_partitioned ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.proper_partitioned (
+CREATE TABLE proper_partitioned ON CLUSTER treasurycluster (
     id UInt64,
     event_date DateTime,
     value Float64
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 PARTITION BY toYYYYMM(event_date)  -- 每月一个分区
 ORDER BY id;
 
 -- 查看分区数量对比
-INSERT INTO tutorial.over_partitioned
+INSERT INTO over_partitioned
 SELECT number, toDateTime('2024-01-01') + number * 3600, rand() / 100.0
 FROM numbers(100000);
 
-INSERT INTO tutorial.proper_partitioned
-SELECT * FROM tutorial.over_partitioned;
+INSERT INTO proper_partitioned
+SELECT * FROM over_partitioned;
 
 SELECT 
     'over_partitioned' AS table_name,
     count(DISTINCT partition) AS partition_count
 FROM system.parts
-WHERE database = 'tutorial' AND table = 'over_partitioned' AND active = 1
+WHERE database = 'playground' AND table = 'over_partitioned' AND active = 1
 UNION ALL
 SELECT 
     'proper_partitioned' AS table_name,
     count(DISTINCT partition) AS partition_count
 FROM system.parts
-WHERE database = 'tutorial' AND table = 'proper_partitioned' AND active = 1;
+WHERE database = 'playground' AND table = 'proper_partitioned' AND active = 1;
 
 -- -----------------------------------------------------
 -- 4. 数据类型选择
@@ -241,83 +243,83 @@ WHERE database = 'tutorial' AND table = 'proper_partitioned' AND active = 1;
 -- 4.1 数据类型演示
 --
 -- Bad: 使用 String 存储日期
-DROP TABLE IF EXISTS tutorial.bad_date_type;
+DROP TABLE IF EXISTS bad_date_type ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.bad_date_type (
+CREATE TABLE bad_date_type ON CLUSTER treasurycluster (
     id UInt64,
     event_date String,  -- String 类型
     value Float64
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
 -- Good: 使用 Date 类型
-DROP TABLE IF EXISTS tutorial.good_date_type;
+DROP TABLE IF EXISTS good_date_type ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.good_date_type (
+CREATE TABLE good_date_type ON CLUSTER treasurycluster (
     id UInt64,
     event_date Date,  -- Date 类型
     value Float64
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
 -- 插入测试数据
-INSERT INTO tutorial.bad_date_type
+INSERT INTO bad_date_type
 SELECT number, toString(toDate('2024-01-01') + (number % 365)), rand() / 100.0
 FROM numbers(100000);
 
-INSERT INTO tutorial.good_date_type
+INSERT INTO good_date_type
 SELECT number, toDate('2024-01-01') + (number % 365), rand() / 100.0
 FROM numbers(100000);
 
 -- 对比存储大小
 SELECT 
     'String' AS type,
-    formatReadableSize(sum(compressed_bytes)) AS compressed
+    formatReadableSize(sum(compressed_size)) AS compressed
 FROM system.parts_columns
-WHERE database = 'tutorial' AND table = 'bad_date_type' AND column = 'event_date' AND active = 1
+WHERE database = 'playground' AND table = 'bad_date_type' AND column = 'event_date' AND active = 1
 UNION ALL
 SELECT 
     'Date' AS type,
-    formatReadableSize(sum(compressed_bytes)) AS compressed
+    formatReadableSize(sum(compressed_size)) AS compressed
 FROM system.parts_columns
-WHERE database = 'tutorial' AND table = 'good_date_type' AND column = 'event_date' AND active = 1;
+WHERE database = 'playground' AND table = 'good_date_type' AND column = 'event_date' AND active = 1;
 
 -- 4.2 LowCardinality 演示
 --
 -- 普通 String
-DROP TABLE IF EXISTS tutorial.normal_string;
+DROP TABLE IF EXISTS normal_string ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.normal_string (
+CREATE TABLE normal_string ON CLUSTER treasurycluster (
     id UInt64,
     category String
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
 -- LowCardinality
-DROP TABLE IF EXISTS tutorial.low_cardinality;
+DROP TABLE IF EXISTS low_cardinality ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.low_cardinality (
+CREATE TABLE low_cardinality ON CLUSTER treasurycluster (
     id UInt64,
     category LowCardinality(String)
-) ENGINE = MergeTree()
+) ENGINE = ReplicatedMergeTree()
 ORDER BY id;
 
 -- 插入数据 (重复的 category)
-INSERT INTO tutorial.normal_string
+INSERT INTO normal_string
 SELECT number, ['Electronics', 'Books', 'Clothing', 'Food', 'Home'][number % 5 + 1]
 FROM numbers(1000000);
 
-INSERT INTO tutorial.low_cardinality
-SELECT * FROM tutorial.normal_string;
+INSERT INTO low_cardinality
+SELECT * FROM normal_string;
 
 -- 对比存储
 SELECT 
     table,
     column,
-    formatReadableSize(sum(compressed_bytes)) AS compressed,
+    formatReadableSize(sum(compressed_size)) AS compressed,
     formatReadableSize(sum(data_uncompressed_bytes)) AS uncompressed
 FROM system.parts_columns
-WHERE database = 'tutorial' 
+WHERE database = 'playground' 
   AND table IN ('normal_string', 'low_cardinality')
   AND column = 'category'
   AND active = 1
@@ -566,9 +568,9 @@ GROUP BY table, column;
 -- └─────────────────────────────────────────────────────────────┘
 
 -- 创建事件日志表
-DROP TABLE IF EXISTS tutorial.events;
+DROP TABLE IF EXISTS events ON CLUSTER treasurycluster SYNC;
 
-CREATE TABLE IF NOT EXISTS tutorial.events (
+CREATE TABLE events ON CLUSTER treasurycluster (
     event_id UInt64,
     tenant_id UInt16,
     user_id UInt32,
@@ -576,13 +578,13 @@ CREATE TABLE IF NOT EXISTS tutorial.events (
     event_time DateTime64(3),
     page_url String,
     metadata String
-) ENGINE = ReplacingMergeTree(event_id)
+) ENGINE = ReplicatedReplacingMergeTree(event_id)
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (tenant_id, user_id, event_time)
 SETTINGS index_granularity = 8192;
 
 -- 插入测试数据
-INSERT INTO tutorial.events
+INSERT INTO events
 SELECT 
     number,
     number % 100,
@@ -594,21 +596,21 @@ SELECT
 FROM numbers(100000);
 
 -- 查看表结构
-DESCRIBE TABLE tutorial.events;
+DESCRIBE TABLE events;
 
 -- -----------------------------------------------------
 -- 8. 清理
 -- -----------------------------------------------------
 
-DROP TABLE IF EXISTS tutorial.bad_primary_key;
-DROP TABLE IF EXISTS tutorial.good_primary_key;
-DROP TABLE IF EXISTS tutorial.over_partitioned;
-DROP TABLE IF EXISTS tutorial.proper_partitioned;
-DROP TABLE IF EXISTS tutorial.bad_date_type;
-DROP TABLE IF EXISTS tutorial.good_date_type;
-DROP TABLE IF EXISTS tutorial.normal_string;
-DROP TABLE IF EXISTS tutorial.low_cardinality;
-DROP TABLE IF EXISTS tutorial.events;
+DROP TABLE IF EXISTS bad_primary_key ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS good_primary_key ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS over_partitioned ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS proper_partitioned ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS bad_date_type ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS good_date_type ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS normal_string ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS low_cardinality ON CLUSTER treasurycluster SYNC;
+DROP TABLE IF EXISTS events ON CLUSTER treasurycluster SYNC;
 
 -- =====================================================
 -- 本章小结
