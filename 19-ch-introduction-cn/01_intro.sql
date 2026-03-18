@@ -1,8 +1,18 @@
 -- =====================================================
 -- 01 - ClickHouse Introduction & Core Advantages
 -- =====================================================
+-- 
 -- Cluster: treasurycluster (2 replicas)
--- Time: 0-20 minutes
+-- Estimated Learning Time: 20 minutes
+-- 
+-- This file covers:
+--   1. ClickHouse Positioning - OLAP Columnar Storage Database
+--   2. Core Advantages - Vectorized Execution/Columnar Storage/Distributed Architecture
+--   3. Performance Comparison - Comparison with Traditional Databases
+--   4. Suitable Scenarios - Log Analysis/User Behavior/Time Series Data
+--   5. Unsuitable Scenarios - OLTP Transactions/High Frequency Updates
+--   6. Quick Start - Basic Queries and Data Import
+-- 
 -- =====================================================
 
 -- -----------------------------------------------------

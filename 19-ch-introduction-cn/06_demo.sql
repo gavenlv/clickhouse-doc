@@ -1,8 +1,20 @@
 -- =====================================================
 -- 06 - Live Demo Cases
 -- =====================================================
+-- 
 -- Cluster: treasurycluster (2 replicas)
+-- Estimated Learning Time: 20 minutes
+-- 
+-- This file covers:
+--   1. E-commerce Analytics Scenario - Order Data Analysis Demo
+--   2. Real-time Dashboard - KPI Metrics Calculation
+--   3. User Behavior Analysis - Funnel Analysis and Retention Analysis
+--   4. Log Analysis Scenario - Access Log Statistics
+--   5. Time Series Data Analysis - Monitoring Metrics Query
+--   6. Performance Comparison Demo - Before and After Optimization Results
+-- 
 -- This file contains SQL code for live demos
+-- 
 -- =====================================================
 
 -- -----------------------------------------------------

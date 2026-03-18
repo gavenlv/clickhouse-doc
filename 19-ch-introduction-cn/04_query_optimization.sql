@@ -1,8 +1,20 @@
 -- =====================================================
 -- 04 - Query Optimization Techniques & Practices
 -- =====================================================
+-- 
 -- Cluster: treasurycluster (2 replicas)
--- Time: 45-55 minutes
+-- Estimated Learning Time: 30 minutes
+-- 
+-- This file covers:
+--   1. Query Optimization Principles - Reduce Data Read Volume
+--   2. PREWHERE Optimization - Filter Ahead to Reduce IO
+--   3. Index Utilization Techniques - Primary Index/Skip Index/Projection
+--   4. Partition Pruning Optimization - Quick Location by Time Range
+--   5. Aggregation Query Optimization - GROUP BY/Window Functions
+--   6. JOIN Query Optimization - JOIN Order and Type Selection
+--   7. Query Analysis Tools - EXPLAIN and Performance Diagnosis
+--   8. Common Anti-Patterns - Performance Killers and Avoidance Methods
+-- 
 -- =====================================================
 
 -- -----------------------------------------------------

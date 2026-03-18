@@ -1,8 +1,18 @@
 -- =====================================================
 -- 05 - Best Practices & Common Issues
 -- =====================================================
+-- 
 -- Cluster: treasurycluster (2 replicas)
--- Time: 55-60 minutes
+-- Estimated Learning Time: 25 minutes
+-- 
+-- This file covers:
+--   1. Table Design Best Practices - Engine Selection/Primary Key Design/Partition Strategy
+--   2. Write Best Practices - Batch Write/Avoid Updates
+--   3. Query Best Practices - Column Selection/Filter Optimization
+--   4. Cluster Best Practices - Sharding Strategy/Replica Configuration/Load Balancing
+--   5. Operations Best Practices - Monitoring Metrics/Backup Strategy/Capacity Planning
+--   6. Common Issue Resolution - Performance Issues/Error Diagnosis/Optimization Suggestions
+-- 
 -- =====================================================
 
 -- -----------------------------------------------------

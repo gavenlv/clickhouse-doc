@@ -1,8 +1,19 @@
 -- =====================================================
 -- 03 - MergeTree Engine Core Principles
 -- =====================================================
+-- 
 -- Cluster: treasurycluster (2 replicas)
--- Time: 35-45 minutes
+-- Estimated Learning Time: 30 minutes
+-- 
+-- This file covers:
+--   1. MergeTree Core Concepts - Part/Granule/Mark
+--   2. Primary Key Index Principle - Sparse Index Structure and Query
+--   3. Partitioning Mechanism - Partition Pruning and Performance Optimization
+--   4. Data Merge Process - Background Merge and Part Management
+--   5. MergeTree Variants - Replacing/Summing/Aggregating/Collapsing
+--   6. TTL Lifecycle Management - Data Expiration and Auto Cleanup
+--   7. Best Practice Recommendations - Table Design Optimization Points
+-- 
 -- =====================================================
 
 -- -----------------------------------------------------

@@ -1,8 +1,19 @@
 -- =====================================================
 -- 02 - ClickHouse Core Architecture
 -- =====================================================
+-- 
 -- Cluster: treasurycluster (2 replicas)
--- Time: 20-35 minutes
+-- Estimated Learning Time: 25 minutes
+-- 
+-- This file covers:
+--   1. Overall Architecture Design - Client Layer/Service Layer/Storage Layer
+--   2. Query Processing Pipeline - Parser/Interpreter/Executor
+--   3. Vectorized Execution Engine - SIMD Batch Processing
+--   4. Columnar Storage Structure - Data Organization and Compression
+--   5. I/O and Cache Mechanism - PageCache/MarkCache
+--   6. Background Task System - Merge/Mutation/TTL Cleanup
+--   7. Cluster Architecture - Sharding and Replication Mechanism
+-- 
 -- =====================================================
 
 -- -----------------------------------------------------
