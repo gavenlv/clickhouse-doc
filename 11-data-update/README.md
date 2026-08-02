@@ -1,5 +1,9 @@
 # 数据更新专题
 
+> **⚠️ 重整标注（2026-08-02）**
+> 本章节编号 `11-data-update` 与 `11-performance` 冲突。按重整计划，本章节将在 **R3 批次** 与 `09-data-deletion` 合并为新的 `07-data-mutation` 章（INSERT 优化/Mutation/轻量删除/分区操作/TTL/异步插入/并发隔离/案例）。
+> 当前内容保留可用，详见 [重整计划](../.trae/documents/clickhouse-tutorial-reorg-plan.md)。
+
 本专题介绍 ClickHouse 中的数据更新方法、策略和最佳实践。
 
 ## 📚 文档目录

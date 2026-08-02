@@ -50,6 +50,17 @@ CREATE DATABASE IF NOT EXISTS engine_test ON CLUSTER 'treasurycluster';
 -- ========================================
 -- 1. Distributed（分布式表引擎）
 -- ========================================
+-- 【原理】Distributed 表不存数据，只是「查询路由层 + 写入分片器」：
+--   写入: 按分片键 hash(sharding_key) 路由到对应分片的本地表
+--   查询: fan-out 到所有分片并行查本地表，汇总(merge)结果返回
+-- 【场景】跨分片透明查询入口；写入时自动分片
+-- 【坑】Distributed 表本身不存数据，DROP 它不删数据；数据在本地表
+-- 【坑】写入 Distributed 表会先缓存到本机再转发，宕机会丢未转发数据
+--   → 生产建议直接写本地表，用 Distributed 仅做查询入口
+
+-- 清理旧表（确保可重复执行）
+DROP TABLE IF EXISTS engine_test.distributed_orders ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.local_orders ON CLUSTER 'treasurycluster' SYNC;
 
 -- 创建本地表（生产环境：使用复制引擎 + ON CLUSTER）
 CREATE TABLE IF NOT EXISTS engine_test.local_orders ON CLUSTER 'treasurycluster' (
@@ -63,7 +74,7 @@ PARTITION BY toYYYYMM(order_date)
 ORDER BY (user_id, order_id);
 
 -- 创建分布式表
-CREATE TABLE IF NOT EXISTS engine_test.distributed_orders ON CLUSTER 'treasurycluster' AS local_orders
+CREATE TABLE IF NOT EXISTS engine_test.distributed_orders ON CLUSTER 'treasurycluster' AS engine_test.local_orders
 ENGINE = Distributed(treasurycluster, engine_test, local_orders, user_id);
 
 -- 插入数据（通过分布式表）
@@ -92,6 +103,15 @@ ORDER BY total_amount DESC;
 -- ========================================
 -- 2. MaterializedView（物化视图引擎）
 -- ========================================
+-- 【原理】物化视图 = 触发器 + 存储表。源表 INSERT 时自动执行 SELECT 写入 MV 表
+-- 【触发时机】仅源表 INSERT！DELETE/UPDATE/TRUNCATE 不触发
+-- 【坑1】MV 创建前的历史数据不会被回填，需手动 INSERT INTO MV SELECT
+-- 【坑2】MV 的 ORDER BY 作用于 SELECT 输出列，不是源表列（见下方注释）
+-- 【对比】vs View: MV 有存储(预聚合)，查询快；View 无存储，查询=原始SQL
+
+-- 清理旧表（确保可重复执行；MV 必须先于源表删除）
+DROP TABLE IF EXISTS engine_test.event_stats_mv ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.source_events ON CLUSTER 'treasurycluster' SYNC;
 
 -- 创建源表（生产环境：使用复制引擎 + ON CLUSTER）
 CREATE TABLE IF NOT EXISTS engine_test.source_events ON CLUSTER 'treasurycluster' (
@@ -104,16 +124,20 @@ CREATE TABLE IF NOT EXISTS engine_test.source_events ON CLUSTER 'treasurycluster
 ORDER BY (user_id, timestamp);
 
 -- 创建物化视图（生产环境：使用复制聚合引擎 + ON CLUSTER）
+-- 【原理】MV 的 ORDER BY 作用于 SELECT 的【输出列】，不是源表列。
+--   SELECT 把 timestamp 转成 event_date，所以 ORDER BY 必须用 event_date。
+--   【坑】若写 ORDER BY (user_id, toDate(timestamp)) 会报 Missing columns: 'timestamp'
+--   —— 因为 MV 存储表的列是输出列(user_id, event_date, ...state)，没有 timestamp
 CREATE MATERIALIZED VIEW IF NOT EXISTS engine_test.event_stats_mv ON CLUSTER 'treasurycluster'
 ENGINE = ReplicatedAggregatingMergeTree()
-ORDER BY (user_id, toDate(timestamp))
+ORDER BY (user_id, event_date)
 AS SELECT
     user_id,
     toDate(timestamp) as event_date,
     countState() as event_count_state,
     sumState(event_value) as total_value_state
 FROM engine_test.source_events
-GROUP BY user_id, toDate(timestamp);
+GROUP BY user_id, event_date;
 
 -- 插入数据到源表
 INSERT INTO engine_test.source_events (event_id, user_id, event_type, event_value, timestamp) VALUES
@@ -138,6 +162,9 @@ ORDER BY event_date, user_id;
 -- ========================================
 
 -- 创建普通视图
+-- 【原理】View 不存数据，只是 SQL 别名，查询时展开为子查询
+-- 【对比】vs MaterializedView: View 无存储无预聚合，性能 = 原始查询
+-- 【注意】HAVING 用固定日期（数据是 2024-01），用 now() 查不到历史数据
 CREATE VIEW IF NOT EXISTS engine_test.active_users AS
 SELECT
     user_id,
@@ -145,10 +172,10 @@ SELECT
     max(timestamp) as last_event_time
 FROM engine_test.source_events
 GROUP BY user_id
-HAVING last_event_time > now() - INTERVAL 1 DAY;
+HAVING last_event_time >= '2024-01-01 00:00:00';
 
 -- 查询视图
-SELECT * FROM engine_test.active_users;
+SELECT * FROM engine_test.active_users ORDER BY user_id;
 
 -- 创建带过滤的视图
 CREATE VIEW IF NOT EXISTS engine_test.click_events AS
@@ -192,6 +219,16 @@ WHERE e.user_id IN (1, 2, 3);
 -- ========================================
 -- 5. Buffer（缓冲表引擎）
 -- ========================================
+-- 【原理】Buffer 表是写入缓冲层：数据先写内存，达阈值(行数/字节/时间)后批量刷盘
+--   语法: Buffer(db, table, num_buffers, min_time, max_time, min_rows, max_rows, min_bytes, max_bytes)
+-- 【风险★】Buffer 数据在内存中，CH 进程崩溃会【丢失】！不可用于零丢失场景
+-- 【场景】高频小批量写入合并（如每秒100次1行 → 合并成每100秒1万行）
+-- 【替代】现代 CH 推荐 async_insert 替代 Buffer 表（更安全，性能相当）
+-- 【坑】Buffer 表不能加 ON CLUSTER（它是本地内存缓冲）
+
+-- 清理旧表
+DROP TABLE IF EXISTS engine_test.buffer_table SYNC;
+DROP TABLE IF EXISTS engine_test.buffer_target ON CLUSTER 'treasurycluster' SYNC;
 
 -- 创建目标表（生产环境：使用复制引擎 + ON CLUSTER）
 CREATE TABLE IF NOT EXISTS engine_test.buffer_target ON CLUSTER 'treasurycluster' (
@@ -232,6 +269,15 @@ SELECT * FROM engine_test.buffer_target;
 -- ========================================
 -- 6. Merge（合并表引擎）
 -- ========================================
+-- 【原理】Merge 引擎不存数据，用正则匹配多个同结构表，查询时透明合并扫描
+--   语法: Merge(db, '正则模式')
+-- 【场景】按月分表后的统一查询入口（如 archive_202401 + archive_202402）
+-- 【坑】只读，不能写入；被合并的表必须有相同列结构
+
+-- 清理旧表
+DROP TABLE IF EXISTS engine_test.merge_all SYNC;
+DROP TABLE IF EXISTS engine_test.merge_src1 ON CLUSTER 'treasurycluster' SYNC;
+DROP TABLE IF EXISTS engine_test.merge_src2 ON CLUSTER 'treasurycluster' SYNC;
 
 -- 创建多个源表（生产环境：使用复制引擎 + ON CLUSTER）
 CREATE TABLE IF NOT EXISTS engine_test.merge_src1 ON CLUSTER 'treasurycluster' (
@@ -265,7 +311,11 @@ SELECT * FROM engine_test.merge_all ORDER BY id;
 -- ========================================
 -- 7. Null（空表引擎）
 -- ========================================
+-- 【原理】Null 引擎表丢弃所有写入，SELECT 永远返回 0 行
+-- 【场景】测试写入性能（不落盘）、审计流水（只触发 MV 不存原始数据）
+-- 【巧用】Null + MaterializedView：源表不存数据，MV 只做实时聚合
 
+DROP TABLE IF EXISTS engine_test.null_sink SYNC;
 -- 创建 Null 表（写入的数据会被丢弃）
 CREATE TABLE IF NOT EXISTS engine_test.null_sink (
     id UInt64,
@@ -281,12 +331,14 @@ INSERT INTO engine_test.null_sink VALUES
 -- 查询表（结果为空）
 SELECT count() FROM engine_test.null_sink;
 
--- 使用场景：数据清洗测试、性能测试
-
 -- ========================================
 -- 8. Set（集合引擎）
 -- ========================================
+-- 【原理】Set 引擎表存唯一值集合，专用于加速 IN 子句
+-- 【场景】高频 IN 过滤（如 WHERE user_id IN (活跃用户集合)）
+-- 【坑】Set 表是本地内存表，重启后需重新写入
 
+DROP TABLE IF EXISTS engine_test.user_set SYNC;
 -- 创建 Set 表
 CREATE TABLE IF NOT EXISTS engine_test.user_set (
     user_id UInt64
@@ -306,8 +358,17 @@ WHERE e.user_id IN engine_test.user_set;
 -- ========================================
 -- 9. Join（连接表引擎）
 -- ========================================
+-- 【原理】Join 引擎把右表数据存内存，专门加速 JOIN（避免每次重读右表）
+--   语法: Join(STRICTNESS, JOIN_TYPE, key)
+--     STRICTNESS: ANY(同键保留一行) / ALL(保留所有)
+--     JOIN_TYPE:  INNER/LEFT/RIGHT/FULL —— 决定能配合哪种 JOIN 使用
+-- 【场景】维度表小且频繁 JOIN（如用户画像、商品类目）
+-- 【坑1】Join 引擎表是【本地内存表】，不要加 ON CLUSTER（集群下会类型不兼容）
+-- 【坑2】修改 JOIN_TYPE 必须 DROP 重建，IF NOT EXISTS 不会改已有表
+-- 【替代】现代 CH 推荐用普通 ReplicatedMergeTree + hash JOIN，Join 引擎已少用
 
 -- 创建右表（生产环境：使用复制引擎 + ON CLUSTER）
+DROP TABLE IF EXISTS engine_test.user_profiles ON CLUSTER 'treasurycluster' SYNC;
 CREATE TABLE IF NOT EXISTS engine_test.user_profiles ON CLUSTER 'treasurycluster' (
     user_id UInt64,
     name String,
@@ -321,7 +382,8 @@ INSERT INTO engine_test.user_profiles (user_id, name, email) VALUES
 (2, 'Bob', 'bob@example.com'),
 (3, 'Charlie', 'charlie@example.com');
 
--- 创建 Join 表
+-- 创建 Join 表（本地表，不加 ON CLUSTER）
+DROP TABLE IF EXISTS engine_test.user_join SYNC;
 CREATE TABLE IF NOT EXISTS engine_test.user_join (
     user_id UInt64,
     name String,
@@ -332,15 +394,18 @@ CREATE TABLE IF NOT EXISTS engine_test.user_join (
 INSERT INTO engine_test.user_join
 SELECT * FROM engine_test.user_profiles;
 
--- 使用 Join 表进行连接查询
+-- 使用 Join 表：方式一 joinGet 函数（推荐，CH 25.x 标准方式）
+-- 【原理】joinGet('表名', '列名', key) 从 Join 引擎表取值，O(1) 内存查找
+-- 【对比】vs LEFT JOIN 语法: joinGet 更稳定，LEFT JOIN 在集群下报 INCOMPATIBLE_TYPE_OF_JOIN
 SELECT
     e.event_id,
     e.user_id,
-    j.name as user_name,
+    joinGet('engine_test.user_join', 'name', e.user_id) AS user_name,
+    joinGet('engine_test.user_join', 'email', e.user_id) AS user_email,
     e.event_type
 FROM engine_test.source_events e
-LEFT JOIN engine_test.user_join j USING (user_id)
-WHERE e.user_id IN (1, 2, 3);
+WHERE e.user_id IN (1, 2, 3)
+ORDER BY e.event_id;
 
 -- ========================================
 -- 10. 特殊引擎性能测试

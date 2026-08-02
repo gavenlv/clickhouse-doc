@@ -1,5 +1,9 @@
 # 性能优化专题
 
+> **⚠️ 重整标注（2026-08-02）**
+> 本章节编号 `11-performance` 与 `11-data-update` 冲突。按重整计划，本章节将在 **R7 批次** 重命名为 `08-performance`（合并 `02-advance/01_performance_optimization.sql` 与 `17-best-practices/03_query_optimization.sql`，并补充 Projections/JOIN 策略）。
+> 当前内容保留可用，详见 [重整计划](../.trae/documents/clickhouse-tutorial-reorg-plan.md)。
+
 本专题介绍 ClickHouse 的性能优化技术，包括查询优化、索引优化、分区优化、缓存优化等。
 
 ## 📚 文档目录

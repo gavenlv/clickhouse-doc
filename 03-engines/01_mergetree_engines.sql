@@ -332,7 +332,7 @@ DROP TABLE IF EXISTS versioned_collapsing_scores ON CLUSTER 'treasurycluster' SY
 
 CREATE TABLE versioned_collapsing_scores ON CLUSTER 'treasurycluster' (
     user_id UInt64,
-    score_change Int32,
+    score Int32,
     sign Int8,
     version UInt64,
     timestamp DateTime
@@ -340,24 +340,29 @@ CREATE TABLE versioned_collapsing_scores ON CLUSTER 'treasurycluster' (
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY user_id;
 
--- 6.1 初始分数
+-- 6.1 初始分数（sign=+1 表示当前状态）
 INSERT INTO versioned_collapsing_scores VALUES
     (1, 100, 1, 1, '2024-01-01 10:00:00'),
     (2, 150, 1, 1, '2024-01-01 10:00:00'),
     (3, 200, 1, 1, '2024-01-01 10:00:00');
 
--- 6.2 更新分数：先 sign=-1 删旧版本，再 sign=+1 插新版本
+-- 6.2 更新分数：先 sign=-1 镜像旧值，再 sign=+1 插新值
+-- 【关键★】sign=-1 行的 score 必须 = 被取消行的 score（镜像），不是取反！
+--   这样 sum(score*sign) 在合并前/后都一致：
+--     合并前: 100*(+1) + 100*(-1) + 120*(+1) = 120
+--     合并后: +1/-1 配对抵消，剩 120*(+1) = 120
+--   若误写成 -100（取反），合并前会算成 100+100+120=320，与合并后 120 不一致！
 INSERT INTO versioned_collapsing_scores VALUES
-    (1, -100, -1, 1, '2024-01-01 11:00:00'),
+    (1, 100, -1, 1, '2024-01-01 11:00:00'),
     (1, 120, 1, 2, '2024-01-01 11:00:00'),
-    (2, -150, -1, 1, '2024-01-01 11:00:00'),
+    (2, 150, -1, 1, '2024-01-01 11:00:00'),
     (2, 160, 1, 2, '2024-01-01 11:00:00');
 
 -- 6.3 查询最新分数
 -- 【结果解读】user1: 120; user2: 160; user3: 200（version 旧的被抵消）
 SELECT
     user_id,
-    sum(score_change * sign) AS current_score
+    sum(score * sign) AS current_score
 FROM versioned_collapsing_scores
 GROUP BY user_id
 ORDER BY user_id;
@@ -416,12 +421,13 @@ OPTIMIZE TABLE cmp_summing FINAL;
 --   MergeTree:           3 行全保留 (v=10,20,30) —— 不去重不聚合
 --   ReplacingMergeTree:  1 行 (v=30, ver=3)       —— 保留 version 最大
 --   SummingMergeTree:    1 行 (v=60)              —— 数值列求和 10+20+30
-SELECT 'MergeTree' AS engine, k, v, ver FROM cmp_mt
-UNION ALL
-SELECT 'ReplacingMergeTree', k, v, ver FROM cmp_replacing
-UNION ALL
-SELECT 'SummingMergeTree', k, v, ver FROM cmp_summing
-ORDER BY engine, k;
+SELECT * FROM (
+    SELECT 'MergeTree' AS engine, k, v, ver FROM cmp_mt
+    UNION ALL
+    SELECT 'ReplacingMergeTree' AS engine, k, v, ver FROM cmp_replacing
+    UNION ALL
+    SELECT 'SummingMergeTree' AS engine, k, v, ver FROM cmp_summing
+) ORDER BY engine, k;
 
 
 -- ============================================================
@@ -451,11 +457,14 @@ SELECT id, val, ver FROM dedup_demo FINAL ORDER BY id;
 
 -- 9.2 写法B: argMax（推荐，可并行，性能好）
 -- 【原理】argMax(val, ver) 返回使 ver 最大的那个 val
+-- 【坑】别名不能与列名同名！若写 max(ver) AS ver，则 argMax(val, ver) 中的 ver
+--   会被解析器当作「max(ver) 的别名」→ 嵌套聚合报错 ILLEGAL_AGGREGATION。
+--   解决：用不同别名（如 max_ver）
 -- 【结果解读】与 FINAL 结果一致，但不阻塞合并、可并行
 SELECT
     id,
     argMax(val, ver) AS val,
-    max(ver) AS ver
+    max(ver) AS max_ver
 FROM dedup_demo
 GROUP BY id
 ORDER BY id;
