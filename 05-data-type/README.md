@@ -1,295 +1,319 @@
-# ClickHouse 数据类型
+# ClickHouse 数据类型（专家级详解）
 
-本目录包含 ClickHouse 数据类型的详细说明和使用示例。
+> 本章是 schema 设计的基础。读完本章，你应能：为每个字段选择最省空间又最准确的类型、理解 LowCardinality 的字典编码原理、知道 Decimal vs Float 的精度与性能权衡、明白 Nullable 为什么有额外开销。
+>
+> 配套文件：[01_numeric_types.md](./01_numeric_types.md)、[01_numeric_types_examples.sql](./01_numeric_types_examples.sql)、[02_string_types.md](./02_string_types.md)、[02_string_types_examples.sql](./02_string_types_examples.sql)
 
-## 目录结构
+---
+
+## 1. 本章解决什么问题（Why）
+
+| 痛点 | 本章如何解答 |
+|------|--------------|
+| 字段类型选大了浪费空间，选小了溢出，怎么选？ | §3.1 数值类型选型原理 |
+| LowCardinality 神器到底怎么省空间的？什么时候不能用？ | §3.2 LowCardinality 字典编码原理 |
+| 金额用 Float 还是 Decimal？性能差多少？ | §3.3 Decimal vs Float 精度原理 |
+| Nullable 为什么有性能开销？什么时候该用？ | §3.4 Nullable 存储原理 |
+| Date/DateTime/DateTime64 内部怎么存？时区怎么处理？ | §3.5 时间类型内部表示 |
+| String / FixedString / LowCardinality 怎么选？ | §3.6 字符串类型决策表 |
+
+---
+
+## 2. 类型体系全景
 
 ```
-05-data-type/
-├── README.md                      # 数据类型总览
-├── 01_numeric_types.md           # 数值类型
-├── 02_string_types.md            # 字符串类型
-├── 03_date_time_types.md         # 日期时间类型
-├── 04_array_types.md             # 数组类型
-├── 05_tuple_types.md             # 元组类型
-├── 06_map_types.md               # Map 类型
-├── 07_nested_types.md            # Nested 类型
-├── 08_enum_types.md              # Enum 类型
-├── 09_nullable_types.md           # Nullable 类型
-├── 10_special_types.md           # 特殊类型（UUID、JSON、IP 等）
-└── 11_type_conversion.md         # 类型转换和兼容性
-```
-
-## 数据类型分类
-
-### 基础类型
-
-| 类型 | 描述 | 示例 | 大小 |
-|------|------|------|------|
-| **UInt8** | 无符号 8 位整数 | `0` ~ `255` | 1 字节 |
-| **UInt16** | 无符号 16 位整数 | `0` ~ `65535` | 2 字节 |
-| **UInt32** | 无符号 32 位整数 | `0` ~ `4294967295` | 4 字节 |
-| **UInt64** | 无符号 64 位整数 | `0` ~ `18446744073709551615` | 8 字节 |
-| **Int8** | 有符号 8 位整数 | `-128` ~ `127` | 1 字节 |
-| **Int16** | 有符号 16 位整数 | `-32768` ~ `32767` | 2 字节 |
-| **Int32** | 有符号 32 位整数 | `-2147483648` ~ `2147483647` | 4 字节 |
-| **Int64** | 有符号 64 位整数 | `-9223372036854775808` ~ `9223372036854775807` | 8 字节 |
-| **Float32** | 单精度浮点数 | `-3.4e38` ~ `3.4e38` | 4 字节 |
-| **Float64** | 双精度浮点数 | `-1.7e308` ~ `1.7e308` | 8 字节 |
-
-### 字符串类型
-
-| 类型 | 描述 | 适用场景 |
-|------|------|----------|
-| **String** | 任意长度的字符串 | 存储文本、日志、JSON 等 |
-| **FixedString(N)** | 固定长度字符串 | 存储定长数据（如 MD5、UUID） |
-| **LowCardinality(String)** | 字典编码字符串 | 低基数字符串（如国家、状态） |
-
-### 日期时间类型
-
-| 类型 | 描述 | 范围 |
-|------|------|------|
-| **Date** | 日期（天） | `1970-01-01` ~ `2149-06-06` |
-| **DateTime** | 日期时间（秒） | `1970-01-01 00:00:00` ~ `2106-02-07 06:28:15` |
-| **DateTime64(N)** | 日期时间（亚秒） | 支持微秒、纳秒精度 |
-
-### 复合类型
-
-| 类型 | 描述 | 示例 |
-|------|------|------|
-| **Array(T)** | 数组 | `[1, 2, 3]` |
-| **Tuple(T1, T2, ...)** | 元组 | `(1, 'hello', 3.14)` |
-| **Map(Key, Value)** | 键值对映射 | `{'a': 1, 'b': 2}` |
-| **Nested(Name1 Type1, ...)** | 嵌套结构 | `[['a', 1], ['b', 2]]` |
-| **Enum8** | 枚举（8 位） | `'hello' = 1` |
-| **Enum16** | 枚举（16 位） | `'hello' = 1` |
-
-### 特殊类型
-
-| 类型 | 描述 | 示例 |
-|------|------|------|
-| **Nullable(T)** | 可空类型 | `NULL` 或 `T` |
-| **UUID** | 通用唯一标识符 | `'550e8400-e29b-41d4-a716-446655440000'` |
-| **IPv4** | IPv4 地址 | `127.0.0.1` |
-| **IPv6** | IPv6 地址 | `::1` |
-| **JSON** | JSON 对象 | `{"key": "value"}` |
-
-## 快速参考
-
-### 数值类型选择
-
-```sql
--- 用户 ID、订单号（无符号大整数）
-CREATE TABLE users (
-    id UInt64,
-    user_id UInt64,
-    order_id UInt64
-) ENGINE = MergeTree ORDER BY id;
-
--- 年龄、数量（小整数）
-CREATE TABLE products (
-    id UInt64,
-    age UInt8,        -- 0-255
-    quantity UInt16,   -- 0-65535
-    price UInt32       -- 0-4294967295（分为单位）
-) ENGINE = MergeTree ORDER BY id;
-
--- 坐标、评分（浮点数）
-CREATE TABLE locations (
-    id UInt64,
-    latitude Float32,
-    longitude Float32,
-    rating Float32
-) ENGINE = MergeTree ORDER BY id;
-```
-
-### 字符串类型选择
-
-```sql
--- 普通字符串
-CREATE TABLE events (
-    id UInt64,
-    message String
-) ENGINE = MergeTree ORDER BY id;
-
--- 定长字符串（MD5、UUID）
-CREATE TABLE files (
-    id UInt64,
-    file_hash FixedString(32)  -- MD5 32 字符
-) ENGINE = MergeTree ORDER BY id;
-
--- 低基数字符串（优化）
-CREATE TABLE users (
-    id UInt64,
-    country LowCardinality(String),  -- 只有 200 个国家
-    status LowCardinality(String)     -- 只有少量状态
-) ENGINE = MergeTree ORDER BY id;
-```
-
-### 日期时间类型选择
-
-```sql
--- 日期（天）
-CREATE TABLE events (
-    id UInt64,
-    event_date Date
-) ENGINE = MergeTree ORDER BY event_date;
-
--- 日期时间（秒）
-CREATE TABLE events (
-    id UInt64,
-    event_time DateTime
-) ENGINE = MergeTree ORDER BY event_time;
-
--- 日期时间（毫秒）
-CREATE TABLE events (
-    id UInt64,
-    event_time DateTime64(3)  -- 毫秒精度
-) ENGINE = MergeTree ORDER BY event_time;
-```
-
-### 复合类型示例
-
-```sql
--- 数组
-CREATE TABLE users (
-    id UInt64,
-    tags Array(String)
-) ENGINE = MergeTree ORDER BY id;
-
--- 元组
-CREATE TABLE locations (
-    id UInt64,
-    coordinates Tuple(Float32, Float32)
-) ENGINE = MergeTree ORDER BY id;
-
--- Map
-CREATE TABLE settings (
-    id UInt64,
-    config Map(String, String)
-) ENGINE = MergeTree ORDER BY id;
-
--- Nested
-CREATE TABLE orders (
-    id UInt64,
-    items Nested(
-        product_id UInt64,
-        quantity UInt32,
-        price UInt32
-    )
-) ENGINE = MergeTree ORDER BY id;
-```
-
-## 学习路径
-
-### 1. 基础类型（推荐先学）
-- [01_numeric_types.md](./01_numeric_types.md) - 数值类型
-- [02_string_types.md](./02_string_types.md) - 字符串类型
-- [03_date_time_types.md](./03_date_time_types.md) - 日期时间类型
-
-### 2. 复合类型
-- [04_array_types.md](./04_array_types.md) - 数组类型
-- [05_tuple_types.md](./05_tuple_types.md) - 元组类型
-- [06_map_types.md](./06_map_types.md) - Map 类型
-- [07_nested_types.md](./07_nested_types.md) - Nested 类型
-
-### 3. 高级类型
-- [08_enum_types.md](./08_enum_types.md) - Enum 类型
-- [09_nullable_types.md](./09_nullable_types.md) - Nullable 类型
-- [10_special_types.md](./10_special_types.md) - 特殊类型
-
-### 4. 类型转换
-- [11_type_conversion.md](./11_type_conversion.md) - 类型转换和兼容性
-
-## 类型选择指南
-
-### 何时使用整数类型？
-
-| 场景 | 推荐类型 | 说明 |
-|------|---------|------|
-| 主键、ID | `UInt64` | 避免溢出，支持大数据量 |
-| 年龄、数量 | `UInt8/UInt16` | 节省存储，范围有限 |
-| 计数器 | `UInt32/UInt64` | 不允许负数 |
-| 温度、评分 | `Float32/Float64` | 需要小数 |
-
-### 何时使用 LowCardinality？
-
-| 场景 | 使用 | 不使用 |
-|------|------|--------|
-| 国家代码 | ✅ | ❌ |
-| 用户 ID | ❌ | ✅ |
-| 状态码 | ✅ | ❌ |
-| UUID | ❌ | ✅ |
-| 任意文本 | ❌ | ✅ |
-
-### 何时使用 Nullable？
-
-| 场景 | 推荐使用 | 说明 |
-|------|---------|------|
-| 可选字段 | ✅ | 允许 NULL 值 |
-| 必填字段 | ❌ | 使用默认值 |
-| 外键 | ❌ | 使用 0 或空字符串 |
-| 主键 | ❌ | 禁止使用 |
-
-## 最佳实践
-
-### 1. 选择最小的合适类型
-
-```sql
--- ❌ 不好
-CREATE TABLE users (
-    id UInt64,
-    age UInt64,      -- 浪费空间
-    status UInt64    -- 浪费空间
-) ENGINE = MergeTree ORDER BY id;
-
--- ✅ 好
-CREATE TABLE users (
-    id UInt64,
-    age UInt8,        -- 0-255
-    status UInt8       -- 0-255
-) ENGINE = MergeTree ORDER BY id;
-```
-
-### 2. 使用 LowCardinality 优化
-
-```sql
--- ❌ 不好
-CREATE TABLE users (
-    id UInt64,
-    country String,     -- 重复字符串
-    status String      -- 重复字符串
-) ENGINE = MergeTree ORDER BY id;
-
--- ✅ 好
-CREATE TABLE users (
-    id UInt64,
-    country LowCardinality(String),  -- 字典编码
-    status LowCardinality(String)    -- 字典编码
-) ENGINE = MergeTree ORDER BY id;
-```
-
-### 3. 避免过度使用 Nullable
-
-```sql
--- ❌ 不好
-CREATE TABLE users (
-    id UInt64,
-    name Nullable(String),
-    age Nullable(UInt8),
-    status Nullable(UInt8)
-) ENGINE = MergeTree ORDER BY id;
-
--- ✅ 好
-CREATE TABLE users (
-    id UInt64,
-    name String DEFAULT '',
-    age UInt8 DEFAULT 0,
-    status UInt8 DEFAULT 0
-) ENGINE = MergeTree ORDER BY id;
+┌─────────────────────────────────────────────────────────────────┐
+│                   ClickHouse 数据类型分类                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ① 数值类型                                                      │
+│     ├─ 整数: UInt8/16/32/64/256, Int8/16/32/64/256              │
+│     ├─ 浮点: Float32, Float64                                   │
+│     └─ 定点: Decimal32/64/128/256                              │
+│                                                                  │
+│  ② 字符串类型                                                    │
+│     ├─ String (变长)                                             │
+│     ├─ FixedString(N) (定长)                                    │
+│     └─ LowCardinality(String) (字典编码)                         │
+│                                                                  │
+│  ③ 时间类型                                                      │
+│     ├─ Date (天数, UInt16)                                       │
+│     ├─ DateTime (秒, UInt32)                                     │
+│     └─ DateTime64(N) (亚秒, 支持毫秒/微秒/纳秒)                  │
+│                                                                  │
+│  ④ 复合类型                                                      │
+│     ├─ Array(T)                                                  │
+│     ├─ Tuple(T1, T2, ...)                                       │
+│     ├─ Map(K, V)                                                │
+│     └─ Nested(name1 Type1, ...)                                 │
+│                                                                  │
+│  ⑤ 特殊类型                                                      │
+│     ├─ Nullable(T)                                               │
+│     ├─ UUID                                                      │
+│     ├─ IPv4 / IPv6                                              │
+│     ├─ Enum8 / Enum16                                           │
+│     └─ JSON (实验)                                              │
+│                                                                  │
+│  ⑥ 聚合状态类型                                                  │
+│     └─ AggregateFunction(func, T)  (配合 *State 函数)            │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-**最后更新**: 2026-01-19
-**适用版本**: ClickHouse 23.x+
+## 3. 核心原理详解
+
+### 3.1 数值类型选型原理
+
+**原理**：ClickHouse 是列式存储，列宽直接决定 I/O 量和压缩率。选"刚好够用"的最小类型是优化的第一步。
+
+| 类型 | 范围 | 大小 | 典型场景 |
+|------|------|------|----------|
+| UInt8 | 0 ~ 255 | 1B | 布尔、状态码、年龄 |
+| UInt16 | 0 ~ 65,535 | 2B | 端口、小计数 |
+| UInt32 | 0 ~ 42亿 | 4B | IP 值、时间戳(秒) |
+| UInt64 | 0 ~ 1844京 | 8B | 主键、ID |
+| Int8 | -128 ~ 127 | 1B | 温度、评分 |
+| Float32 | ±3.4e38 | 4B | 坐标、百分比 |
+| Float64 | ±1.7e308 | 8B | 科学计算 |
+
+**为什么选最小类型？**
+- 列式压缩前，1 亿行 UInt8 占 100MB，UInt64 占 800MB
+- 压缩后差异仍存在（UInt8 压缩率更高）
+- 向量化处理时，小类型一条 SIMD 指令处理更多值
+
+**决策表**：
+| 场景 | ❌ 错误 | ✅ 正确 | 原因 |
+|------|--------|---------|------|
+| 年龄 | UInt64 | UInt8 | 0-255 够用 |
+| 用户 ID | UInt32 | UInt64 | 防溢出 |
+| 金额(分) | Float64 | Decimal64/UInt64 | 避免浮点误差 |
+| 状态(0-5) | String | UInt8/Enum8 | 省空间 |
+
+### 3.2 LowCardinality 字典编码原理
+
+**原理**：LowCardinality(String) 用**字典编码**——把字符串映射为 UInt8/UInt16 的整数索引，实际存储的是整数而非字符串。
+
+```
+普通 String:                    LowCardinality(String):
+┌──────────────────┐            ┌──────────────────┐
+│ "China"          │            │ 字典:            │
+│ "China"          │            │  0 → "China"     │
+│ "USA"            │            │  1 → "USA"       │
+│ "China"          │            │  2 → "Japan"     │
+│ "Japan"          │            └──────────────────┘
+│ "China"          │            ┌──────────────────┐
+│ ...              │            │ 0,0,1,0,2,0,... │ ← 只存索引(1字节)
+└──────────────────┘            └──────────────────┘
+
+每行存完整字符串(占N字节)       每行只存索引(1-2字节)
+```
+
+**适用条件**：
+- 基数 < 10,000（不同值的数量）
+- 超过 10,000 会自动退化为普通 String（且有转换开销）
+- **绝对禁用**于：UUID、URL、自由文本、用户 ID 等高基数字段
+
+**性能收益**：
+- 存储省 5-10x（存索引而非字符串）
+- 压缩率更高（整数列比字符串列好压）
+- 比较更快（整数比较 vs 字符串比较）
+- GROUP BY 更快（按整数分组）
+
+| 场景 | 基数 | 用 LowCardinality？ |
+|------|------|---------------------|
+| 国家 | ~200 | ✅ 强烈推荐 |
+| 状态码 | <100 | ✅ 强烈推荐 |
+| HTTP method | 5-10 | ✅ |
+| 用户 ID | 百万级 | ❌ 禁用 |
+| URL | 高基数 | ❌ 禁用 |
+| 任意文本 | 不可控 | ❌ 禁用 |
+
+### 3.3 Decimal vs Float 精度原理
+
+**原理**：
+- Float 是**二进制浮点**（IEEE 754），无法精确表示十进制小数（如 0.1 存为 0.1000000000000000055...）
+- Decimal 是**定点数**，用整数存储 + 固定小数位，精确到指定小数位
+
+```
+Float64 存储 0.1 + 0.2:
+  0.1 → 0.1000000000000000055...
+  0.2 → 0.2000000000000000111...
+  相加 → 0.30000000000000004  ← 不是 0.3!
+
+Decimal64(2) 存储 0.1 + 0.2:
+  0.1 → 内部存 10 (×10^2)
+  0.2 → 内部存 20
+  相加 → 30 → 0.30  ← 精确
+```
+
+**Decimal 类型选择**：
+| 类型 | 有效位数 | 范围 | 场景 |
+|------|----------|------|------|
+| Decimal32(S) | 1-9 位 | ±10^9 | 小金额(分) |
+| Decimal64(S) | 1-18 位 | ±10^18 | 标准金额 |
+| Decimal128(S) | 1-38 位 | ±10^38 | 大额、高精度 |
+| Decimal256(S) | 1-76 位 | ±10^76 | 加密货币 |
+
+**性能对比**：
+| 操作 | Float64 | Decimal64 | 差距 |
+|------|---------|-----------|------|
+| 加法 | 快 | 略慢(整数运算+对齐) | 1.2x |
+| 乘法 | 快 | 慢(需重缩放) | 2-3x |
+| 聚合 sum | 快 | 略慢 | 1.5x |
+| 存储 | 8B | 8B | 相同 |
+
+**决策**：金额、利率等需精确计算用 Decimal；统计/科学计算用 Float。
+
+### 3.4 Nullable 存储原理
+
+**原理**：Nullable(T) 不只存 T 的值，还额外存一个 **NULL 掩码**（每行 1 bit，8192 行约 1KB）。
+
+```
+普通 UInt8:                Nullable(UInt8):
+┌──────────┐               ┌──────────┐ ┌──────────┐
+│ 10       │               │ 10       │ │ 0 (非空) │
+│ 20       │               │ 20       │ │ 0        │
+│ 30       │               │ 0 (占位) │ │ 1 (NULL) │
+└──────────┘               │ 40       │ │ 0        │
+                           └──────────┘ └──────────┘
+3 字节                      3 字节 + 3 bit 掩码 + 额外文件
+```
+
+**额外开销**：
+- 存储：多一个掩码列
+- 查询：每行需检查掩码，无法完全向量化
+- 索引：Nullable 列不能作为主键/排序键
+- 聚合：需处理 NULL 语义
+
+**决策表**：
+| 场景 | 推荐 | 原因 |
+|------|------|------|
+| 可选字段（少量 NULL） | Nullable(T) | 语义清晰 |
+| 必填字段 | DEFAULT 值 | 省开销 |
+| 外键 | 0 或空字符串 | 避免 Nullable |
+| 主键/排序键 | ❌ 禁止 Nullable | 不支持 |
+
+### 3.5 时间类型内部表示
+
+**原理**：时间类型本质是整数存储，函数是对整数的算术运算。
+
+| 类型 | 内部表示 | 大小 | 精度 | 范围 |
+|------|----------|------|------|------|
+| Date | UInt16 (天数) | 2B | 天 | 1970 ~ 2149 |
+| DateTime | UInt32 (Unix秒) | 4B | 秒 | 1970 ~ 2106 |
+| DateTime64(N) | Int64 (tick) | 8B | 10^-N 秒 | 更广 |
+
+**时区处理**：
+- DateTime 存的是 UTC 秒，查询时按列时区转换
+- 建表可指定 `DateTime('Asia/Shanghai')`
+- DateTime64 同理
+
+**决策**：
+- 只需日期 → Date（最省空间）
+- 秒级足够 → DateTime
+- 毫秒/微秒 → DateTime64(3)/(6)
+
+### 3.6 字符串类型决策表
+
+| 类型 | 原理 | 适用 | 不适用 |
+|------|------|------|--------|
+| String | 变长字节序列 | 通用文本、JSON、日志 | 低基数字段 |
+| FixedString(N) | 定长 N 字节 | MD5(16)、UUID(16)、定长哈希 | 变长文本 |
+| LowCardinality(String) | 字典编码 | 基数<1万的枚举值 | 高基数、UUID |
+
+**FixedString 注意**：
+- 不足 N 字节会补 `\0`
+- 超过 N 字节会截断
+- 主要用于固定长度的二进制标识（哈希值），普通文本用 String
+
+---
+
+## 4. 文件导航
+
+| 文件 | 主题 | 内容 |
+|------|------|------|
+| [01_numeric_types.md](./01_numeric_types.md) | 数值类型详解 | 整数/浮点/Decimal 原理与选型 |
+| [01_numeric_types_examples.sql](./01_numeric_types_examples.sql) | 数值类型示例 | 可运行示例（含溢出、精度演示） |
+| [02_string_types.md](./02_string_types.md) | 字符串类型详解 | String/FixedString/LowCardinality |
+| [02_string_types_examples.sql](./02_string_types_examples.sql) | 字符串类型示例 | LowCardinality 压缩对比、FixedString |
+
+> 注：其他类型（日期、数组、Map 等）的示例分散在各章节，日期类型详见 [10-date-update](../10-date-update/)，数组/Map 详见 [04-functions](../04-functions/)。
+
+---
+
+## 5. 类型选择决策树
+
+```
+字段是什么?
+  │
+  ├─ 数值
+  │   ├─ 整数 → 选最小够用类型 (UInt8 ~ UInt64)
+  │   ├─ 小数
+  │   │   ├─ 金额/需精确 → Decimal64/128
+  │   │   └─ 统计/科学 → Float64
+  │   └─ 布尔 → UInt8 (CH 无独立 Bool 类型)
+  │
+  ├─ 字符串
+  │   ├─ 低基数(<1万) → LowCardinality(String)
+  │   ├─ 定长哈希 → FixedString(N)
+  │   └─ 通用文本 → String
+  │
+  ├─ 时间
+  │   ├─ 只需日期 → Date
+  │   ├─ 秒级 → DateTime
+  │   └─ 亚秒 → DateTime64(N)
+  │
+  ├─ 集合
+  │   ├─ 同类型列表 → Array(T)
+  │   ├─ 键值对 → Map(K,V)
+  │   └─ 异构 → Tuple
+  │
+  ├─ 枚举
+  │   ├─ 少量值 → Enum8
+  │   └─ 较多值 → LowCardinality(String) (更灵活)
+  │
+  └─ 可空?
+      ├─ 少量 NULL → Nullable(T)
+      └─ 多数有值 → DEFAULT 默认值 (避免 Nullable 开销)
+```
+
+---
+
+## 6. 常见误区与最佳实践
+
+### 误区
+1. **所有整数用 UInt64**：浪费空间，年龄用 UInt8 即可
+2. **金额用 Float64**：浮点误差，财务数据错误
+3. **所有字符串用 String**：低基数字段没用 LowCardinality，浪费
+4. **滥用 Nullable**：每个字段都 Nullable，增加开销且不能做主键
+5. **LowCardinality 用于高基数**：超过 1 万值会退化，反而更慢
+
+### 最佳实践
+1. **选最小够用类型**：UInt8 能装的就别用 UInt64
+2. **低基数字符串用 LowCardinality**：省 5-10x 空间
+3. **金额用 Decimal**：避免浮点误差
+4. **避免 Nullable**：用 DEFAULT 替代
+5. **时间按精度选**：Date 最省，DateTime64 按需
+6. **主键用 UInt64**：避免溢出
+
+---
+
+## 7. 自测题
+
+1. 为什么 UInt8 比 UInt64 省 8 倍空间？对压缩率有什么影响？
+2. LowCardinality(String) 的字典编码原理是什么？基数超过多少会退化？
+3. Float64 存储 0.1+0.2 结果是什么？为什么金额不能用 Float？
+4. Nullable(UInt8) 比普通 UInt8 多了什么开销？为什么不能做主键？
+5. Date 内部如何存储？为什么只占 2 字节？
+6. FixedString(32) 适合存什么？不适合存什么？
+
+---
+
+## 8. 关联章节
+
+- [04-functions](../04-functions/README.md) —— 类型相关函数（转换、数组、Map）
+- [10-date-update](../10-date-update/) —— 日期时间类型与函数大全
+- [11-performance](../11-performance/README.md) —— 类型对性能的影响
+- [17-best-practices](../17-best-practices/README.md) —— schema 设计最佳实践

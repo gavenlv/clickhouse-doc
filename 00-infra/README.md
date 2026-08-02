@@ -50,6 +50,140 @@
 - **负载均衡**: 可通过分布式表实现查询负载均衡
 - **简化配置**: 使用默认复制路径，无需手动指定 ZooKeeper 路径
 
+## 核心原理详解
+
+### 1. ClickHouse Keeper 与 Raft 共识
+
+Keeper 是 ZooKeeper 的 C++ 替代品，用 Raft 协议实现分布式协调。理解 Raft 是理解复制的前提。
+
+```
+为什么需要 3 个节点？
+  Raft 需要"多数派"(quorum)确认才能提交日志。
+  3 节点: quorum=2, 可容忍 1 节点故障  ← 本集群采用
+  5 节点: quorum=3, 可容忍 2 节点故障
+  公式: 容忍故障数 = (N-1)/2
+
+Raft 工作流程 (写请求):
+  1. 客户端写请求 → 转发给 Leader
+  2. Leader 追加日志条目 → 复制到 Followers
+  3. 多数 Followers 确认 → Leader 提交
+  4. Leader 响应客户端 → 通知 Followers 也提交
+
+Leader 选举:
+  - 初始所有节点是 Follower
+  - 超时未收到 Leader 心跳 → 转为 Candidate → 请求投票
+  - 获多数票 → 成为 Leader
+  - 本集群当前: keeper3 是 Leader, keeper1/2 是 Follower
+    (用 docker exec clickhouse-keeper-N clickhouse-keeper-client -q "mntr" 查看)
+
+验证命令:
+  docker exec clickhouse-keeper-1 clickhouse-keeper-client -q "mntr" | grep zk_server_state
+```
+
+### 2. ReplicatedMergeTree 复制机制
+
+复制表靠 Keeper 协调，不是直接在节点间拷数据。
+
+```
+复制流程 (INSERT 为例):
+  1. 客户端 INSERT 到 clickhouse1
+  2. clickhouse1 写入本地 Part (数据文件)
+  3. clickhouse1 在 Keeper 创建日志:
+     /clickhouse/tables/{shard}/{table}/log/log-000001
+     内容: "新增 Part xxx, 待同步"
+  4. clickhouse2 监听到 log 变化 (Watch 机制)
+  5. clickhouse2 从 clickhouse1 拉取 Part 数据 (HTTP)
+  6. clickhouse2 写入本地 Part, 在 Keeper 标记完成
+
+Keeper 中的路径结构:
+  /clickhouse/tables/{shard}/{table}/
+  ├── log/          # 复制日志队列 (待执行操作)
+  ├── replicas/     # 副本注册信息 (谁在线)
+  └── columns/      # 元数据 (表结构)
+
+为什么用 Keeper 而非直接复制?
+  - 元数据一致性: 所有副本感知彼此存在
+  - 故障恢复: 副本宕机后日志保留, 重启后继续同步
+  - 去重: 防止重复拉取同一 Part
+  - 顺序保证: 日志有序, 所有副本按相同顺序应用
+
+验证命令:
+  SELECT * FROM system.replicas WHERE table = 'your_table';
+  -- is_readonly=0 表示正常; absolute_delay=0 表示已同步
+```
+
+### 3. 分布式表查询路由
+
+Distributed 引擎**不存储数据**，只是路由层。
+
+```
+SELECT * FROM distributed_table WHERE ...
+  ↓
+  1. 解析查询, 确定涉及的分片
+  2. 将查询发往所有分片的本地表 (并行)
+  3. 各分片本地执行, 返回部分结果
+  4. 协调节点 (接收查询的节点) 合并结果
+
+本集群是单分片双副本:
+  分布式表 → 路由到 clickhouse1 或 clickhouse2 (随机/负载均衡)
+  INSERT 到分布式表 → 写入随机选定的副本
+
+两阶段聚合 (分布式查询优化):
+  - 各分片用 sumState 本地聚合 (减少传输量)
+  - 协调节点用 sumMerge 合并状态
+  详见 04-functions/01_basic_functions_examples.sql §11
+
+注意: 分布式表查询适合大表扫描, 小表查询直接查本地表更高效
+```
+
+### 4. 分片 vs 副本
+
+```
+分片 (Shard): 水平切分数据, 不同分片存不同数据 → 扩展存储/计算能力
+副本 (Replica): 同一数据的拷贝, 提高可用性 → 容错
+
+本集群: 1 分片 × 2 副本
+  ┌──────────────────────────────────┐
+  │  Shard 1                         │
+  │  ├── Replica 1 (clickhouse1)     │ ← 数据完全相同
+  │  └── Replica 2 (clickhouse2)     │
+  └──────────────────────────────────┘
+
+扩展决策:
+  - 存储不够/写入瓶颈? → 增加分片 (数据水平切分到更多节点)
+  - 可用性不够/读瓶颈? → 增加副本 (数据复制到更多节点)
+  - Keeper 节点数建议: 奇数, 至少 3 (本集群 1 分片用 3 Keeper)
+
+分片键选择:
+  - 均匀分布 (如 user_id 哈希) 避免数据倾斜
+  - 按时间分片便于冷热数据分离
+```
+
+### 5. 默认复制路径宏
+
+本集群配置了宏，简化复制表创建：
+
+| 宏 | clickhouse1 | clickhouse2 | 用途 |
+|----|-------------|-------------|------|
+| `{cluster}` | treasurycluster | treasurycluster | 集群名 |
+| `{shard}` | 1 | 1 | 分片号 |
+| `{replica}` | 1 | 2 | 副本号 |
+| `{table}` | (表名) | (表名) | 自动替换 |
+
+配置的默认路径：`/clickhouse/tables/{shard}/{table}`，副本名 `{replica}`。
+
+因此创建复制表无需手写 ZooKeeper 路径：
+```sql
+-- 最简方式 (推荐): 自动用默认路径
+CREATE TABLE t (...) ENGINE = ReplicatedMergeTree ORDER BY ...;
+
+-- 等价于完整写法:
+CREATE TABLE t (...) ENGINE = ReplicatedMergeTree(
+    '/clickhouse/tables/1/t',  -- 默认路径
+    '1'                         -- 默认副本名 (clickhouse1 上)
+) ORDER BY ...;
+```
+
 ## 快速开始
 
 ### 前置要求

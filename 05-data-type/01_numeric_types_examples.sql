@@ -45,11 +45,11 @@
 -- └─────────────────────────────────────────────────────────────┘
 
 -- 创建数据库（如果存在则不创建）
-CREATE DATABASE IF NOT EXISTS example ON CLUSTER 'treasurycluster';
+CREATE DATABASE IF NOT EXISTS datatype_test ON CLUSTER 'treasurycluster';
 
 
-DROP TABLE IF EXISTS example.numeric_types ON CLUSTER 'treasurycluster' SYNC;
-CREATE TABLE IF NOT EXISTS example.numeric_types ON CLUSTER 'treasurycluster' (
+DROP TABLE IF EXISTS datatype_test.numeric_types ON CLUSTER 'treasurycluster' SYNC;
+CREATE TABLE IF NOT EXISTS datatype_test.numeric_types ON CLUSTER 'treasurycluster' (
     id UInt64,
     user_id UInt32,
     age UInt8,
@@ -59,12 +59,12 @@ CREATE TABLE IF NOT EXISTS example.numeric_types ON CLUSTER 'treasurycluster' (
 ) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- 插入数据
-INSERT INTO example.numeric_types VALUES
+INSERT INTO datatype_test.numeric_types VALUES
     (1, 1001, 25, 1000, 36.5, 99.99),
     (2, 1002, 30, -500, 37.2, 199.99);
 
 -- 查询数据
-SELECT * FROM example.numeric_types;
+SELECT * FROM datatype_test.numeric_types;
 
 -- ========================================
 -- 基础使用
@@ -95,8 +95,8 @@ SELECT
 -- ========================================
 
 -- 创建测试表
-DROP TABLE IF EXISTS example.sales ON CLUSTER 'treasurycluster' SYNC;
-CREATE TABLE IF NOT EXISTS example.sales ON CLUSTER 'treasurycluster' (
+DROP TABLE IF EXISTS datatype_test.sales ON CLUSTER 'treasurycluster' SYNC;
+CREATE TABLE IF NOT EXISTS datatype_test.sales ON CLUSTER 'treasurycluster' (
     id UInt64,
     product_id UInt32,
     quantity UInt16,
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS example.sales ON CLUSTER 'treasurycluster' (
 ) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- 插入数据
-INSERT INTO example.sales VALUES
+INSERT INTO datatype_test.sales VALUES
     (1, 100, 5, 100, 500, 4.5),
     (2, 101, 3, 200, 600, 4.8),
     (3, 100, 2, 100, 200, 4.2),
@@ -119,7 +119,7 @@ SELECT
     min(rating) as min_rating,
     max(rating) as max_rating,
     count() as total_rows
-FROM example.sales;
+FROM datatype_test.sales;
 
 -- GROUP BY 聚合
 SELECT
@@ -127,7 +127,7 @@ SELECT
     sum(quantity) as total_quantity,
     sum(total_price) as total_sales,
     avg(rating) as avg_rating
-FROM example.sales
+FROM datatype_test.sales
 GROUP BY product_id
 ORDER BY product_id;
 
@@ -142,7 +142,7 @@ ORDER BY product_id;
 -- ) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- ✅ 好：使用 UInt8 存储年龄
-CREATE TABLE IF NOT EXISTS users_good ON CLUSTER 'treasurycluster' (
+CREATE TABLE IF NOT EXISTS datatype_test.users_good ON CLUSTER 'treasurycluster' (
     id UInt64,
     age UInt8       -- 0-255，足够
 ) ENGINE = ReplicatedMergeTree() ORDER BY id;
@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS users_good ON CLUSTER 'treasurycluster' (
 -- ========================================
 
 -- ✅ 推荐：主键使用 UInt64
-CREATE TABLE IF NOT EXISTS events ON CLUSTER 'treasurycluster' (
+CREATE TABLE IF NOT EXISTS datatype_test.events ON CLUSTER 'treasurycluster' (
     id UInt64,
     user_id UInt64,
     event_time DateTime
@@ -162,10 +162,9 @@ CREATE TABLE IF NOT EXISTS events ON CLUSTER 'treasurycluster' (
 -- 基础使用
 -- ========================================
 
--- 检查溢出
-SELECT
-    cast(toInt8(200) as UInt8);  -- 会溢出，产生错误
+-- 检查溢出: toInt8 范围是 -128~127, 200 会溢出抛错
+-- 演示: 用 toInt16 容纳 200, 避免溢出
+SELECT toInt16(200) AS no_overflow;  -- 200, 正常
 
--- 使用 toUInt64 避免溢出
-SELECT
-    cast(200 as UInt64);  -- 正常
+-- 对比: toInt8(200) 会抛 OVERFLOW 错误 (取消注释可验证)
+-- SELECT toInt8(200);  -- ERROR: 溢出

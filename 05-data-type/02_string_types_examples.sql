@@ -68,11 +68,11 @@
 -- └─────────────────────────────────────────────────────────────┘
 
 -- 创建数据库（如果存在则不创建）
-CREATE DATABASE IF NOT EXISTS example ON CLUSTER 'treasurycluster';
+CREATE DATABASE IF NOT EXISTS datatype_test ON CLUSTER 'treasurycluster';
 
 
-DROP TABLE IF EXISTS example.strings ON CLUSTER 'treasurycluster' SYNC;
-CREATE TABLE IF NOT EXISTS example.strings ON CLUSTER 'treasurycluster' (
+DROP TABLE IF EXISTS datatype_test.strings ON CLUSTER 'treasurycluster' SYNC;
+CREATE TABLE IF NOT EXISTS datatype_test.strings ON CLUSTER 'treasurycluster' (
     id UInt64,
     message String,
     email String,
@@ -80,20 +80,20 @@ CREATE TABLE IF NOT EXISTS example.strings ON CLUSTER 'treasurycluster' (
 ) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- 插入数据
-INSERT INTO example.strings VALUES
-    (1, 'Hello, World!', 'user@example.com', 'https://example.com'),
-    (2, '你好，世界！', 'user@example.org', 'https://example.org');
+INSERT INTO datatype_test.strings VALUES
+    (1, 'Hello, World!', 'user@datatype_test.com', 'https://datatype_test.com'),
+    (2, '你好，世界！', 'user@datatype_test.org', 'https://datatype_test.org');
 
 -- 查询
-SELECT * FROM example.strings;
+SELECT * FROM datatype_test.strings;
 
 -- ========================================
 -- String 类型
 -- ========================================
 
 -- 创建表（存储 MD5 哈希）
-DROP TABLE IF EXISTS example.files ON CLUSTER 'treasurycluster' SYNC;
-CREATE TABLE IF NOT EXISTS example.files ON CLUSTER 'treasurycluster' (
+DROP TABLE IF EXISTS datatype_test.files ON CLUSTER 'treasurycluster' SYNC;
+CREATE TABLE IF NOT EXISTS datatype_test.files ON CLUSTER 'treasurycluster' (
     id UInt64,
     file_name String,
     file_hash FixedString(32),  -- MD5 32 字符
@@ -101,20 +101,20 @@ CREATE TABLE IF NOT EXISTS example.files ON CLUSTER 'treasurycluster' (
 ) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- 插入数据
-INSERT INTO example.files VALUES
+INSERT INTO datatype_test.files VALUES
     (1, 'document.pdf', 'd41d8cd98f00b204e9800998ecf8427e', 1024),
     (2, 'image.jpg', '0cc175b9c0f1b6a831c399e269772661', 2048);
 
 -- 查询
-SELECT * FROM example.files WHERE file_hash = 'd41d8cd98f00b204e9800998ecf8427e';
+SELECT * FROM datatype_test.files WHERE file_hash = 'd41d8cd98f00b204e9800998ecf8427e';
 
 -- ========================================
 -- String 类型
 -- ========================================
 
 -- 创建表（国家、状态）
-DROP TABLE IF EXISTS example.users ON CLUSTER 'treasurycluster' SYNC;
-CREATE TABLE IF NOT EXISTS example.users ON CLUSTER 'treasurycluster' (
+DROP TABLE IF EXISTS datatype_test.users ON CLUSTER 'treasurycluster' SYNC;
+CREATE TABLE IF NOT EXISTS datatype_test.users ON CLUSTER 'treasurycluster' (
     id UInt64,
     name String,
     country LowCardinality(String),  -- 只有 200 个国家
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS example.users ON CLUSTER 'treasurycluster' (
 ) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- 插入数据
-INSERT INTO example.users VALUES
+INSERT INTO datatype_test.users VALUES
     (1, 'Alice', 'USA', 'active', 'F'),
     (2, 'Bob', 'China', 'inactive', 'M'),
     (3, 'Charlie', 'UK', 'active', 'M'),
@@ -131,7 +131,7 @@ INSERT INTO example.users VALUES
 
 -- 查询
 SELECT country, count() as user_count
-FROM example.users
+FROM datatype_test.users
 GROUP BY country
 ORDER BY user_count DESC;
 
@@ -203,7 +203,7 @@ SELECT
 -- ) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- ✅ 好：低基数字符串使用 LowCardinality
-CREATE TABLE IF NOT EXISTS users_good ON CLUSTER 'treasurycluster' (
+CREATE TABLE IF NOT EXISTS datatype_test.users_good ON CLUSTER 'treasurycluster' (
     id UInt64,
     country LowCardinality(String),  -- 字典编码
     status LowCardinality(String)    -- 字典编码
@@ -214,7 +214,7 @@ CREATE TABLE IF NOT EXISTS users_good ON CLUSTER 'treasurycluster' (
 -- ========================================
 
 -- ✅ 推荐：MD5、UUID 使用 FixedString
-CREATE TABLE IF NOT EXISTS files ON CLUSTER 'treasurycluster' (
+CREATE TABLE IF NOT EXISTS datatype_test.files ON CLUSTER 'treasurycluster' (
     id UInt64,
     file_name String,
     file_md5 FixedString(32),   -- MD5 32 字符
@@ -232,7 +232,7 @@ CREATE TABLE IF NOT EXISTS files ON CLUSTER 'treasurycluster' (
 -- ) ENGINE = ReplicatedMergeTree() ORDER BY id;
 
 -- ✅ 好：大文本存储到外部，只存引用
-CREATE TABLE IF NOT EXISTS logs_good ON CLUSTER 'treasurycluster' (
+CREATE TABLE IF NOT EXISTS datatype_test.logs_good ON CLUSTER 'treasurycluster' (
     id UInt64,
     log_path String,     -- 存储文件路径
     log_size UInt64

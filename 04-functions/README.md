@@ -1,607 +1,324 @@
-# ClickHouse Functions and Window Functions
+# ClickHouse 函数与窗口函数（专家级详解）
 
-本目录包含 ClickHouse 函数和窗口函数的详细教程和实践示例。
-
-## 📚 目录
-
-- [基本函数](01_basic_functions_examples.sql) - 各类基本函数的使用示例
-- [窗口函数](02_window_functions_examples.sql) - 窗口函数的高级应用
+> 本章是 ClickHouse 的"表达能力核心"。读完本章，你应能：根据业务场景精准选函数、理解聚合状态函数的底层机制、用窗口函数解决跨行计算、识别常见性能陷阱。
+>
+> 配套可运行 SQL：[01_basic_functions_examples.sql](./01_basic_functions_examples.sql)、[02_window_functions_examples.sql](./02_window_functions_examples.sql)。集群已启动（`treasurycluster`，CH 25.12.1.649），所有 SQL 均已验证零错误。
 
 ---
 
-## 1. 基本函数 (01_basic_functions_examples.sql)
+## 1. 本章解决什么问题（Why）
 
-### 1.1 聚合函数 (Aggregate Functions)
+ClickHouse 的函数体系远比传统 OLTP 数据库庞大，且有几个"反直觉"设计：
 
-聚合函数用于对一组值进行计算并返回单个值。
-
-#### 常用聚合函数
-
-```sql
--- 基本聚合函数
-SELECT 
-    count() as total_records,              -- 总记录数
-    count(DISTINCT product_id) as unique_products,  -- 唯一值计数
-    sum(quantity) as total_quantity,       -- 求和
-    avg(price) as avg_price,               -- 平均值
-    min(price) as min_price,               -- 最小值
-    max(price) as max_price                -- 最大值
-FROM sales_data;
-
--- 条件聚合
-SELECT 
-    category,
-    sumIf(quantity, region = 'North') as north_quantity,
-    avgIf(price, category = 'Electronics') as electronics_avg_price,
-    countIf(price > 100) as expensive_items_count
-FROM sales_data
-GROUP BY category;
-
--- 统计聚合函数
-SELECT 
-    category,
-    variance(price) as price_variance,    -- 方差
-    stddev(price) as price_stddev,        -- 标准差
-    quantile(0.5)(price) as median_price,    -- 中位数
-    quantile(0.9)(price) as p90_price         -- 90分位数
-FROM sales_data
-GROUP BY category;
-```
-
-#### 重要提示
-
-- `count()` 计算所有行（不包括 NULL 值）
-- `count(DISTINCT expr)` 计算唯一值
-- `sumIf(expr, condition)` 只在条件满足时求和
-- `quantile(p)` 计算百分位数，p 在 0 到 1 之间
-
-### 1.2 字符串函数 (String Functions)
-
-字符串函数用于处理和转换文本数据。
-
-```sql
--- 基本字符串操作
-SELECT 
-    length(username) as username_length,      -- 字符串长度
-    upper(username) as username_upper,        -- 转大写
-    lower(email) as email_lower,              -- 转小写
-    trim(LEADING 'Software' FROM bio),        -- 去除前导字符
-    substring(username, 1, 4) as prefix       -- 截取子串
-FROM users_data;
-
--- 字符串分割和连接
-SELECT 
-    splitByChar('@', email) as parts,                     -- 按字符分割
-    arrayElement(splitByChar('@', email), 1) as local,   -- 获取数组元素
-    concat('User: ', username, ' - ', email) as combined  -- 连接字符串
-FROM users_data;
-
--- 字符串搜索和替换
-SELECT 
-    positionCaseInsensitive(bio, 'Engineer') as pos,      -- 查找位置
-    countMatches(bio, 'Engineer') as count,               -- 匹配计数
-    replaceRegexpOne(username, '_', ' ') as readable      -- 正则替换
-FROM users_data;
-```
-
-### 1.3 日期时间函数 (Date/Time Functions)
-
-日期时间函数用于处理和转换时间数据。
-
-```sql
--- 日期时间提取
-SELECT 
-    toYear(event_time) as year,           -- 年份
-    toMonth(event_time) as month,         -- 月份
-    toDayOfMonth(event_time) as day,      -- 日
-    toHour(event_time) as hour,           -- 小时
-    toMinute(event_time) as minute,       -- 分钟
-    toDayOfWeek(event_time) as weekday,   -- 星期
-    toQuarter(event_time) as quarter      -- 季度
-FROM events_data;
-
--- 日期时间计算
-SELECT 
-    event_time,
-    now() as current_time,
-    dateDiff('day', event_time, now()) as days_ago,     -- 计算差值
-    addDays(event_time, 7) as week_later,              -- 添加天数
-    toStartOfDay(event_time) as day_start,             -- 天的开始
-    toStartOfMonth(event_time) as month_start           -- 月的开始
-FROM events_data;
-
--- 日期时间格式化
-SELECT 
-    formatDateTime(event_time, '%Y-%m-%d') as date_only,
-    formatDateTime(event_time, '%H:%M:%S') as time_only,
-    formatDateTime(event_time, '%Y年%m月%d日') as chinese_format
-FROM events_data;
-```
-
-### 1.4 数学函数 (Math Functions)
-
-数学函数执行数值计算。
-
-```sql
-SELECT 
-    round(value1) as rounded,          -- 四舍五入
-    floor(value1) as floored,          -- 向下取整
-    ceil(value2) as ceiled,            -- 向上取整
-    abs(value3 - 150) as abs_diff,    -- 绝对值
-    pow(value1, 2) as squared,         -- 幂运算
-    sqrt(value1) as root,              -- 平方根
-    exp(value1 / 10) as exponential,   -- 指数
-    log10(value1) as logarithm         -- 对数
-FROM numeric_data;
-
--- 三角函数
-SELECT 
-    sin(toFloat32(3.14159 / 4)) as sin_45deg,
-    cos(toFloat32(3.14159 / 6)) as cos_30deg,
-    tan(toFloat32(3.14159 / 4)) as tan_45deg;
-```
-
-### 1.5 条件函数 (Conditional Functions)
-
-条件函数用于实现逻辑判断。
-
-```sql
--- if 函数
-SELECT 
-    product_name,
-    stock,
-    if(stock >= reorder_point, 'In Stock', 'Low Stock') as status
-FROM product_inventory;
-
--- ifNull 函数 - 处理 NULL 值
-SELECT 
-    ifNull(stock, 0) as safe_stock
-FROM product_inventory;
-
--- multiIf - 多重条件判断
-SELECT 
-    product_name,
-    stock,
-    multiIf(
-        stock = 0, 'Out of Stock',
-        stock < reorder_point, 'Critical Stock',
-        stock < reorder_point * 2, 'Normal Stock',
-        'High Stock'
-    ) as stock_level
-FROM product_inventory;
-```
-
-### 1.6 数组函数 (Array Functions)
-
-数组函数用于处理数组类型数据。
-
-```sql
--- 基本数组操作
-SELECT 
-    item_name,
-    tags,
-    length(tags) as tag_count,              -- 数组长度
-    has(tags, 'tech') as has_tech,         -- 检查元素
-    indexOf(tags, 'tech') as position,     -- 查找位置
-    arrayJoin(tags) as individual_tag      -- 展开数组
-FROM tags_data;
-
--- 数组操作
-SELECT 
-    arrayConcat(tags, ['new']) as concat,        -- 连接数组
-    arrayPushBack(tags, 'item') as push_back,    -- 追加元素
-    arrayPushFront(tags, 'item') as push_front,  -- 前置元素
-    arraySlice(tags, 1, 2) as slice              -- 切片
-FROM tags_data;
-
--- 数组聚合
-SELECT 
-    scores,
-    arraySum(scores) as total,
-    arrayAvg(scores) as avg,
-    arrayMin(scores) as min,
-    arrayMax(scores) as max,
-    arraySort(scores) as sorted
-FROM tags_data;
-```
-
-### 1.7 类型转换函数 (Type Conversion Functions)
-
-类型转换函数用于在不同数据类型之间转换。
-
-```sql
--- 字符串转数字
-SELECT 
-    toInt32(string_num) as int32,
-    toFloat32(string_num) as float32,
-    toDecimal128(string_num, 2) as decimal128
-FROM mixed_data;
-
--- 字符串转日期
-SELECT 
-    toDate(date_str) as date,
-    toDateTime(date_str) as datetime
-FROM mixed_data;
-```
-
-### 1.8 哈希函数 (Hash Functions)
-
-哈希函数用于生成数据的哈希值。
-
-```sql
-SELECT 
-    md5(session_id) as md5_hash,
-    sha1(session_id) as sha1_hash,
-    sha256(session_id) as sha256_hash,
-    sipHash64(session_id) as siphash,
-    xxHash64(session_id) as xxhash,
-    intHash32(user_id) as int_hash
-FROM user_sessions;
-```
-
-### 1.9 IP 地址函数 (IP Address Functions)
-
-IP 地址函数用于处理 IPv4 地址。
-
-```sql
-SELECT 
-    client_ip,
-    toIPv4(client_ip) as ipv4,
-    IPv4NumToString(toIPv4(client_ip)) as back_to_string,
-    IPv4NumToClassC(toIPv4(client_ip)) as class_c
-FROM access_logs;
-```
-
-### 1.10 JSON 函数 (JSON Functions)
-
-JSON 函数用于解析和提取 JSON 数据。
-
-```sql
-SELECT 
-    json_string,
-    JSONExtractString(json_string, 'name') as name,
-    JSONExtractUInt(json_string, 'age') as age,
-    JSONExtractString(json_string, '$.city') as jsonpath_city
-FROM json_data;
-```
+| 痛点 | 本章如何解答 |
+|------|--------------|
+| 同样是"求和"，为什么有 `sum` / `sumWithOverflow` / `sumState` / `sumMerge`？它们到底什么关系？ | §3.1 聚合状态函数原理，讲透"两阶段聚合" |
+| 物化视图预聚合为什么必须用 `*State` 函数，用 `sum` 会怎样？ | §3.2 AggregatingMergeTree 完整示例 + 对比 |
+| 窗口函数的 `ROWS` 和 `RANGE` 到底差在哪？默认 frame 是什么？ | §4.3 窗口帧原理图解 |
+| `arrayJoin` 为什么"一行变多行"？和 `arrayMap` 区别？ | §3.3 数组函数的"展开 vs 映射" |
+| 老的 `JSONExtract*` 和新的 `JSON` 类型该用哪个？ | §3.4 JSON 方案对比决策表 |
+| `count()` / `count(*)` / `count(列)` 哪个对？NULL 怎么算？ | §3.5 计数函数的坑 |
 
 ---
 
-## 2. 窗口函数 (02_window_functions_examples.sql)
+## 2. 函数体系全景图
 
-窗口函数是在 ClickHouse 中执行跨行计算的强大工具，可以对与当前行相关的行集执行计算。
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   ClickHouse 函数分类                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ① 标量函数（Scalar）：一行进一行出，可在任何表达式位置使用          │
+│     ├─ 字符串：length / substring / splitByChar / replaceRegexpAll│
+│     ├─ 日期：toDate / toDateTime / dateDiff / toStartOfDay       │
+│     ├─ 数学：round / floor / pow / sqrt / sin / log              │
+│     ├─ 条件：if / multiIf / nullIf / ifNull / coalesce            │
+│     ├─ 类型转换：CAST / toInt32 / toFloat64 / toDecimal128       │
+│     ├─ 哈希：sipHash64 / xxHash64 / cityHash64 / intHash32       │
+│     ├─ IP：toIPv4 / toIPv6 / IPv4CIDRToRange                     │
+│     ├─ 数组：arrayJoin / arrayMap / arrayFilter / arraySum       │
+│     ├─ JSON：JSONExtractString / JSONExtractUInt / visitParam*   │
+│     └─ Map：mapApply / mapPopulateSeries / mapKeys / mapValues   │
+│                                                                  │
+│  ② 聚合函数（Aggregate）：多行进一行出，配合 GROUP BY 使用           │
+│     ├─ 基础：count / sum / avg / min / max / any / anyLast       │
+│     ├─ 统计：varPop / varSamp / stddevPop / quantile / topK      │
+│     ├─ 组合子（Combinator）：*If / *Array / *State / *Merge       │
+│     └─ 状态型：sumState / quantileState / uniqState ...          │
+│                                                                  │
+│  ③ 窗口函数（Window）：多行进一行出，但不折叠行数                    │
+│     ├─ 排名：row_number / rank / dense_rank / ntile              │
+│     ├─ 导航：lag / lead / first_value / last_value / nth_value   │
+│     └─ 聚合窗口：sum/avg/count OVER (...)                          │
+│                                                                  │
+│  ④ 表函数（Table Function）：返回一个表，用在 FROM 子句             │
+│     ├─ numbers(N) / generateRandom                              │
+│     ├─ file() / url() / remote()                                │
+│     └─ cluster('name', db, table)                               │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-### 2.1 窗口函数基本语法
+**最易混淆的三组**（本章重点对比）：
+1. `sum` vs `sumState`+`sumMerge` → §3.1
+2. `arrayJoin` vs `arrayMap` → §3.3
+3. `ROWS` vs `RANGE` frame → §4.3
+
+---
+
+## 3. 核心原理：聚合状态函数（*State / *Merge）
+
+> 这是本章最重要的进阶内容，也是 ClickHouse 实现"实时预聚合"的基石。原文件**完全缺失**，本节专门补齐。
+
+### 3.1 一个问题引出 *State
+
+**业务场景**：有一张 10 亿行的明细订单表 `orders`，要做"按天+品类"的实时 GMV 报表。
+
+**方案 A（朴素）**：每次查询都扫全表
+```sql
+SELECT toDate(order_time) AS d, category, sum(amount) AS gmv
+FROM orders GROUP BY d, category;
+```
+问题：10 亿行每次扫，慢且费 CPU。
+
+**方案 B（物化视图预聚合）**：用 `sumState` 把"中间状态"物化到日表
+```sql
+-- 明细表
+CREATE TABLE orders (...) ENGINE = MergeTree ORDER BY ...;
+
+-- 预聚合表：列类型是 AggregateFunction，不是数值！
+CREATE TABLE orders_daily_mv ENGINE = AggregatingMergeTree ORDER BY (d, category) AS
+SELECT
+    toDate(order_time) AS d,
+    category,
+    sumState(amount) AS gmv_state   -- ← 关键：存"状态"而非"和"
+FROM orders
+GROUP BY d, category;
+
+-- 查询：用 sumMerge 把状态合并出最终值
+SELECT d, category, sumMerge(gmv_state) AS gmv
+FROM orders_daily_mv
+GROUP BY d, category;
+```
+
+### 3.2 原理：状态到底是什么？
+
+`sumState(amount)` **不返回数值**，返回的是 `AggregateFunction(Sum, Decimal(10,2))` 类型的**二进制中间状态**。可以理解为：
+
+```
+普通 sum:   [1,2,3,4] ──聚合──> 10          （直接出结果）
+sumState:   [1,2,3,4] ──序列化─> <State: {sum=10, count=4, ...}>
+                                      ↑
+                                二进制 blob，可存储、可传输、可再合并
+sumMerge:   <State: {sum=10}> + <State: {sum=20}> ──> 30
+```
+
+**为什么不能直接 `sum` 存到预聚合表？** 因为日表里 `sum=10` 已经丢失了"怎么算出来的"，无法再做"日→月"的二级聚合而不丢精度（比如加权平均、分位数根本无法从已聚合值恢复）。**状态函数保留了"可继续聚合"的能力**，这是 ClickHouse 实时数仓的核心。
+
+### 3.3 *State / *Merge 全家族对比表
+
+| 聚合目标 | 普通函数 | State 函数（存状态） | Merge 函数（合并状态出结果） | 典型场景 |
+|----------|----------|----------------------|------------------------------|----------|
+| 求和 | `sum(x)` | `sumState(x)` | `sumMerge(s)` | GMV、计数累加 |
+| 计数 | `count()` | `countState()` | `countMerge(s)` | PV/UV 累计 |
+| 唯一计数 | `uniq(x)` | `uniqState(x)` | `uniqMerge(s)` | UV（HLL 状态） |
+| 分位数 | `quantile(0.9)(x)` | `quantile(0.9)(x)` 的 `quantileState(0.9)(x)` | `quantileMerge(0.9)(s)` | P99 延迟监控 |
+| 最大值 | `max(x)` | `maxState(x)` | `maxMerge(s)` | 峰值指标 |
+| 数组收集 | `groupArray(x)` | `groupArrayState(x)` | `groupArrayMerge(s)` | 漏斗步骤收集 |
+| TopK | `topK(10)(x)` | `topKState(10)(x)` | `topKMerge(10)(s)` | 热搜榜 |
+
+**关键规则**：
+- `*State` 返回 `AggregateFunction(...)` 类型，**不能直接 SELECT 看数值**（看到的是二进制）
+- `*Merge` 输入是状态列，输出是最终值
+- 状态列必须用 `AggregatingMergeTree` 引擎，INSERT 时同主键的状态会**自动 merge**（这是引擎行为，不是查询行为）
+- `SimpleAggregateFunction` 是简化版：用于 `sum`/`max`/`any` 等可"直接相加"的聚合，存普通值而非二进制状态，更省空间
+
+### 3.4 完整可运行示例（见 01 SQL 文件 §11）
+
+01 SQL 文件新增了完整章节：明细表 → AggregatingMergeTree 预聚合表 → 二级（月）聚合 → 性能对比，全部可在集群验证。
+
+---
+
+## 4. 核心原理：窗口函数与窗口帧
+
+### 4.1 窗口函数 vs 聚合函数
+
+```
+聚合函数 (GROUP BY):           窗口函数 (OVER):
+┌──────────────────┐           ┌──────────────────────────────┐
+│ 原始 3 行          │           │ 原始 3 行                      │
+│   A  10           │           │   A  10  ← +running_sum=10    │
+│   A  20   ──GROUP BY──>  │   A  20  ← +running_sum=30    │
+│   A  30           │   A:60    │   A  30  ← +running_sum=60    │
+│                   │ (1 行)    │ (仍 3 行，每行带窗口结果)        │
+└──────────────────┘           └──────────────────────────────┘
+折叠行数                         不折叠行数
+```
+
+### 4.2 OVER 子句三要素
 
 ```sql
-function_name([expression]) OVER (
-    [PARTITION BY partition_expression]
-    [ORDER BY sort_expression]
-    [frame_clause]
+function(args) OVER (
+    [PARTITION BY 列]        -- 分区：相当于"分组边界"
+    [ORDER BY 列]            -- 排序：决定"前后"语义
+    [frame_clause]           -- 帧：当前行的计算范围
 )
 ```
 
-**关键组件：**
-- `PARTITION BY` - 将数据分成组（类似 GROUP BY）
-- `ORDER BY` - 在每个分区内排序
-- `frame_clause` - 定义当前行的计算范围
+- **不写 PARTITION BY**：整张表是一个分区
+- **写了 ORDER BY 但不写 frame**：默认 frame = `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`（这是最隐蔽的坑，见 §4.3）
+- **不写 ORDER BY 也不写 frame**：默认 frame = 整个分区（`ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`）
 
-### 2.2 排名函数 (Ranking Functions)
+### 4.3 窗口帧 ROWS vs RANGE（核心难点）
 
-排名函数为每行分配一个排名。
+```
+数据:  价格 [100, 100, 200, 300]
+       ORDER BY price
 
-```sql
--- ROW_NUMBER - 连续的唯一编号（无并列）
-SELECT 
-    salesperson,
-    sale_date,
-    revenue,
-    row_number() OVER (PARTITION BY salesperson ORDER BY revenue DESC) as rn
-FROM sales;
+ROWS BETWEEN 1 PRECEDING AND CURRENT ROW   (物理行)
+  行1(100): 帧=[100]              avg=100
+  行2(100): 帧=[100,100]          avg=100
+  行3(200): 帧=[100,200]          avg=150
+  行4(300): 帧=[200,300]          avg=250
 
--- RANK - 有并列时跳过编号
-SELECT 
-    category,
-    price,
-    rank() OVER (PARTITION BY category ORDER BY price DESC) as rank_num
-FROM sales;
-
--- DENSE_RANK - 有并列时不跳过编号
-SELECT 
-    category,
-    price,
-    dense_rank() OVER (PARTITION BY category ORDER BY price DESC) as dense_rank_num
-FROM sales;
+RANGE BETWEEN 100 PRECEDING AND CURRENT ROW  (值范围: price-100 ~ price)
+  行1(100): 值域[0,100]  匹配行=[100,100]  avg=100
+  行2(100): 值域[0,100]  匹配行=[100,100]  avg=100
+  行3(200): 值域[100,200] 匹配行=[100,100,200] avg=133.3
+  行4(300): 值域[200,300] 匹配行=[200,300]  avg=250
 ```
 
-**区别示例：**
-```
-价格:    100, 90, 90, 80
-RANK:      1,  2,  2,  4   (跳过3)
-DENSE_RANK: 1,  2,  2,  3   (不跳过)
-ROW_NUMBER:1,  2,  3,  4   (唯一)
-```
+**对比表**：
 
-### 2.3 偏移函数 (Offset Functions)
+| 维度 | ROWS | RANGE |
+|------|------|-------|
+| 单位 | 物理行位置 | ORDER BY 列的值范围 |
+| 并列值处理 | 每行独立 | 同值同帧 |
+| 常见用法 | 移动平均(N 天/行) | 累计到当前"值" |
+| 性能 | 快（按行定位） | 慢（需值比较） |
+| 默认 | —— | `ORDER BY` 时的默认 frame |
 
-偏移函数访问当前行之前或之后的行。
+**最隐蔽的坑**：写 `sum(x) OVER (ORDER BY d)` 看似"累计求和"，但默认是 `RANGE`，当 `d` 有重复值时，**同值的行会一起算进同一帧**，导致"累计值跳变"。要安全做累计求和，应显式写 `ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`。
 
-```sql
--- LAG - 访问之前的行
-SELECT 
-    sale_date,
-    price,
-    lag(price) OVER (ORDER BY sale_date) as prev_price,           -- 前一行
-    lag(price, 2) OVER (ORDER BY sale_date) as prev_2_price,     -- 前两行
-    price - lag(price) OVER (ORDER BY sale_date) as price_change   -- 价格变化
-FROM sales;
+### 4.4 三类窗口函数选型
 
--- LEAD - 访问之后的行
-SELECT 
-    sale_date,
-    price,
-    lead(price) OVER (ORDER BY sale_date) as next_price,          -- 后一行
-    lead(price, 2) OVER (ORDER BY sale_date) as next_2_price     -- 后两行
-FROM sales;
-```
-
-### 2.4 首尾值函数 (First/Last Value Functions)
-
-```sql
--- FIRST_VALUE - 获取分区的第一个值
-SELECT 
-    sale_date,
-    price,
-    first_value(price) OVER (PARTITION BY salesperson ORDER BY sale_date) as first_price
-FROM sales;
-
--- LAST_VALUE - 获取分区的最后一个值
-SELECT 
-    sale_date,
-    price,
-    last_value(price) OVER (PARTITION BY salesperson ORDER BY sale_date) as last_price
-FROM sales;
-```
-
-### 2.5 聚合窗口函数 (Aggregate Window Functions)
-
-在窗口中使用聚合函数。
-
-```sql
--- 运行总计 (累积求和)
-SELECT 
-    sale_date,
-    salesperson,
-    revenue,
-    sum(revenue) OVER (PARTITION BY salesperson ORDER BY sale_date) as running_total
-FROM sales;
-
--- 移动平均
-SELECT 
-    sale_date,
-    price,
-    avg(price) OVER (ORDER BY sale_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) as ma_3day
-FROM sales;
-
--- 分区聚合
-SELECT 
-    category,
-    price,
-    avg(price) OVER (PARTITION BY category) as category_avg,
-    max(price) OVER (PARTITION BY category) as category_max
-FROM sales;
-```
-
-### 2.6 窗口框架 (Window Frames)
-
-窗口框架定义当前行的计算范围。
-
-```sql
--- ROWS - 基于物理行位置
-avg(price) OVER (ORDER BY sale_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)
-
--- RANGE - 基于值范围
-avg(price) OVER (ORDER BY price RANGE BETWEEN 100 PRECEDING AND CURRENT ROW)
-
--- 常用框架模式
-ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW  -- 从开头到当前行
-ROWS BETWEEN 2 PRECEDING AND 2 FOLLOWING         -- 当前行前后各2行
-ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING  -- 整个分区
-```
-
-### 2.7 实际应用场景
-
-#### 场景 1：识别顶级表现者
-
-```sql
-WITH sales_by_person AS (
-    SELECT 
-        salesperson,
-        sum(revenue) as total_sales
-    FROM sales
-    GROUP BY salesperson
-)
-SELECT 
-    salesperson,
-    total_sales,
-    rank() OVER (ORDER BY total_sales DESC) as rank_num,
-    CASE 
-        WHEN rank() OVER (ORDER BY total_sales DESC) <= 1 THEN '🏆 Top Performer'
-        WHEN rank() OVER (ORDER BY total_sales DESC) <= 3 THEN '🥈 Top 3'
-        ELSE ''
-    END as award
-FROM sales_by_person;
-```
-
-#### 场景 2：比较当前销售与历史最佳
-
-```sql
-SELECT 
-    sale_date,
-    salesperson,
-    revenue,
-    max(revenue) OVER (PARTITION BY salesperson) as best_sale,
-    avg(revenue) OVER (PARTITION BY salesperson) as avg_sale,
-    revenue / max(revenue) OVER (PARTITION BY salesperson) * 100 as pct_of_best
-FROM sales;
-```
-
-#### 场景 3：移动平均和趋势分析
-
-```sql
-WITH daily_totals AS (
-    SELECT 
-        sale_date,
-        sum(revenue) as daily_revenue
-    FROM sales
-    GROUP BY sale_date
-)
-SELECT 
-    sale_date,
-    daily_revenue,
-    avg(daily_revenue) OVER (ORDER BY sale_date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) as ma_7day,
-    avg(daily_revenue) OVER (ORDER BY sale_date ROWS BETWEEN 29 PRECEDING AND CURRENT ROW) as ma_30day
-FROM daily_totals;
-```
-
-#### 场景 4：检测间隔和异常
-
-```sql
-SELECT 
-    sale_date,
-    salesperson,
-    lag(sale_date) OVER (PARTITION BY salesperson ORDER BY sale_date) as prev_date,
-    dateDiff('day', lag(sale_date) OVER (PARTITION BY salesperson ORDER BY sale_date), sale_date) as days_gap,
-    CASE 
-        WHEN dateDiff('day', lag(sale_date) OVER (PARTITION BY salesperson ORDER BY sale_date), sale_date) > 7 
-        THEN '⚠️ Long Gap'
-        ELSE 'OK'
-    END as status
-FROM sales;
-```
-
-### 2.8 性能优化建议
-
-1. **使用分区减少数据量**
-   ```sql
-   -- 好的做法
-   rank() OVER (PARTITION BY salesperson ORDER BY revenue DESC)
-   
-   -- 避免（除非必要）
-   rank() OVER (ORDER BY revenue DESC)
-   ```
-
-2. **选择合适的窗口框架**
-   ```sql
-   -- 避免过大的框架
-   avg(price) OVER (ORDER BY sale_date ROWS BETWEEN 1000 PRECEDING AND CURRENT ROW)
-   
-   -- 更高效的方式
-   avg(price) OVER (ORDER BY sale_date ROWS BETWEEN 7 PRECEDING AND CURRENT ROW)
-   ```
-
-3. **窗口函数 vs 自连接**
-   - 窗口函数通常更高效
-   - 避免使用自连接实现窗口函数功能
-
-### 2.9 常见错误和解决方案
-
-#### 错误 1：忘记 PARTITION BY
-```sql
--- 错误：全局排名
-row_number() OVER (ORDER BY revenue DESC)
-
--- 正确：分组内排名
-row_number() OVER (PARTITION BY salesperson ORDER BY revenue DESC)
-```
-
-#### 错误 2：窗口函数在 WHERE 中使用
-```sql
--- 错误：不能在 WHERE 中使用窗口函数
-SELECT * FROM sales WHERE rank() OVER (...) <= 10
-
--- 正确：使用子查询
-SELECT * FROM (
-    SELECT *, rank() OVER (ORDER BY revenue DESC) as rnk
-    FROM sales
-) WHERE rnk <= 10
-```
-
-#### 错误 3：混淆 ROWS 和 RANGE
-```sql
--- ROWS：基于行数
-avg(price) OVER (ORDER BY sale_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)
-
--- RANGE：基于值范围
-avg(price) OVER (ORDER BY price RANGE BETWEEN 100 PRECEDING AND CURRENT ROW)
-```
+| 类别 | 函数 | 何时用 |
+|------|------|--------|
+| 排名 | `row_number` | 唯一编号、分页、取 Top-N |
+| 排名 | `rank` | 允许并列且跳号（如"第 1/1/3 名"） |
+| 排名 | `dense_rank` | 允许并列不跳号（如"第 1/1/2 名"） |
+| 排名 | `ntile(N)` | 切桶（四分位、十分位） |
+| 导航 | `lag(col, n)` | 环比、同环比、间隔检测 |
+| 导航 | `lead(col, n)` | 预测下一条、趋势 |
+| 导航 | `first_value`/`last_value` | 区间首末值（注意 frame！`last_value` 默认到当前行，需显式 `UNBOUNDED FOLLOWING` 才是分区末） |
+| 聚合窗口 | `sum/avg/count OVER` | 累计、移动平均、占比 |
 
 ---
 
-## 3. 最佳实践
+## 5. 关键函数深度对比（决策表）
 
-### 3.1 函数选择
+### 5.1 计数函数
 
-1. **聚合函数**
-   - 使用 `sumIf`, `avgIf` 代替 `CASE WHEN` + 聚合
-   - 使用 `quantile` 而不是手动计算百分位
+| 写法 | 行为 | NULL 处理 | 推荐 |
+|------|------|-----------|------|
+| `count()` | 计所有行 | 不忽略（算行） | ✅ ClickHouse 惯用 |
+| `count(*)` | 同 `count()` | 同上 | 可用，但非惯用 |
+| `count(col)` | 计 col 非空行 | 忽略 NULL | 统计非空时用 |
+| `count(DISTINCT col)` | 精确去重 | 忽略 NULL | 准确但慢，大数据用 `uniq` |
+| `uniq(col)` | 近似去重（HLL） | 忽略 NULL | 大数据 UV，误差 <1% |
+| `uniqExact(col)` | 精确去重 | 忽略 NULL | 等同 `count(DISTINCT)` |
 
-2. **字符串函数**
-   - 优先使用 `positionCaseInsensitive` 进行不区分大小写的搜索
-   - 使用 `splitByChar` 而不是正则表达式进行简单分割
+### 5.2 数组：展开 vs 映射
 
-3. **日期时间函数**
-   - 使用 `toStartOfDay` 等函数进行日期规范化
-   - 使用 `dateDiff` 计算日期差值，而不是手动计算
+| 函数 | 行为 | 输入→输出行数 | 场景 |
+|------|------|---------------|------|
+| `arrayJoin(arr)` | 把数组展开成多行 | 1 行 → N 行 | 标签表展开、事件拆解 |
+| `arrayMap(f, arr)` | 对每个元素套函数 | 1 行 → 1 行 | 批量变换，如 `arrayMap(x->x*2, arr)` |
+| `arrayFilter(f, arr)` | 过滤元素 | 1 行 → 1 行 | 筛选满足条件的元素 |
+| `arrayAggregate(f, arr)` | 数组内聚合 | 1 行 → 1 值 | `arraySum`/`arrayAvg` 的通用形式 |
 
-### 3.2 窗口函数使用
+**核心区别**：`arrayJoin` 改变行数（展开），其余保持行数（变换）。`arrayJoin` 是 ClickHouse 独有的"反聚合"能力，等价于其他库的 `UNNEST`。
 
-1. **性能考虑**
-   - 在 PARTITION BY 中使用高基数列时要谨慎
-   - 尽量减少窗口框架的大小
-   - 考虑使用 FINAL 关键字或物化视图进行预计算
+### 5.3 JSON 方案对比
 
-2. **代码可读性**
-   - 为窗口函数结果使用有意义的别名
-   - 使用注释说明复杂的窗口逻辑
-   - 考虑将复杂窗口函数逻辑封装到视图或 CTE 中
+| 方案 | 类型 | 适用 | 性能 | 灵活性 |
+|------|------|------|------|--------|
+| `JSONExtract*(str, path)` | String + 函数解析 | 已有 String 列存 JSON | 每次查询解析，慢 | 高 |
+| `visitParam*(str, key)` | String + 轻量解析 | 简单扁平 JSON | 比 JSONExtract 快 | 低（只支持简单结构） |
+| `JSON` 类型（实验） | 原生类型 | 新建表 | 解析一次，查询快 | 高 |
+| 子列提取 + 物化 | 普通列 | 高频查询字段 | 最快 | 需提前建模 |
 
-3. **数据一致性**
-   - 注意 NULL 值对窗口函数的影响
-   - 使用 `ignore nulls` 选项处理 NULL 值（如果支持）
+**推荐**：高频查询字段抽成普通列 + 索引；低频/动态字段用 `JSONExtract*`；新表可试 `JSON` 类型。
 
----
+### 5.4 条件函数
 
-## 4. 参考资料
-
-- [ClickHouse 官方文档 - 函数](https://clickhouse.com/docs/en/sql-reference/functions/)
-- [ClickHouse 官方文档 - 窗口函数](https://clickhouse.com/docs/en/sql-reference/window-functions/)
-- [ClickHouse 函数速查表](https://clickhouse.com/docs/en/sql-reference/functions/)
-
----
-
-## 5. 练习建议
-
-1. **基础练习**
-   - 使用不同类型的聚合函数计算统计指标
-   - 练习字符串操作和正则表达式
-   - 熟悉日期时间函数的各种用法
-
-2. **进阶练习**
-   - 使用窗口函数进行排名和分位计算
-   - 实现移动平均和趋势分析
-   - 使用偏移函数进行周期比较
-
-3. **实战项目**
-   - 构建销售分析仪表板
-   - 实现用户行为分析
-   - 创建性能监控系统
+| 函数 | 等价 SQL | 何时用 |
+|------|----------|--------|
+| `if(cond, a, b)` | `CASE WHEN cond THEN a ELSE b END` | 二选一，简洁 |
+| `multiIf(c1,a1, c2,a2, ..., default)` | 嵌套 `CASE` | 多分支，避免深层嵌套 |
+| `nullIf(a, b)` | `CASE WHEN a=b THEN NULL ELSE a END` | 除零保护、过滤哨兵值 |
+| `ifNull(a, b)` | `COALESCE(a, b)` | NULL 兜底 |
+| `coalesce(a, b, c)` | 同 | 多级兜底 |
 
 ---
 
-## 注意事项
+## 6. 文件导航
 
-- 本目录中的 SQL 示例都包含完整的测试数据，可以直接运行
-- 建议按照文件顺序学习：先基本函数，后窗口函数
-- 运行示例前请确保 ClickHouse 服务正常运行
-- 部分高级功能可能需要特定版本的 ClickHouse
+| 文件 | 内容 | 关键章节 |
+|------|------|----------|
+| [01_basic_functions_examples.sql](./01_basic_functions_examples.sql) | 标量 + 聚合 + 状态函数 | §1 聚合基础、§11 **聚合状态函数（sumState/sumMerge + AggregatingMergeTree）**、§6 数组（arrayJoin）、§10 JSON |
+| [02_window_functions_examples.sql](./02_window_functions_examples.sql) | 排名/导航/聚合窗口 + 帧 | §2 排名函数、§3 累计求和、§7 **窗口帧 ROWS vs RANGE**、§8 实战场景 |
+
+---
+
+## 7. 常见误区与最佳实践
+
+### 误区
+1. **在 `AggregatingMergeTree` 表上直接 `SELECT sum_state_col` 期望看到数值** → 看到二进制，必须 `sumMerge(col)`
+2. **`last_value(price) OVER (ORDER BY d)` 期望得到分区最后一个值** → 默认 frame 到当前行，得到的是"当前行值"，需 `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`
+3. **`sum(x) OVER (ORDER BY d)` 做累计求和，d 有重复值时结果跳变** → 默认 `RANGE` frame，同值同帧；改用 `ROWS`
+4. **`count(DISTINCT col)` 对亿级数据** → 极慢，改用 `uniq(col)`（误差 <1%）
+5. **用 `//` 注释** → ClickHouse 只支持 `--` 注释，`//` 会语法错误
+6. **`arrayJoin` 和 `arrayMap` 混用** → `arrayJoin` 改变行数，`arrayMap` 不变
+
+### 最佳实践
+1. **实时预聚合三件套**：明细表（MergeTree）+ 物化视图（`AggregatingMergeTree` + `*State`）+ 查询（`*Merge`）
+2. **分位数监控用 `quantileState`**：避免每次重算 P99
+3. **UV 用 `uniqState`**：跨分片合并无损
+4. **窗口函数加 `PARTITION BY`**：避免全表单分区导致性能灾难
+5. **移动平均显式写 frame**：`ROWS BETWEEN N PRECEDING AND CURRENT ROW`
+6. **`multiIf` 替代嵌套 `CASE WHEN`**：可读性更好
+
+---
+
+## 8. 自测题（理解检查点）
+
+完成本章后，应能回答：
+
+1. 为什么 `sumState` 不能直接 `SELECT` 看到求和结果？它的返回类型是什么？
+2. `AggregatingMergeTree` 在什么时机把状态 merge？是查询时还是写入时？
+3. `sum(x) OVER (ORDER BY d)` 和 `sum(x) OVER (ORDER BY d ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)` 在 `d` 有重复值时结果有何不同？
+4. `last_value(col) OVER (PARTITION BY k ORDER BY t)` 默认返回什么？如何得到分区真正的末值？
+5. `arrayJoin(['a','b','c'])` 返回几行？`arrayMap(x->upper(x), ['a','b'])` 返回几行？
+6. `uniq` 和 `count(DISTINCT)` 的区别？什么时候选哪个？
+7. 如何用 `*State`/`*Merge` 实现"日表 → 月表"的二级聚合且不丢精度？
+
+答案线索均在本 README 及配套 SQL 文件中。
+
+---
+
+## 9. 关联章节
+
+- [03-engines](../03-engines/README.md) —— `AggregatingMergeTree` / `SummingMergeTree` 引擎详解
+- [16-principle](../16-principle/README.md) —— 聚合管道、向量化执行原理
+- [11-performance](../11-performance/README.md) —— 函数对查询性能的影响
+- [10-date-update](../10-date-update/README.md) —— 日期函数大全
+
+---
+
+## 10. 参考资源
+
+- [ClickHouse 聚合函数](https://clickhouse.com/docs/en/sql-reference/aggregate-functions)
+- [聚合状态 combinator (*State/*Merge)](https://clickhouse.com/docs/en/sql-reference/aggregate-functions/combinators)
+- [AggregatingMergeTree 引擎](https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/aggregatingmergetree)
+- [窗口函数](https://clickhouse.com/docs/en/sql-reference/window-functions)
