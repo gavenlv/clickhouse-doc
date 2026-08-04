@@ -277,8 +277,8 @@ Raft 工作流程（写请求）:
 ## 关联章节
 
 - [00-infra/README.md](../00-infra/README.md) — 集群基础设施与 Docker Compose 部署
-- [16-principle/07_replication.md](../16-principle/07_replication.md) — 复制原理（专家级详解）
-- [16-principle/08_sharding.sql](../16-principle/08_sharding.sql) — 分片实战 SQL
+- [02-principles/07_replication.md](../02-principles/07_replication.md) — 复制原理（专家级详解）
+- [02-principles/08_sharding.sql](../02-principles/08_sharding.sql) — 分片实战 SQL
 - [01-getting-started/05_cluster_concepts.sql](../01-getting-started/05_cluster_concepts.sql) — 集群基础概念
 - [01-getting-started/09_distributed_tables.sql](../01-getting-started/09_distributed_tables.sql) — 分布式表入门
 

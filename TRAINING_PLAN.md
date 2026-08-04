@@ -3,13 +3,13 @@
 > 本培训计划配合 [ClickHouse 从 0 到专家培养教程](./README.md)，按 4 阶段 14 章系统化培养生产级 ClickHouse 专家。
 > 集群：treasurycluster（CH 25.12.1.649，clickhouse-server-1: 8123/9000，clickhouse-server-2: 8124/9001）
 
-## 重整说明（2026-08-02）
+## 重整说明（2026-08-04）
 
-本教程正在重整中（详见 [重整计划](./.trae/documents/clickhouse-tutorial-reorg-plan.md)）。当前目录仍为旧编号，本培训计划按**目标 14 章结构**组织学习路径，每个学习单元标注：
+本教程已完成重整（R0-R16，详见 [重整计划](./.trae/documents/clickhouse-tutorial-reorg-plan.md) 与 [进度追踪](./PROGRESS.md)）。目录已全部重命名为新编号（`git mv` 保留历史），旧内容归档至 `_legacy/`。本培训计划按**目标 14 章结构**组织学习路径，每个学习单元标注：
 
 - **目标章节**：重整后的新章节名（如 `02-principles`）
-- **当前文件**：当前实际可读的文件路径（如 `16-principle/README.md`），重命名在对应 R 批次执行
-- **状态**：✅ 已细化 / ⬜ 待细化 / 🔄 重整中
+- **当前文件**：当前实际存在的文件路径（新编号为准）
+- **状态**：✅ 已完成 / ⬜ 待集群验证（文件已就位，SQL 待 Docker 恢复后执行）
 
 ---
 
@@ -43,11 +43,11 @@
 
 | 天 | 主题 | 目标章节 | 当前文件 | 状态 |
 |----|------|----------|----------|------|
-| Day 1 | 集群架构与部署 | 00-infra | [00-infra/README.md](./00-infra/README.md) | ⬜ |
-| Day 2 | Keeper 原理与 Raft 共识 | 00-infra | [00-infra/README.md](./00-infra/README.md) | ⬜ |
-| Day 3 | 基础 SQL 操作 | 01-getting-started | [01-base/01_basic_operations.sql](./01-base/01_basic_operations.sql) | ⬜ |
-| Day 4 | 什么是 ClickHouse / OLAP 定位 | 01-getting-started | [01-understanding-clickhouse/README.md](./01-understanding-clickhouse/README.md) | ⬜ |
-| Day 5 | 列式存储基础 | 01-getting-started | [01-understanding-clickhouse/02_column_oriented.sql](./01-understanding-clickhouse/02_column_oriented.sql) | ⬜ |
+| Day 1 | 集群架构与部署 | 00-infra | [00-infra/README.md](./00-infra/README.md) | ✅ |
+| Day 2 | Keeper 原理与 Raft 共识 | 00-infra | [00-infra/README.md](./00-infra/README.md) | ✅ |
+| Day 3 | 基础 SQL 操作 | 01-getting-started | [01-getting-started/04_basic_sql.sql](./01-getting-started/04_basic_sql.sql) | ⬜ |
+| Day 4 | 什么是 ClickHouse / OLAP 定位 | 01-getting-started | [01-getting-started/01_what_is_clickhouse.sql](./01-getting-started/01_what_is_clickhouse.sql) | ⬜ |
+| Day 5 | 列式存储基础 | 01-getting-started | [01-getting-started/02_column_oriented.sql](./01-getting-started/02_column_oriented.sql) | ⬜ |
 
 **实操任务**：
 1. 启动集群，验证 5 个容器 healthy
@@ -60,13 +60,13 @@
 
 | 天 | 主题 | 目标章节 | 当前文件 | 状态 |
 |----|------|----------|----------|------|
-| Day 6-7 | 复制表（ReplicatedMergeTree） | 01-getting-started | [01-base/02_replicated_tables.sql](./01-base/02_replicated_tables.sql) | ⬜ |
-| Day 8 | 分布式表入门 | 01-getting-started | [01-base/03_distributed_tables.sql](./01-base/03_distributed_tables.sql) | ⬜ |
-| Day 9 | 列存与压缩原理 | 02-principles | [16-principle/README.md](./16-principle/README.md) | ✅ |
-| Day 10 | 稀疏索引与 mark 机制 | 02-principles | [16-principle/02_storage_indexes.sql](./16-principle/02_storage_indexes.sql) | ✅ |
-| Day 11 | 向量化执行与查询管道 | 02-principles | [16-principle/06_query_execution.md](./16-principle/06_query_execution.md) | ✅ |
-| Day 12 | MergeTree 与 Part 生命周期 | 02-principles | [16-principle/03_mergetree.sql](./16-principle/03_mergetree.sql) | ✅ |
-| Day 13 | 复制与分片原理 | 02-principles | [16-principle/07_replication.md](./16-principle/07_replication.md) + [16-principle/08_sharding.sql](./16-principle/08_sharding.sql) | ✅ |
+| Day 6-7 | 复制表（ReplicatedMergeTree） | 01-getting-started | [01-getting-started/06_first_replicated_table.sql](./01-getting-started/06_first_replicated_table.sql) + [01-getting-started/08_replicated_tables.sql](./01-getting-started/08_replicated_tables.sql) | ⬜ |
+| Day 8 | 分布式表入门 | 01-getting-started | [01-getting-started/09_distributed_tables.sql](./01-getting-started/09_distributed_tables.sql) | ⬜ |
+| Day 9 | 列存与压缩原理 | 02-principles | [02-principles/README.md](./02-principles/README.md) + [02-principles/04_compression.md](./02-principles/04_compression.md) | ✅ |
+| Day 10 | 稀疏索引与 mark 机制 | 02-principles | [02-principles/05_indexing.md](./02-principles/05_indexing.md) | ✅ |
+| Day 11 | 向量化执行与查询管道 | 02-principles | [02-principles/06_query_execution.md](./02-principles/06_query_execution.md) | ✅ |
+| Day 12 | MergeTree 与 Part 生命周期 | 02-principles | [02-principles/03_mergetree.sql](./02-principles/03_mergetree.sql) | ✅ |
+| Day 13 | 复制与分片原理 | 02-principles | [02-principles/07_replication.md](./02-principles/07_replication.md) + [02-principles/08_sharding.sql](./02-principles/08_sharding.sql) | ✅ |
 | Day 14 | 阶段考核 + 复习 | — | — | — |
 
 **阶段一考核**：
@@ -83,17 +83,17 @@
 
 | 天 | 主题 | 目标章节 | 当前文件 | 状态 |
 |----|------|----------|----------|------|
-| Day 15 | 数值类型与 Decimal | 03-data-types | [05-data-type/01_numeric_types.md](./05-data-type/01_numeric_types.md) | ⬜ |
-| Day 16 | 字符串与 LowCardinality | 03-data-types | [05-data-type/02_string_types.md](./05-data-type/02_string_types.md) | ⬜ |
-| Day 17 | 日期时间类型 | 03-data-types | [10-date-update/01_date_time_types.md](./10-date-update/01_date_time_types.md) | ⬜ |
-| Day 18-19 | MergeTree 家族 6 变体 | 04-engines | [03-engines/01_mergetree_engines.sql](./03-engines/01_mergetree_engines.sql) | ✅ |
-| Day 20 | 复制引擎与 Keeper 路径 | 04-engines | [03-engines/02_replicated_engines.sql](./03-engines/02_replicated_engines.sql) | ✅ |
-| Day 21 | Log 家族与特殊引擎 | 04-engines | [03-engines/03_log_engines.sql](./03-engines/03_log_engines.sql) + [03-engines/05_special_engines.sql](./03-engines/05_special_engines.sql) | ✅ |
+| Day 15 | 数值类型与 Decimal | 03-data-types | [03-data-types/01_numeric_types.md](./03-data-types/01_numeric_types.md) | ✅ |
+| Day 16 | 字符串与 LowCardinality | 03-data-types | [03-data-types/02_string_types.md](./03-data-types/02_string_types.md) | ✅ |
+| Day 17 | 日期时间类型与函数 | 03-data-types | [03-data-types/03_date_time_types.sql](./03-data-types/03_date_time_types.sql) | ⬜ |
+| Day 18-19 | MergeTree 家族 6 变体 | 04-engines | [04-engines/01_mergetree_engines.sql](./04-engines/01_mergetree_engines.sql) | ✅ |
+| Day 20 | 复制引擎与 Keeper 路径 | 04-engines | [04-engines/02_replicated_engines.sql](./04-engines/02_replicated_engines.sql) | ✅ |
+| Day 21 | Log 家族与特殊引擎 | 04-engines | [04-engines/03_log_engines.sql](./04-engines/03_log_engines.sql) + [04-engines/05_special_engines.sql](./04-engines/05_special_engines.sql) | ✅ |
 
 **实操任务**：
 1. 为"用户行为日志"场景选型数据类型（含 LowCardinality 优化）
 2. 为"订单去重"场景选型引擎（ReplacingMergeTree vs CollapsingMergeTree）
-3. 阅读 [03-engines/06_engine_selection_guide.md](./03-engines/06_engine_selection_guide.md) 完成选型决策练习 ✅
+3. 阅读 [04-engines/06_engine_selection_guide.md](./04-engines/06_engine_selection_guide.md) 完成选型决策练习 ✅
 
 ### 第 4 周：函数与查询
 
@@ -101,44 +101,42 @@
 
 | 天 | 主题 | 目标章节 | 当前文件 | 状态 |
 |----|------|----------|----------|------|
-| Day 22 | 标量函数全集 | 05-functions | [04-functions/01_basic_functions_examples.sql](./04-functions/01_basic_functions_examples.sql) | ✅ |
-| Day 23 | 聚合函数与聚合状态（sumState/sumMerge） | 05-functions | [04-functions/README.md](./04-functions/README.md) | ✅ |
-| Day 24 | AggregatingMergeTree 配合 *State/*Merge | 05-functions | [04-functions/01_basic_functions_examples.sql](./04-functions/01_basic_functions_examples.sql) | ✅ |
-| Day 25 | 窗口函数与窗口帧 | 05-functions | [04-functions/02_window_functions_examples.sql](./04-functions/02_window_functions_examples.sql) | ✅ |
-| Day 26 | 日期时间函数 | 05-functions | [10-date-update/02_date_time_functions.md](./10-date-update/02_date_time_functions.md) | ⬜ |
-| Day 27 | 时区处理与 DateTime64 | 05-functions | [10-date-update/03_time_zones.md](./10-date-update/03_time_zones.md) | ⬜ |
+| Day 22 | 标量函数全集 | 05-functions | [05-functions/01_basic_functions_examples.sql](./05-functions/01_basic_functions_examples.sql) | ✅ |
+| Day 23 | 聚合函数与聚合状态（sumState/sumMerge） | 05-functions | [05-functions/README.md](./05-functions/README.md) §3 | ✅ |
+| Day 24 | AggregatingMergeTree 配合 *State/*Merge | 05-functions | [05-functions/03_aggregate_combinators.sql](./05-functions/03_aggregate_combinators.sql) | ✅ |
+| Day 25 | 窗口函数与窗口帧 | 05-functions | [05-functions/02_window_functions_examples.sql](./05-functions/02_window_functions_examples.sql) | ✅ |
+| Day 26 | 日期时间函数与转换 | 05-functions | [05-functions/01_basic_functions_examples.sql](./05-functions/01_basic_functions_examples.sql) §5（日期时间函数） | ✅ |
+| Day 27 | 时区处理与 DateTime64 | 03-data-types | [03-data-types/03_date_time_types.sql](./03-data-types/03_date_time_types.sql) §4（时区） | ⬜ |
 | Day 28 | 复习 + 阶段测验 | — | — | — |
 
 ### 第 5 周：数据建模
 
 **学习目标**：掌握宽表 vs 星型 schema 取舍，能用物化视图与字典加速查询。
 
-> **注**：`06-modeling` 为重整计划 R5 新建章节，当前内容散落在多个章节。下表标注当前可读文件。
-
 | 天 | 主题 | 目标章节 | 当前文件 | 状态 |
 |----|------|----------|----------|------|
-| Day 29 | 宽表 vs 星型 schema | 06-modeling | [14-use-case/01_schema_ddl.sql](./14-use-case/01_schema_ddl.sql) | ⬜ |
-| Day 30 | 主键设计与 ORDER BY | 06-modeling | [11-performance/02_primary_indexes.md](./11-performance/02_primary_indexes.md) | ⬜ |
-| Day 31 | 物化视图（MaterializedView） | 06-modeling | [03-engines/05_special_engines.sql](./03-engines/05_special_engines.sql)（MV 部分） | ✅ |
-| Day 32 | 字典（Dictionary） | 06-modeling | [03-engines/05_special_engines.sql](./03-engines/05_special_engines.sql)（字典部分） | ✅ |
-| Day 33 | 时间序列建模 | 06-modeling | [10-date-update/07_time_series.md](./10-date-update/07_time_series.md) | ⬜ |
-| Day 34 | 实时数仓分层（ODS/DWD/DWS/ADS） | 06-modeling | [20-flink-clickhouse-superset/02_clickhouse_modeling.md](./20-flink-clickhouse-superset/02_clickhouse_modeling.md) | ⬜ |
+| Day 29 | 宽表 vs 星型 schema | 06-modeling | [06-modeling/01_wide_vs_star.sql](./06-modeling/01_wide_vs_star.sql) | ✅ |
+| Day 30 | 主键设计与 ORDER BY | 06-modeling | [06-modeling/02_primary_key_design.sql](./06-modeling/02_primary_key_design.sql) | ✅ |
+| Day 31 | 物化视图（MaterializedView） | 06-modeling | [06-modeling/03_materialized_views.sql](./06-modeling/03_materialized_views.sql) | ✅ |
+| Day 32 | 字典（Dictionary） | 06-modeling | [06-modeling/04_dictionaries.sql](./06-modeling/04_dictionaries.sql) | ✅ |
+| Day 33 | 时间序列建模 | 06-modeling | [06-modeling/05_time_series.sql](./06-modeling/05_time_series.sql) | ✅ |
+| Day 34 | 实时数仓分层（ODS/DWD/DWS/ADS） | 06-modeling | [06-modeling/07_realtime_modeling.sql](./06-modeling/07_realtime_modeling.sql) + [14-integration/06_flink_clickhouse_modeling.sql](./14-integration/06_flink_clickhouse_modeling.sql) | ✅ |
 | Day 35 | 复习 + 建模实战 | — | — | — |
 
 ### 第 6 周：数据变更
 
 **学习目标**：掌握 INSERT 优化、Mutation、轻量删除、TTL、异步插入。
 
-> **注**：`07-data-mutation` 为重整计划 R3 合并章节（09-data-deletion + 11-data-update）。当前两个章节都可读。
+> **注**：`07-data-mutation` 为重整计划 R3 合并章节（09-data-deletion + 11-data-update），已统一为一个完整 SQL 文件覆盖全部变更手段。
 
 | 天 | 主题 | 目标章节 | 当前文件 | 状态 |
 |----|------|----------|----------|------|
-| Day 36 | INSERT 优化与批量插入 | 07-data-mutation | [11-performance/06_batch_inserts.md](./11-performance/06_batch_inserts.md) | ⬜ |
-| Day 37 | Mutation（ALTER UPDATE/DELETE） | 07-data-mutation | [11-data-update/02_mutation_updates.md](./11-data-update/02_mutation_updates.md) | ⬜ |
-| Day 38 | 轻量级 DELETE/UPDATE | 07-data-mutation | [11-data-update/03_lightweight_updates.md](./11-data-update/03_lightweight_updates.md) + [09-data-deletion/04_lightweight_deletion.md](./09-data-deletion/04_lightweight_deletion.md) | ⬜ |
-| Day 39 | 分区操作（DROP/ATTACH/DETACH） | 07-data-mutation | [09-data-deletion/02_partition_deletion.md](./09-data-deletion/02_partition_deletion.md) | ⬜ |
-| Day 40 | TTL 自动过期 | 07-data-mutation | [09-data-deletion/03_ttl.md](./09-data-deletion/03_ttl.md) | ⬜ |
-| Day 41 | 异步插入（async_insert） | 07-data-mutation | [11-performance/07_async_inserts.md](./11-performance/07_async_inserts.md) | ⬜ |
+| Day 36 | INSERT 优化与批量插入 | 07-data-mutation | [07-data-mutation/01_all_data_mutation.sql](./07-data-mutation/01_all_data_mutation.sql) §1-2 | ✅ |
+| Day 37 | Mutation（ALTER UPDATE/DELETE） | 07-data-mutation | [07-data-mutation/01_all_data_mutation.sql](./07-data-mutation/01_all_data_mutation.sql) §3 | ✅ |
+| Day 38 | 轻量级 DELETE/UPDATE | 07-data-mutation | [07-data-mutation/01_all_data_mutation.sql](./07-data-mutation/01_all_data_mutation.sql) §4 | ✅ |
+| Day 39 | 分区操作（DROP/ATTACH/DETACH） | 07-data-mutation | [07-data-mutation/01_all_data_mutation.sql](./07-data-mutation/01_all_data_mutation.sql) §5 | ✅ |
+| Day 40 | TTL 自动过期 | 07-data-mutation | [07-data-mutation/01_all_data_mutation.sql](./07-data-mutation/01_all_data_mutation.sql) §6 | ✅ |
+| Day 41 | 异步插入（async_insert） | 07-data-mutation | [07-data-mutation/01_all_data_mutation.sql](./07-data-mutation/01_all_data_mutation.sql) §7 | ✅ |
 | Day 42 | 阶段二考核 + 复习 | — | — | — |
 
 **阶段二考核**：
@@ -155,13 +153,13 @@
 
 | 天 | 主题 | 目标章节 | 当前文件 | 状态 |
 |----|------|----------|----------|------|
-| Day 43 | 查询优化总览 | 08-performance | [11-performance/01_query_optimization.md](./11-performance/01_query_optimization.md) | ⬜ |
-| Day 44 | 主键索引与 mark 机制 | 08-performance | [11-performance/02_primary_indexes.md](./11-performance/02_primary_indexes.md) | ⬜ |
-| Day 45 | 分区策略 | 08-performance | [11-performance/03_partitioning.md](./11-performance/03_partitioning.md) | ⬜ |
-| Day 46 | 跳数索引（5 种类型） | 08-performance | [11-performance/04_skipping_indexes.md](./11-performance/04_skipping_indexes.md) | ⬜ |
-| Day 47 | PREWHERE 优化 | 08-performance | [11-performance/05_prewhere.md](./11-performance/05_prewhere.md) | ⬜ |
-| Day 48 | 数据类型与 Schema 优化 | 08-performance | [11-performance/09_data_types.md](./11-performance/09_data_types.md) | ⬜ |
-| Day 49 | Profiling 与 Analyzer | 08-performance | [11-performance/12_analyzer.md](./11-performance/12_analyzer.md) + [11-performance/11_profiling.md](./11-performance/11_profiling.md) | ⬜ |
+| Day 43 | 查询优化总览 | 08-performance | [08-performance/01_query_optimization.md](./08-performance/01_query_optimization.md) | ✅ |
+| Day 44 | 主键索引与 mark 机制 | 08-performance | [08-performance/02_primary_indexes.md](./08-performance/02_primary_indexes.md) | ✅ |
+| Day 45 | 分区策略 | 08-performance | [08-performance/03_partitioning.md](./08-performance/03_partitioning.md) | ✅ |
+| Day 46 | 跳数索引（5 种类型） | 08-performance | [08-performance/04_skipping_indexes.md](./08-performance/04_skipping_indexes.md) | ✅ |
+| Day 47 | PREWHERE 优化 | 08-performance | [08-performance/05_prewhere_optimization.md](./08-performance/05_prewhere_optimization.md) | ✅ |
+| Day 48 | 数据类型与 Schema 优化 | 08-performance | [08-performance/09_data_types.md](./08-performance/09_data_types.md) | ✅ |
+| Day 49 | Profiling 与 Analyzer | 08-performance | [08-performance/12_analyzer.md](./08-performance/12_analyzer.md) + [08-performance/11_query_profiling.md](./08-performance/11_query_profiling.md) | ✅ |
 
 ### 第 8 周：分布式架构与安全
 
@@ -169,28 +167,28 @@
 
 | 天 | 主题 | 目标章节 | 当前文件 | 状态 |
 |----|------|----------|----------|------|
-| Day 50 | Keeper 内部与 Raft 共识 | 09-distributed | [00-infra/README.md](./00-infra/README.md)（Keeper 部分） | ⬜ |
-| Day 51 | 分片与分布式表 | 09-distributed | [16-principle/08_sharding.sql](./16-principle/08_sharding.sql) | ✅ |
-| Day 52 | 两阶段聚合（sumState/sumMerge） | 09-distributed | [16-principle/README.md](./16-principle/README.md)（分片聚合部分） | ✅ |
-| Day 53 | 认证方法（密码/SSL/LDAP） | 10-security | [12-security-authentication/01_authentication_methods.md](./12-security-authentication/01_authentication_methods.md) | ⬜ |
-| Day 54 | RBAC（用户/角色/权限） | 10-security | [12-security-authentication/02_rbac.md](./12-security-authentication/02_rbac.md) | ⬜ |
-| Day 55 | 行级安全（RLS） | 10-security | [12-security-authentication/04_row_level_security.md](./12-security-authentication/04_row_level_security.md) | ⬜ |
+| Day 50 | Keeper 内部与 Raft 共识 | 09-distributed | [09-distributed/01_keeper_internals.sql](./09-distributed/01_keeper_internals.sql) | ✅ |
+| Day 51 | 分片与分布式表 | 09-distributed | [09-distributed/03_distributed_table.sql](./09-distributed/03_distributed_table.sql) + [09-distributed/05_sharding_key_design.sql](./09-distributed/05_sharding_key_design.sql) | ✅ |
+| Day 52 | 两阶段聚合（sumState/sumMerge） | 09-distributed | [09-distributed/06_two_phase_aggregation.sql](./09-distributed/06_two_phase_aggregation.sql) + [09-distributed/07_global_join.sql](./09-distributed/07_global_join.sql) | ✅ |
+| Day 53 | 认证方法（密码/SSL/LDAP） | 10-security | [10-security/01_authentication.md](./10-security/01_authentication.md) | ✅ |
+| Day 54 | RBAC（用户/角色/权限） | 10-security | [10-security/02_user_role_management.md](./10-security/02_user_role_management.md) | ✅ |
+| Day 55 | 行级安全（RLS） | 10-security | [10-security/04_row_level_security.md](./10-security/04_row_level_security.md) | ✅ |
 | Day 56 | 复习 + 实操 | — | — | — |
 
 ### 第 9 周：监控与备份
 
 **学习目标**：掌握系统表监控、告警、Prometheus 集成、BACKUP/RESTORE。
 
-> **重要变更**：备份方案从旧 `ALTER TABLE ... FREEZE` 升级为 `BACKUP/RESTORE` SQL 命令（CH 22.x+ 推荐）。
+> **重要变更**：备份方案从旧 `ALTER TABLE ... FREEZE` 升级为 `BACKUP/RESTORE` SQL 命令（CH 22.x+ 推荐）；`system.query_log` 在本集群被禁用，改用 `system.query_thread_log`（`SET log_query_threads = 1`）。
 
 | 天 | 主题 | 目标章节 | 当前文件 | 状态 |
 |----|------|----------|----------|------|
-| Day 57 | 系统表监控总览 | 11-monitoring-ops | [08-information-schema/README.md](./08-information-schema/README.md) | ⬜ |
-| Day 58 | 查询监控与 query_thread_log | 11-monitoring-ops | [08-information-schema/07_queries_processes.md](./08-information-schema/07_queries_processes.md) | ⬜ |
-| Day 59 | 副本与 Merge 监控 | 11-monitoring-ops | [08-information-schema/05_clusters_replicas.md](./08-information-schema/05_clusters_replicas.md) + [08-information-schema/06_merges_mutations.md](./08-information-schema/06_merges_mutations.md) | ⬜ |
-| Day 60 | 告警配置 | 11-monitoring-ops | [13-monitor/06_alerting.md](./13-monitor/06_alerting.md) + [06-admin/MONITORING_ALERTING_GUIDE.md](./06-admin/MONITORING_ALERTING_GUIDE.md) | ⬜ |
-| Day 61 | BACKUP/RESTORE 备份恢复 | 11-monitoring-ops | [06-admin/BACKUP_RECOVERY_GUIDE.md](./06-admin/BACKUP_RECOVERY_GUIDE.md) | ⬜ |
-| Day 62 | 日常维护 | 11-monitoring-ops | [06-admin/ROUTINE_MAINTENANCE_GUIDE.md](./06-admin/ROUTINE_MAINTENANCE_GUIDE.md) | ⬜ |
+| Day 57 | 系统表监控总览 | 11-monitoring-ops | [11-monitoring-ops/01_system_monitoring.sql](./11-monitoring-ops/01_system_monitoring.sql) + [13-system-tables/README.md](./13-system-tables/README.md) | ✅ |
+| Day 58 | 查询监控与 query_thread_log | 11-monitoring-ops | [13-system-tables/07_queries_processes.md](./13-system-tables/07_queries_processes.md) + [13-system-tables/09_query_log_deep_dive.md](./13-system-tables/09_query_log_deep_dive.md) | ✅ |
+| Day 59 | 副本与 Merge 监控 | 11-monitoring-ops | [13-system-tables/05_clusters_replicas.md](./13-system-tables/05_clusters_replicas.md) + [13-system-tables/03_partitions_parts.md](./13-system-tables/03_partitions_parts.md) | ✅ |
+| Day 60 | 告警配置 | 11-monitoring-ops | [11-monitoring-ops/03_alerting.sql](./11-monitoring-ops/03_alerting.sql) | ✅ |
+| Day 61 | BACKUP/RESTORE 备份恢复 | 11-monitoring-ops | [11-monitoring-ops/02_backup_recovery.sql](./11-monitoring-ops/02_backup_recovery.sql) | ✅ |
+| Day 62 | 日常维护 | 11-monitoring-ops | [11-monitoring-ops/07_routine_maintenance.sql](./11-monitoring-ops/07_routine_maintenance.sql) | ✅ |
 | Day 63 | 复习 + 实操 | — | — | — |
 
 **实操任务**：
@@ -202,9 +200,9 @@
 
 | 天 | 主题 | 目标章节 | 当前文件 | 状态 |
 |----|------|----------|----------|------|
-| Day 64 | 硬件调优与缓存 | 08-performance | [11-performance/14_hardware_tuning.md](./11-performance/14_hardware_tuning.md) | ⬜ |
-| Day 65 | 常见查询模式优化 | 08-performance | [11-performance/10_common_patterns.md](./11-performance/10_common_patterns.md) | ⬜ |
-| Day 66 | 集群管理 | 11-monitoring-ops | [06-admin/cluster_admin.sql](./06-admin/cluster_admin.sql) | ⬜ |
+| Day 64 | 硬件调优与缓存 | 08-performance | [08-performance/14_hardware_tuning.md](./08-performance/14_hardware_tuning.md) + [08-performance/13_caching.md](./08-performance/13_caching.md) | ✅ |
+| Day 65 | 常见查询模式优化 | 08-performance | [08-performance/10_common_patterns.md](./08-performance/10_common_patterns.md) | ✅ |
+| Day 66 | 集群管理 | 11-monitoring-ops | [11-monitoring-ops/README.md](./11-monitoring-ops/README.md) | ✅ |
 | Day 67-68 | 阶段三考核 | — | — | — |
 | Day 69-70 | 补漏 + 复习 | — | — | — |
 
@@ -222,22 +220,22 @@
 
 | 天 | 主题 | 目标章节 | 当前文件 | 状态 |
 |----|------|----------|----------|------|
-| Day 71 | 连接问题诊断 | 12-troubleshooting | [07-troubleshooting/01_connection_issues.md](./07-troubleshooting/01_connection_issues.md) | ⬜ |
-| Day 72 | 性能问题诊断 | 12-troubleshooting | [07-troubleshooting/02_performance_issues.md](./07-troubleshooting/02_performance_issues.md) | ⬜ |
-| Day 73 | 故障排查指南 | 12-troubleshooting | [06-admin/TROUBLESHOOTING_GUIDE.md](./06-admin/TROUBLESHOOTING_GUIDE.md) | ⬜ |
-| Day 74 | Kafka 集成 | 14-integration | [03-engines/04_integration_engines.sql](./03-engines/04_integration_engines.sql)（Kafka 部分） | ✅ |
-| Day 75 | Flink + ClickHouse | 14-integration | [20-flink-clickhouse-superset/03_flink_clickhouse_sink.md](./20-flink-clickhouse-superset/03_flink_clickhouse_sink.md) | ⬜ |
-| Day 76 | Superset 集成 | 14-integration | [14-use-case/06_superset_integration.sql](./14-use-case/06_superset_integration.sql) | ⬜ |
-| Day 77 | 大规模批量导入 | 14-integration | [15-high-performance-bulk-import/README.md](./15-high-performance-bulk-import/README.md) | ⬜ |
+| Day 71 | 连接问题诊断 | 12-troubleshooting | [12-troubleshooting/01_connection_issues.md](./12-troubleshooting/01_connection_issues.md) | ✅ |
+| Day 72 | 性能问题诊断 | 12-troubleshooting | [12-troubleshooting/02_performance_issues.md](./12-troubleshooting/02_performance_issues.md) | ✅ |
+| Day 73 | 故障排查指南（全场景索引） | 12-troubleshooting | [12-troubleshooting/README.md](./12-troubleshooting/README.md) | ✅ |
+| Day 74 | Kafka 集成 | 14-integration | [14-integration/02_kafka_engine.md](./14-integration/02_kafka_engine.md) + [14-integration/03_kafka_engine_examples.sql](./14-integration/03_kafka_engine_examples.sql) | ✅ |
+| Day 75 | Flink + ClickHouse | 14-integration | [14-integration/04_flink_architecture.md](./14-integration/04_flink_architecture.md) + [14-integration/05_flink_clickhouse_sink.sql](./14-integration/05_flink_clickhouse_sink.sql) | ✅ |
+| Day 76 | Superset 集成 | 14-integration | [14-integration/07_superset_dashboard.sql](./14-integration/07_superset_dashboard.sql) | ✅ |
+| Day 77 | 大规模批量导入 | 14-integration | [14-integration/11_bulk_import_guide.md](./14-integration/11_bulk_import_guide.md) | ✅ |
 
 ### 第 12 周：最佳实践与专家考核
 
 | 天 | 主题 | 目标章节 | 当前文件 | 状态 |
 |----|------|----------|----------|------|
-| Day 78 | Schema 设计最佳实践 | 15-best-practices | [17-best-practices/01_schema_design.sql](./17-best-practices/01_schema_design.sql) | ⬜ |
-| Day 79 | 查询优化最佳实践 | 15-best-practices | [17-best-practices/03_query_optimization.sql](./17-best-practices/03_query_optimization.sql) | ⬜ |
-| Day 80 | 常见错误与反模式 | 15-best-practices | [17-best-practices/02_common_mistakes.sql](./17-best-practices/02_common_mistakes.sql) | ⬜ |
-| Day 81 | 端到端方案设计（开始） | — | [20-flink-clickhouse-superset/README.md](./20-flink-clickhouse-superset/README.md) | ⬜ |
+| Day 78 | Schema 设计最佳实践 | 15-best-practices | [15-best-practices/02_schema_design.sql](./15-best-practices/02_schema_design.sql) | ✅ |
+| Day 79 | 查询优化最佳实践 | 15-best-practices | [15-best-practices/03_query_optimization.sql](./15-best-practices/03_query_optimization.sql) | ✅ |
+| Day 80 | 常见错误与反模式 | 15-best-practices | [15-best-practices/04_common_mistakes.sql](./15-best-practices/04_common_mistakes.sql) + [15-best-practices/07_anti_patterns.md](./15-best-practices/07_anti_patterns.md) | ✅ |
+| Day 81 | 端到端方案设计（开始） | — | [14-integration/15_prediction_case_study.md](./14-integration/15_prediction_case_study.md) | ✅ |
 | Day 82-83 | 端到端方案设计（进行） | — | — | — |
 | Day 84 | 专家考核：架构答辩 | — | — | — |
 
@@ -250,10 +248,24 @@
 
 ## 学习资源
 
-### 已细化章节（专家级深度标杆，优先阅读）
-- ✅ [04-functions/README.md](./04-functions/README.md) — 函数与聚合状态
-- ✅ [16-principle/README.md](./16-principle/README.md) — 核心原理
-- ✅ [03-engines/README.md](./03-engines/README.md) — 表引擎与选型
+### 已细化章节（全部 14 章 + 2 附录均为专家级，优先阅读）
+- ✅ [01-getting-started/README.md](./01-getting-started/README.md) — 入门 13 个 SQL 全集群验证
+- ✅ [02-principles/README.md](./02-principles/README.md) — 核心原理（含汇编级 SIMD/Pipeline）
+- ✅ [03-data-types/README.md](./03-data-types/README.md) — 数据类型全体系
+- ✅ [04-engines/README.md](./04-engines/README.md) — 表引擎与选型
+- ✅ [05-functions/README.md](./05-functions/README.md) — 函数与聚合状态
+- ✅ [06-modeling/README.md](./06-modeling/README.md) — 数据建模
+- ✅ [07-data-mutation/README.md](./07-data-mutation/README.md) — 数据变更
+- ✅ [08-performance/README.md](./08-performance/README.md) — 性能优化
+- ✅ [09-distributed/README.md](./09-distributed/README.md) — 分布式架构
+- ✅ [10-security/README.md](./10-security/README.md) — 安全权限
+- ✅ [11-monitoring-ops/README.md](./11-monitoring-ops/README.md) — 监控运维
+- ✅ [12-troubleshooting/README.md](./12-troubleshooting/README.md) — 故障排查
+- ✅ [13-system-tables/README.md](./13-system-tables/README.md) — 系统表参考
+- ✅ [14-integration/README.md](./14-integration/README.md) — 集成生态
+- ✅ [15-best-practices/README.md](./15-best-practices/README.md) — 最佳实践
+- ✅ [appendix-tech-sharing/README.md](./appendix-tech-sharing/README.md) — 附录 A 技术分享
+- ✅ [appendix-blogs/README.md](./appendix-blogs/README.md) — 附录 B 博客
 
 ### 重整计划与进度
 - [重整计划文档](./.trae/documents/clickhouse-tutorial-reorg-plan.md)
@@ -275,7 +287,7 @@
 
 ### 给有经验者
 1. **跳读入门章**：直接从 04-engines 或 08-performance 开始
-2. **重点读标杆章**：04-functions/16-principle/03-engines 已达专家深度
+2. **重点读标杆章**：05-functions / 02-principles / 04-engines 已达专家深度
 3. **做专家考核**：直接挑战阶段四的架构答辩与故障注入
 
 ### 给培训组织者
@@ -306,7 +318,7 @@
 
 ## 附录：CH 25.12 兼容性注意事项
 
-> 培训中遇到以下问题时的应对方案（基于批次 1-3 的验证经验）：
+> 培训中遇到以下问题时的应对方案（基于批次 1-13 的验证经验）：
 
 | 问题 | 原因 | 解决 |
 |------|------|------|
@@ -319,3 +331,6 @@
 | File 引擎路径找不到 | user_files_path 限制 | File 引擎加 `path` 参数 |
 | Join 引擎 ON CLUSTER 报错 | 分布式类型冲突 | 移除 ON CLUSTER，用 `joinGet()` |
 | ReplicatedMergeTree ZK 路径冲突 | 跨库同名表 | ZK 路径含库名或表名唯一化 |
+| `compressed_bytes` 列不存在 | 25.x 改名 | `column_data_compressed_bytes` |
+| 函数名大小写敏感 | md5/sha1 等小写未定义 | 改为大写 MD5/SHA1/SHA256 |
+| `formatDateTime('%A')` 报错 | 25.12 不支持 %A/%B | 用 dateName() 函数 |

@@ -131,7 +131,7 @@ SELECT * FROM distributed_table WHERE ...
 两阶段聚合 (分布式查询优化):
   - 各分片用 sumState 本地聚合 (减少传输量)
   - 协调节点用 sumMerge 合并状态
-  详见 04-functions/01_basic_functions_examples.sql §11
+  详见 05-functions/01_basic_functions_examples.sql §11
 
 注意: 分布式表查询适合大表扫描, 小表查询直接查本地表更高效
 ```
@@ -672,8 +672,10 @@ docker compose up -d
 - `system.metrics` - 系统指标
 - `system.events` - 系统事件
 - `system.asynchronous_metrics` - 异步指标
-- `system.query_log` - 查询日志（如启用）
+- `system.processes` - 当前运行中的查询（替代 query_log 的实时方案）
 - `system.replicas` - 副本状态
+
+> **注意**：本集群默认禁用了 `query_log`（见"日志配置"），因此无法通过 `system.query_log` 做历史慢查询分析。如需启用，在 `config/clickhouse*.xml` 中移除 `<query_log remove="1"/>` 并重启节点；启用前请先阅读 [13-system-tables/09_query_log_deep_dive.md](../13-system-tables/09_query_log_deep_dive.md) 了解字段含义与开启成本。
 
 ## 备份与恢复
 

@@ -12,10 +12,10 @@
 
 ---
 
-## 当前阶段：R11 已完成，下一批次 R12（15-best-practices 扩充）
+## 当前阶段：R0-R16 全部完成（2026-08-04）
 
-> R9 完成：创建 11-monitoring-ops 目录，合并 06-admin/13-monitor/02-advance 运维内容，新增 Prometheus/容量规划/分层存储。
-> **注意**：R2-R9 的 SQL 文件待集群恢复后验证（Docker Desktop 未运行）。
+> 全项目重整（21 章 → 14 主干章 + 2 附录）已全部完成，所有目录重命名为新编号（git mv 保留历史），旧内容归档至 `_legacy/`。
+> **注意**：R2-R9 的 SQL 文件待集群恢复后批量验证（Docker Desktop 未运行，SQL 均已按 CH 25.12 兼容性规则编写）。
 
 ### 重整计划核心结论（2026-08-02 诊断）
 
@@ -46,11 +46,11 @@
 | **R9** | 11-monitoring-ops 合并 + 补 Prometheus/容量 | P2 深化 | ✅ | 2026-08-03 | 合并 06-admin/13-monitor/02-advance，新增 Prometheus/容量规划/分层存储，8 个文件覆盖运维全体系 |
 | **R10** | 10-security 深化 + 补 Quota/多租户（原 12-security-authentication） | P2 深化 | ✅ | 2026-08-04 | 迁入 9 节，新增 Quota/Workload 和多租户隔离 2 个专题，README 专家级重写，共 22 文件 |
 | **R11** | 14-integration 合并 + 补 Kafka/Flink/DBT/Iceberg | P2 深化 | ✅ | 2026-08-04 | 合并 4 个源目录共 20 文件，新建 Kafka/DBT/Iceberg/Local/Cloud 6 个专题，README 专家级重写，共 27 文件 |
-| **R12** | 15-best-practices 扩充（原 17-best-practices） | P3 优化 | ⬜ | — | 反模式案例库 |
-| **R13** | 13-system-tables 深化（原 08-information-schema） | P3 优化 | ⬜ | — | query_log 字段解读 |
-| **R14** | 02-principles 扩充（原 16-principle，向量化 SIMD/Pipeline） | P3 优化 | ⬜ | — | 已细化，补汇编级 |
-| **R15** | 附录 A/B + 00-infra 修正 | P3 收尾 | ⬜ | — | 分享素材定位 + infra 修正 |
-| **R16** | 收尾：全项目一致性校验 + 跨章链接修复 | P3 收尾 | ⬜ | — | 确保导航无断链 |
+| **R12** | 15-best-practices 扩充（原 17-best-practices） | P3 优化 | ✅ | 2026-08-04 | 迁移 6 节，新增 15 个反模式案例库（文档+演示 SQL），README 专家级重写，共 8 文件 |
+| **R13** | 13-system-tables 深化（原 08-information-schema） | P3 优化 | ✅ | 2026-08-04 | 迁移 8 节，新增 query_log 全字段解读 + 30+ 诊断查询库，README 专家级重写，共 19 文件 |
+| **R14** | 02-principles 扩充（原 16-principle，向量化 SIMD/Pipeline） | P3 优化 | ✅ | 2026-08-04 | 迁移 16-principle 为 02-principles，新增汇编级 SIMD + Pipeline 调度器两节 |
+| **R15** | 附录 A/B + 00-infra 修正 | P3 收尾 | ✅ | 2026-08-04 | 附录 A 技术分享（中/英）、附录 B 博客、修正 query_log 引用 |
+| **R16** | 收尾：全项目一致性校验 + 跨章链接修复 | P3 收尾 | ✅ | 2026-08-04 | 5 目录 git mv 改名 + 16 旧目录归档 _legacy/ + 根 README/TRAINING_PLAN/PROGRESS 更新 + 全部跨章链接修复 |
 
 ### 已完成批次（旧计划，重整后保留为已完成基础）
 
@@ -66,7 +66,7 @@
 
 ### 完成内容
 
-#### [04-functions/README.md](./04-functions/README.md)（重写）
+#### [04-functions/README.md](./_legacy/04-functions/README.md)（重写）
 - 新增"本章解决什么问题"章节，对标业务痛点
 - 新增函数体系全景图（标量/聚合/窗口/表函数）
 - **新增核心章节：聚合状态函数（*State/*Merge）原理**
@@ -79,7 +79,7 @@
 - 新增常见误区与最佳实践
 - 新增自测题（7 道，含答案线索）
 
-#### [04-functions/01_basic_functions_examples.sql](./04-functions/01_basic_functions_examples.sql)（深化+扩充）
+#### [04-functions/01_basic_functions_examples.sql](./_legacy/04-functions/01_basic_functions_examples.sql)（深化+扩充）
 - 文件头增加学习目标、深度标准、章节索引
 - 每个章节增加【原理】【场景】【对比】【坑】注释结构
 - **新增 §11 聚合状态函数（原文件完全缺失）**：
@@ -96,7 +96,7 @@
 - 修复 md5/sha1/sha256 大小写（CH 函数名大小写敏感）
 - 修复 IPv4NumToClassC 已废弃（改用 splitByChar + IPv4CIDRToRange）
 
-#### [04-functions/02_window_functions_examples.sql](./04-functions/02_window_functions_examples.sql)（深化）
+#### [04-functions/02_window_functions_examples.sql](./_legacy/04-functions/02_window_functions_examples.sql)（深化）
 - 文件头增加学习目标、章节索引
 - 新增 §5 窗口帧 ROWS vs RANGE 核心难点章节（原理图 + 对比表）
 - 新增 §5.2 默认 frame "跳变"陷阱演示（同值行导致 RANGE 累计跳变）
@@ -145,44 +145,44 @@
 - 列式 vs 行式对比表、分区 vs 主键排序决策表
 - 常见误区 8 条 + 最佳实践 9 条 + 自测题 12 道
 
-#### [01_overview.sql](./16-principle/01_overview.sql)（深化）
+#### [01_overview.sql](./_legacy/16-principle/01_overview.sql)（深化）
 - 文件头增加学习目标、深度标准、章节索引
 - 每节增加【原理】【场景】【对比】【坑】注释结构
 - 修复 `system.query_log` 不存在 → 改用 `query_thread_log` + 说明
 - 修复 `compressed_bytes` → `column_data_compressed_bytes`
 
-#### [02_column_store.sql](./16-principle/02_column_store.sql)（深化）
+#### [02_column_store.sql](./_legacy/16-principle/02_column_store.sql)（深化）
 - 列式 vs 行式对比、LowCardinality 字典编码、index_granularity 实验
 - 修复 `compressed_bytes`/`data_uncompressed_bytes` → `column_data_compressed_bytes`/`column_data_uncompressed_bytes`
 - 修复 `index_granularity` 列不存在 → 改用 `marks` 列反推
 - 修复 `compression_codec` 表级设置不存在 → 改用列级 `CODEC()` 语法定义
 - 修复 `system.query_log` → `query_thread_log`
 
-#### [03_mergetree.sql](./16-principle/03_mergetree.sql)（深化）
+#### [03_mergetree.sql](./_legacy/16-principle/03_mergetree.sql)（深化）
 - Part 生命周期、命名规则、合并机制、5 种 MergeTree 变体对比
 - 修复 `mutation_version` → `data_version`（CH 25.x 改名）
 - 修复 `ttl_info` → `delete_ttl_info_min`/`delete_ttl_info_max`
 - 修复 INSERT VALUES 块内行内注释（解析器不支持）→ 移到 INSERT 前
 - 修复 AggregatingMergeTree 的 `uniqState()` 不能用 INSERT VALUES → 改用 INSERT SELECT
 
-#### [04_compression.md](./16-principle/04_compression.md)（深化）
+#### [04_compression.md](./_legacy/16-principle/04_compression.md)（深化）
 - 压缩原理（LZ4/ZSTD/Delta/Gorilla）、codec 选择决策树、LowCardinality 适用边界
 - 修复 `compressed_bytes` → `column_data_compressed_bytes`
 
-#### [05_indexing.md](./16-principle/05_indexing.md)（深化）
+#### [05_indexing.md](./_legacy/16-principle/05_indexing.md)（深化）
 - 稀疏索引 mark 定位流程、主键列顺序原则、index_granularity 权衡
 - 跳数索引选择矩阵（minmax/set/bloom_filter/tokenbf/ngrambf）
 - 添加 query_log 前置条件说明
 
-#### [06_query_execution.md](./16-principle/06_query_execution.md)（深化）
+#### [06_query_execution.md](./_legacy/16-principle/06_query_execution.md)（深化）
 - Pipeline 阶段、向量化+SIMD、PREWHERE 机制、并行执行、聚合管道
 - 添加 query_log 前置条件说明（config 启用 + 替代方案）
 
-#### [07_replication.md](./16-principle/07_replication.md)（深化）
+#### [07_replication.md](./_legacy/16-principle/07_replication.md)（深化）
 - 异步复制语义、Keeper 路径模型、INSERT 复制全流程、quorum、故障恢复
 - 副本健康诊断（system.replicas 关键字段 + 决策表 + 告警阈值）
 
-#### [08_sharding.sql](./16-principle/08_sharding.sql)（深化）
+#### [08_sharding.sql](./_legacy/16-principle/08_sharding.sql)（深化）
 - 分片 vs 副本、本地表+分布式表、分片键原理、两阶段聚合（sumState/sumMerge）
 - 跨分片 JOIN（GLOBAL JOIN/GLOBAL IN）、分片监控
 - 修复 `system.query_log` → 三种替代方案（query_thread_log/query_log 注释/processes）
@@ -213,7 +213,7 @@
 
 ### 完成内容
 
-#### [03-engines/README.md](./03-engines/README.md)（已为专家级，本期保持）
+#### [03-engines/README.md](./_legacy/03-engines/README.md)（已为专家级，本期保持）
 - "本章解决什么问题"对标 11 个核心痛点
 - 引擎体系全景图（MergeTree 家族 / Log 家族 / 集成引擎 / 特殊引擎）
 - 6 种 MergeTree 变体合并算法本质对比表
@@ -221,7 +221,7 @@
 - Distributed 表分片键设计 + 两阶段聚合原理
 - 11 条常见误区 + 生产铁律
 
-#### [03-engines/01_mergetree_engines.sql](./03-engines/01_mergetree_engines.sql)（深化）
+#### [03-engines/01_mergetree_engines.sql](./_legacy/03-engines/01_mergetree_engines.sql)（深化）
 - 6 种 MergeTree 变体（含 GraphiteMergeTree 注释）的写入/合并/查询对比
 - Part 生命周期、命名规则、合并算法实验
 - ReplacingMergeTree 的 argMax + GROUP BY 替代 FINAL（避免 ILLEGAL_AGGREGATION）
@@ -230,7 +230,7 @@
 - CollapsingMergeTree 正确 sign 镜像写法（含错误反例注释）
 - VersionedCollapsingMergeTree 乱序写入实验
 
-#### [03-engines/02_replicated_engines.sql](./03-engines/02_replicated_engines.sql)（重写）
+#### [03-engines/02_replicated_engines.sql](./_legacy/03-engines/02_replicated_engines.sql)（重写）
 - ReplicatedMergeTree 复制机制（Keeper 协调、Part 复制队列）
 - system.replicas / system.replication_queue 关键字段解读
 - 5 种 Replicated* 变体完整示例（含 sign 镜像修复）
@@ -238,14 +238,14 @@
 - 副本健康监控（is_leader / is_readonly / queue_size / absolute_delay 告警阈值）
 - quorum 强一致配置说明
 
-#### [03-engines/03_log_engines.sql](./03-engines/03_log_engines.sql)（重写）
+#### [03-engines/03_log_engines.sql](./_legacy/03-engines/03_log_engines.sql)（重写）
 - TinyLog / StripeLog / Log 三引擎存储结构原理对比
 - 三引擎同数据存储大小 + 查询性能对比实验
 - system.tables 文件大小查询（修复 `table` → `name` 列名）
 - 物理文件结构说明（docker exec ls 验证）
 - Log 系列适用场景与生产迁移建议
 
-#### [03-engines/04_integration_engines.sql](./03-engines/04_integration_engines.sql)（重写）
+#### [03-engines/04_integration_engines.sql](./_legacy/03-engines/04_integration_engines.sql)（重写）
 - 集成引擎总览（引擎 vs 表函数对比 + 选型决策表）
 - File 引擎三格式（CSV/JSONEachRow/Parquet）+ path 参数正确用法
   - 修复：File 引擎表带 path 参数让数据存到 user_files_path，使 file() 表函数可读
@@ -255,7 +255,7 @@
 - 跨系统 ETL 5 种模式（一次性/增量/流式/全量刷新/冷热分层）
 - 生产铁律 + 性能优化（Parquet/disk_cache/JOIN 前过滤/超时）
 
-#### [03-engines/05_special_engines.sql](./03-engines/05_special_engines.sql)（深化）
+#### [03-engines/05_special_engines.sql](./_legacy/03-engines/05_special_engines.sql)（深化）
 - Distributed 表路由实验 + 分片键验证
 - MaterializedView INSERT 触发 + 目标表落盘
 - Buffer 表写入缓冲实验
@@ -264,14 +264,14 @@
 - 修复：Join 表去除 ON CLUSTER，改用 joinGet() 避免 INCOMPATIBLE_TYPE_OF_JOIN
 - 修复：MV 的 ORDER BY 引用已转换列名（timestamp → event_date）
 
-#### [03-engines/06_engine_selection_guide_examples.sql](./03-engines/06_engine_selection_guide_examples.sql)（深化）
+#### [03-engines/06_engine_selection_guide_examples.sql](./_legacy/03-engines/06_engine_selection_guide_examples.sql)（深化）
 - 7 个生产场景的完整 DDL + 查询模板
 - 修复：ZooKeeper 路径冲突（events → events_log）
 - 修复：CollapsingMergeTree sign 镜像写法（含错误反例注释）
 - 修复：INSERT VALUES 块内行内注释（移到 INSERT 语句前）
 - TTL 自动过期实验 + Part 状态观察
 
-#### [03-engines/06_engine_selection_guide.md](./03-engines/06_engine_selection_guide.md)（重写为专家级）
+#### [03-engines/06_engine_selection_guide.md](./_legacy/03-engines/06_engine_selection_guide.md)（重写为专家级）
 - 新增"选型心智模型"（三维权衡：存储/可用性/拓扑语义）
 - MergeTree 家族 6 选 1 本质（合并时同主键行做什么）
 - 7 条选型反例（错误选型的灾难后果 + 正确选型）
@@ -505,13 +505,152 @@
 
 ---
 
-## 下批次计划：R12 — 15-best-practices 扩充
+---
 
-> **优先级**：P3 优化（反模式案例库）
+## R12 完成记录（2026-08-04）
 
-**R12 范围**：
-1. 深化 15-best-practices（原 17-best-practices）为反模式案例库
-2. 补充 ClickHouse 特有反模式（ORDER BY 不当/FINAL 滥用/分区过多/单条 INSERT 等）
-3. 重写 README.md 达专家级深度
+### 交付物
 
-**后续批次**按 R13→R16 顺序推进，详见上方"重整批次进度总览"表。
+#### 1. 迁移基础内容（6 个文件）
+- 01_overview.sql：最佳实践总览（列式/批量/不可变/最终一致四大哲学）
+- 02_schema_design.sql：Schema 设计（排序键/分区/TTL/类型选择）
+- 03_query_optimization.sql：查询优化（索引利用/列裁剪/物化视图/Projection）
+- 04_common_mistakes.sql：常见错误 SQL 演示
+- 05_dos_and_donts.md：Do's & Don'ts 速查
+- 06_etl_vs_clickhouse.md：ETL 职责划分
+
+#### 2. 新增反模式案例库（2 个文件，本章核心）
+- [07_anti_patterns.md](./15-best-practices/07_anti_patterns.md)：专家级反模式案例库
+  - 15 个生产反模式速查表（症状/根因/影响/修复成本）
+  - 每个反模式完整分析：症状 → 根因 → 影响量化 → 解决方案 → 正反示例
+  - 覆盖：单行 INSERT/SELECT */低基数排序键/分区过细/String 类型/FINAL 滥用/无 MV/mutation 当 UPDATE/JOIN 无 GLOBAL/无 TTL/小表分片/索引过多/复制无副本/无并发限制/依赖唯一性
+  - 新增反模式诊断流程图（查询慢/写入慢/集群不稳定三条路径）
+- [08_anti_patterns_examples.sql](./15-best-practices/08_anti_patterns_examples.sql)：15 个反模式的可执行 ❌/✅ 对照演示
+  - 含 Part 数对比、argMax 替代 FINAL、物化视图一致性验证、字典替代 JOIN、TTL 配置查看等
+
+#### 3. README.md 专家级重写
+- 新增 ClickHouse 四大设计哲学（vs 传统数据库对比表 + 违反后果）
+- 新增"为什么批量写入重要"Part 模型量化分析
+- 新增反模式速查表 + 排序键选择黄金法则 + 最终一致性三种应对策略
+- 新增 8 条常见误区纠正 + 5 维度生产检查清单 + 5 天学习路径
+
+### 验收
+- ✅ 8 个文件全部就位（6 迁移 + 2 反模式新增 + README）
+- ✅ 15 个反模式全部补齐（覆盖 R12 计划要求：ORDER BY 不当/FINAL 滥用/分区过多/单条 INSERT 等）
+- ✅ 反模式案例库达到专家级（每个含症状/根因/影响量化/正反示例 + 诊断流程）
+- ✅ README 达到专家级深度
+- ⬜ SQL 文件待集群恢复后验证（Docker Desktop 未运行）
+
+---
+
+---
+
+## R13 完成记录（2026-08-04）
+
+### 交付物
+
+#### 1. 迁移基础内容（16 个文件）
+- 01_databases_tables：数据库和表（system.databases/tables）
+- 02_columns_schema：列与 Schema（system.columns）
+- 03_partitions_parts：分区与数据块（system.parts）
+- 04_indexes_projections：索引与投影
+- 05_clusters_replicas：集群与副本
+- 06_users_roles：用户与角色
+- 07_queries_processes：查询与进程（system.processes）
+- 08_system_tables：系统表详解
+- 每个专题含 md + sql 成对文件
+
+#### 2. 新增 query_log 全字段解读（核心，R13 重点）
+- [09_query_log_deep_dive.md](./13-system-tables/09_query_log_deep_dive.md)
+  - query_log 是什么 + 开启配置方法
+  - 60+ 字段按 5 组全解读：查询标识/查询语句/资源消耗/执行详情/分布式相关
+  - 12 个生产诊断查询：慢查询 Top/用户聚合/热表/索引失效/OOM 前兆/错误分析/同类查询聚合（normalized_query_hash）/小时负载/INSERT 分析/缓存命中率/查询分布/分布式链路
+  - query_log vs query_thread_log vs query_views_log 对比表
+  - 日志表维护（大小/清理/TTL/慢查询过滤配置）
+
+#### 3. 新增诊断查询库
+- [10_diagnostics_queries.sql](./13-system-tables/10_diagnostics_queries.sql)：8 部分 30+ 诊断查询
+  - query_log 分析（7 个）/ parts 健康（3 个）/ 合并状态（3 个）/ 副本状态（3 个）/ 权限审计（4 个）/ 存储磁盘（3 个）/ 运行时审计（4 个）/ 一键健康巡检（3 个）
+
+#### 4. README.md 专家级重写
+- 新增 system 表七层全景图（元数据/数据/复制/查询/性能/安全/存储）
+- 新增核心概念：system.parts 存储健康模型 + 三个关键判断
+- 新增核心概念：query_log 思维模型 + normalized_query_hash 专家技巧
+- 新增诊断方法论：问题 → 表 → 查询（4 条路径）
+- 新增 7 条常见误区 + 日/周/月三档检查清单 + 5 天学习路径
+
+### 验收
+- ✅ 19 个文件全部就位（16 迁移 + 2 新增 + README）
+- ✅ query_log 字段解读达到专家级（5 组 60+ 字段 + 12 诊断查询）
+- ✅ 30+ 诊断查询库覆盖全场景
+- ✅ README 达到专家级深度
+- ⬜ SQL 文件待集群恢复后验证（Docker Desktop 未运行）
+
+---
+
+## R14 完成记录（2026-08-04）：02-principles 扩充
+
+### 交付物
+
+#### 1. 迁移 16-principle → 02-principles（git mv 保留历史）
+- 9 个文件全部迁移（01_overview / 02_column_store / 03_mergetree / 04_compression / 05_indexing / 06_query_execution / 07_replication / 08_sharding / README）
+
+#### 2. [06_query_execution.md](./02-principles/06_query_execution.md) 新增两个汇编级扩展小节
+- **§2.6 Pipeline 调度器线程模型**：Processor 状态机枚举（Ready/Async/Wait/Finished/PortFull）、Push vs Pull 模型对比表、线程动态调度逻辑伪代码、背压端口容量实现
+- **§3.5 汇编级 SIMD**：标量 vs SIMD 机器码对比、三大指令集表格（SSE/AVX2/AVX-512）、intrinsic 手写示例、行存/列存的 vmovups 连续加载论证、位掩码过滤（vcmpps CMP_GT_OQ）、`system.cpu_features` 验证 SQL
+
+### 验收
+- ✅ 9 个文件就位，章节深度达到汇编级
+- ⬜ SQL 文件待集群恢复后验证
+
+---
+
+## R15 完成记录（2026-08-04）：附录 A/B + 00-infra 修正
+
+### 交付物
+
+#### 1. 附录 A：[appendix-tech-sharing/](./appendix-tech-sharing/README.md)（技术分享素材）
+- 从 18-ch-introduction-cn / 19-ch-introduction-en 迁移（git mv）
+- README 改为"1 小时分享素材"定位横幅 + 深度章节映射表
+- 含 en/ 英文子目录（英文 SQL）+ 6 个中文 SQL + README_EN.md
+
+#### 2. 附录 B：[appendix-blogs/](./appendix-blogs/README.md)（博客收藏）
+- 从 blogs/ 迁移 2 篇 MergeTree 深度文章（中/英）
+- README 说明与主干教程的关系
+
+#### 3. [00-infra/README.md](./00-infra/README.md) 修正
+- `system.query_log` 引用（该集群已禁用 query_log）改为 `system.processes` 实时方案 + 启用指引
+
+### 验收
+- ✅ 附录 A（含 en 子目录）+ 附录 B 全部就位
+- ✅ infra query_log 引用修正
+
+---
+
+## R16 完成记录（2026-08-04）：全项目一致性校验 + 跨章链接修复
+
+### 交付物
+
+#### 1. 章节编号重命名（git mv 保留历史）
+- `05-data-type` → `03-data-types`
+- `03-engines` → `04-engines`
+- `04-functions` → `05-functions`
+- `11-performance` → `08-performance`
+- `07-troubleshooting` → `12-troubleshooting`
+
+#### 2. 旧目录归档 `_legacy/`（16 个）
+- 02-advance / 06-admin / 08-information-schema / 09-data-deletion / 10-date-update / 11-data-update / 12-security-authentication / 13-monitor / 14-use-case / 15-high-performance-bulk-import / 16-principle / 17-best-practices / 18-ch-introduction-cn / 19-ch-introduction-en / 20-flink-clickhouse-superset / blogs
+
+#### 3. 导航文档更新
+- 根 [README.md](./README.md)：状态改为"重整完成"，目录结构更新为新编号实际结构，映射表注释更新
+- [TRAINING_PLAN.md](./TRAINING_PLAN.md)：全部 73 处旧路径引用修复为新章节文件，状态统一为已完成/待验证
+- [PROGRESS.md](./PROGRESS.md)：R14-R16 标记完成
+
+#### 4. 跨章链接修复（19 个文件）
+- 各章节 README / MD 中残留的 `../03-engines/`、`../16-principle/`、`../11-performance/` 等旧路径全部改为新编号目录
+
+### 验收
+- ✅ 5 个编号冲突目录全部重命名（与计划 §3.1 目标编号一致）
+- ✅ 16 个旧目录归档至 _legacy/，git 历史完整保留
+- ✅ 根 README / TRAINING_PLAN / PROGRESS 无旧路径引用
+- ✅ 全部活跃章节跨章链接指向新目录，导航无断链

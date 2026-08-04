@@ -7,8 +7,10 @@
 -- 集群: treasurycluster
 -- =====================================================
 
-DROP DATABASE IF EXISTS distributed_test;
-CREATE DATABASE distributed_test;
+-- 注意: 集群建库必须加 ON CLUSTER，否则 clickhouse-server-2 上数据库不存在，
+-- 后续 ON CLUSTER 建表会报 Code 81 (UNKNOWN_DATABASE)
+DROP DATABASE IF EXISTS distributed_test ON CLUSTER treasurycluster SYNC;
+CREATE DATABASE IF NOT EXISTS distributed_test ON CLUSTER treasurycluster;
 USE distributed_test;
 
 -- ========================================
@@ -267,7 +269,7 @@ ORDER BY event_type;
 -- -----------------------------------------------------
 -- 【原理】两阶段聚合的优化配置
 -- -----------------------------------------------------
--- 1. enable_optimize_predicate = 1
+-- 1. enable_optimize_predicate_expression = 1
 --    启用谓词下推优化，将 WHERE 条件下推到各分片
 --    减少网络传输量
 --
@@ -280,7 +282,7 @@ ORDER BY event_type;
 --    避免跨分片数据传输
 
 -- 开启优化配置
-SET enable_optimize_predicate = 1;
+SET enable_optimize_predicate_expression = 1;
 SET prefer_localhost_replica = 0;
 SET optimize_distributed_group_by_sharding_key = 1;
 
@@ -309,7 +311,7 @@ GROUP BY event_type
 ORDER BY total_amount DESC;
 
 -- 恢复默认设置
-SET enable_optimize_predicate = 0;
+SET enable_optimize_predicate_expression = 0;
 SET prefer_localhost_replica = 1;
 SET optimize_distributed_group_by_sharding_key = 0;
 
@@ -378,4 +380,5 @@ GROUP BY event_type;
 DROP TABLE IF EXISTS agg_test_dist ON CLUSTER treasurycluster SYNC;
 DROP TABLE IF EXISTS agg_test_local ON CLUSTER treasurycluster SYNC;
 
-DROP DATABASE IF EXISTS distributed_test;
+-- 与开头 ON CLUSTER 建库对应，DROP 也须 ON CLUSTER
+DROP DATABASE IF EXISTS distributed_test ON CLUSTER treasurycluster SYNC;

@@ -16,7 +16,7 @@
  *        而 JOIN 是 CH 的性能短板（右表全量加载内存）。
  *
  *   建模三大决策：
- *     ① 表引擎：见 03-engines/06_engine_selection_guide.md 决策树
+ *     ① 表引擎：见 04-engines/06_engine_selection_guide.md 决策树
  *     ② ORDER BY：决定物理排序 + 主键稀疏索引 + 分区剪枝粒度
  *     ③ PARTITION BY：决定数据物理分桶 + TTL 过期粒度 + 查询剪枝粒度
  *

@@ -6,8 +6,8 @@
 -- 集群: treasurycluster (3 Keeper)
 -- =====================================================
 
-DROP DATABASE IF EXISTS distributed_test;
-CREATE DATABASE distributed_test;
+DROP DATABASE IF EXISTS distributed_test ON CLUSTER treasurycluster;
+CREATE DATABASE IF NOT EXISTS distributed_test ON CLUSTER treasurycluster;
 USE distributed_test;
 
 -- ========================================
@@ -52,7 +52,8 @@ SELECT * FROM system.zookeeper WHERE path = '/clickhouse';
 
 -- 查看各表的 Keeper 路径
 -- 如果存在复制表，会看到 /clickhouse/tables/{shard}/{table} 路径
-SELECT * FROM system.zookeeper WHERE path LIKE '/clickhouse/tables/%';
+-- 【兼容性】ClickHouse 25.12 起 system.zookeeper 查询必须带 path = / path IN 精确条件，否则 Code 36
+SELECT * FROM system.zookeeper WHERE path IN ('/clickhouse/tables');
 
 -- -----------------------------------------------------
 -- 【原理】Raft Leader 选举
@@ -78,9 +79,9 @@ SELECT * FROM system.zookeeper WHERE path LIKE '/clickhouse/tables/%';
 SELECT 
     name,
     host,
-    port,
-    get_server_type() AS server_type
-FROM system.zookeeper_connections;
+    port
+    -- 25.12 已移除 get_server_type() 函数，故不再输出服务端类型
+FROM system.zookeeper_connection;
 
 -- -----------------------------------------------------
 -- 【原理】日志复制与日志压缩
@@ -134,6 +135,9 @@ SELECT
 FROM system.replicas
 WHERE table = 'keeper_demo_table';
 
+-- 查看 keeper_demo_table 在 Keeper 中的实际节点（25.12 需精确 path）
+SELECT * FROM system.zookeeper WHERE path IN ('/clickhouse/tables/1/keeper_demo_table');
+
 -- -----------------------------------------------------
 -- 【原理】Keeper 中复制表的路径结构
 -- -----------------------------------------------------
@@ -162,6 +166,9 @@ SELECT
     replica_path
 FROM system.replicas
 WHERE table = 'keeper_demo_table';
+
+-- 查看 keeper_demo_table 在 Keeper 中的实际节点（25.12 需精确 path）
+SELECT * FROM system.zookeeper WHERE path IN ('/clickhouse/tables/1/keeper_demo_table');
 
 -- -----------------------------------------------------
 -- 【原理】Keeper vs ZooKeeper 对比
@@ -252,7 +259,7 @@ WHERE path = '/clickhouse/tables/1/keeper_demo_table/replicas';
 -- 查看 Keeper 的可用性信息
 SELECT 
     hostName() AS host,
-    (SELECT count() FROM system.zookeeper_connections) AS keeper_connections;
+    (SELECT count() FROM system.zookeeper_connection) AS keeper_connections;
 
 -- -----------------------------------------------------
 -- 【对比】Keeper 内置 vs 独立部署
@@ -294,4 +301,5 @@ SELECT
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS keeper_demo_table ON CLUSTER treasurycluster SYNC;
 
-DROP DATABASE IF EXISTS distributed_test;
+-- 与开头 ON CLUSTER 建库对应，DROP 也须 ON CLUSTER
+DROP DATABASE IF EXISTS distributed_test ON CLUSTER treasurycluster;

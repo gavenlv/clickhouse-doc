@@ -159,5 +159,5 @@ docker exec -it clickhouse1 clickhouse-client --queries-file /var/lib/clickhouse
 
 ## 🔗 相关文档
 
-- [11-performance/](../11-performance/) - 性能优化专题
-- [01-base/07_data_modeling.sql](../01-base/07_data_modeling.sql) - 数据建模最佳实践
+- [08-performance/](../08-performance/README.md) - 性能优化专题
+- [06-modeling/](../06-modeling/README.md) - 数据建模最佳实践

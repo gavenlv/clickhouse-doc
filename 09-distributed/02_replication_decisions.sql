@@ -6,8 +6,10 @@
 -- 集群: treasurycluster (2 副本 × 1 分片)
 -- =====================================================
 
-DROP DATABASE IF EXISTS distributed_test;
-CREATE DATABASE distributed_test;
+-- 注意: 集群建库必须加 ON CLUSTER，否则 clickhouse-server-2 上数据库不存在，
+-- 后续 ON CLUSTER 建表会报 Code 81 (UNKNOWN_DATABASE)
+DROP DATABASE IF EXISTS distributed_test ON CLUSTER treasurycluster;
+CREATE DATABASE IF NOT EXISTS distributed_test ON CLUSTER treasurycluster;
 USE distributed_test;
 
 -- ========================================
@@ -331,4 +333,5 @@ ORDER BY status, absolute_delay DESC;
 DROP TABLE IF EXISTS replication_test ON CLUSTER treasurycluster SYNC;
 DROP TABLE IF EXISTS non_replicated_test ON CLUSTER treasurycluster SYNC;
 
-DROP DATABASE IF EXISTS distributed_test;
+-- 与开头 ON CLUSTER 建库对应，DROP 也须 ON CLUSTER
+DROP DATABASE IF EXISTS distributed_test ON CLUSTER treasurycluster;

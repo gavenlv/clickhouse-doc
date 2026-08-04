@@ -5,8 +5,8 @@
 -- 集群: treasurycluster
 -- =====================================================
 
-DROP DATABASE IF EXISTS distributed_test;
-CREATE DATABASE distributed_test;
+DROP DATABASE IF EXISTS distributed_test ON CLUSTER treasurycluster;
+CREATE DATABASE IF NOT EXISTS distributed_test ON CLUSTER treasurycluster;
 USE distributed_test;
 
 -- ========================================
@@ -75,25 +75,24 @@ WHERE database = 'ddl_test' AND table = 'sample_table' AND name = 'description';
 -- 【原理】system.distributed_ddl_queue 显示 DDL 执行状态
 -- 关键字段:
 --   - query: DDL 语句
---   - status: 执行状态（完成/等待/失败）
+--   - status: 执行状态 Enum8('Inactive'/'Active'/'Finished'/'Removing'/'Unknown')，不能用 'OK' 比较（Code 691）
 --   - initiator_host: 发起节点
---   - clock_time: 创建时间
+--   - query_create_time: 创建时间（25.12 已无 clock_time 列）
 
 -- 查看 DDL 队列
 -- 【场景】排查 DDL 是否执行成功
+-- 【兼容性】25.12 的 distributed_ddl_queue 无 clock_time/host_name/host_address/is_local/database 列，
+-- 改用 query_create_time/host，并按 cluster 过滤
 SELECT 
     query,
     status,
     initiator_host,
-    clock_time,
     query_create_time,
-    host_name,
-    host_address,
-    port,
-    is_local
+    host,
+    port
 FROM system.distributed_ddl_queue
-WHERE database = 'ddl_test'
-ORDER BY clock_time DESC
+WHERE cluster = 'treasurycluster'
+ORDER BY query_create_time DESC
 LIMIT 10;
 
 -- 查看 DDL 任务的详细执行状态
@@ -102,10 +101,10 @@ SELECT
     query,
     status,
     initiator_host,
-    clock_time
+    query_create_time
 FROM system.distributed_ddl_queue
-WHERE status != 'OK'
-ORDER BY clock_time DESC;
+WHERE status != 'Finished'
+ORDER BY query_create_time DESC;
 
 -- -----------------------------------------------------
 -- 【场景】安全地执行 DDL
@@ -181,13 +180,14 @@ GROUP BY host;
 --   3. 验证所有节点结构一致
 
 -- 步骤 1: 检查 DDL 队列中的失败任务
+-- 【兼容性】25.12 无 database 列，改用 cluster 过滤；clock_time → query_create_time
 SELECT 
     query,
     status,
     initiator_host,
-    clock_time
+    query_create_time
 FROM system.distributed_ddl_queue
-WHERE database = 'ddl_test' AND status != 'OK';
+WHERE cluster = 'treasurycluster' AND status != 'Finished';
 
 -- 步骤 2: 在失败节点上单独执行（假设 node2 失败）
 -- 连接到 node2 执行:
@@ -255,4 +255,5 @@ DROP TABLE IF EXISTS ddl_test.sample_table ON CLUSTER treasurycluster SYNC;
 DROP TABLE IF EXISTS ddl_test.safe_table ON CLUSTER treasurycluster SYNC;
 DROP DATABASE IF EXISTS ddl_test ON CLUSTER treasurycluster;
 
-DROP DATABASE IF EXISTS distributed_test;
+-- 与开头 ON CLUSTER 建库对应，DROP 也须 ON CLUSTER，避免 clickhouse2 残留
+DROP DATABASE IF EXISTS distributed_test ON CLUSTER treasurycluster;

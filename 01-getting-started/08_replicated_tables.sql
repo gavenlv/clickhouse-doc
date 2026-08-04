@@ -1,5 +1,5 @@
 -- ============================================================
--- 文件: 01-base/02_replicated_tables.sql
+-- 文件: 01-getting-started/08_replicated_tables.sql
 -- 学习目标: 掌握 ReplicatedMergeTree 的复制日志机制、Keeper 协调流程、复制监控
 -- 深度标准: 原理 + 场景 + 对比 + 可运行
 -- 集群: treasurycluster (CH 25.12.1.649, 1分片2副本)

@@ -1,5 +1,5 @@
 -- ============================================================
--- 文件: 01-base/01_basic_operations.sql
+-- 文件: 01-getting-started/07_basic_operations.sql
 -- 学习目标: 掌握 ClickHouse 基础操作 + 理解底层原理（MergeTree/向量化/稀疏索引）
 -- 深度标准: 原理 + 场景 + 对比 + 可运行
 -- 集群: treasurycluster (CH 25.12.1.649, 2 副本)
@@ -336,7 +336,7 @@ ORDER BY total_spent DESC;
 -- │  默认 frame 隐患:                                             │
 -- │  - ORDER BY 不写 frame → 默认 RANGE（同值同帧）              │
 -- │  - 累计求和应显式写 ROWS BETWEEN UNBOUNDED PRECEDING          │
--- │  详见 04-functions/02_window_functions_examples.sql          │
+-- │  详见 05-functions/02_window_functions_examples.sql          │
 -- └─────────────────────────────────────────────────────────────┘
 
 -- ============================================================

@@ -588,9 +588,9 @@ FROM dwd_order o;
 ## 6.11 下一章建议
 
 学完本章,推荐:
-- [01-base/07_data_modeling.sql](../01-base/07_data_modeling.sql) - ClickHouse 建模基础
-- [11-performance/](../11-performance/) - 性能优化深入
-- [16-principle/](../16-principle/) - ClickHouse 原理深入
+- [06-modeling/](../06-modeling/README.md) - ClickHouse 建模基础
+- [08-performance/](../08-performance/README.md) - 性能优化深入
+- [02-principles/](../02-principles/README.md) - ClickHouse 原理深入
 - [ClickHouse 官方文档](https://clickhouse.com/docs) - 持续学习
 - [Apache Flink 官方文档](https://flink.apache.org/) - 流式计算深入
 - [Apache Superset 官方文档](https://superset.apache.org/) - BI 深入

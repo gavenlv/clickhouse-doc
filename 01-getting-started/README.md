@@ -193,7 +193,7 @@ ClickHouse 提供的主要压缩算法：
 
 **SIMD（单指令多数据）** 是现代 CPU 的能力：一条机器指令同时处理多个数据。列式存储天然适合 SIMD，因为同一列的数据类型一致、内存连续。
 
-向量化原理深入详见 [02-principles/06_query_execution.md](../16-principle/06_query_execution.md)。
+向量化原理深入详见 [02-principles/06_query_execution.md](../02-principles/06_query_execution.md)。
 
 ---
 
@@ -659,7 +659,7 @@ ENGINE = Distributed(
 
 **生产环境铁律**：所有引擎加 `Replicated` 前缀 + `ON CLUSTER 'treasurycluster'`。
 
-引擎深度对比详见 [04-engines/06_engine_selection_guide.md](../03-engines/06_engine_selection_guide.md)。
+引擎深度对比详见 [04-engines/06_engine_selection_guide.md](../04-engines/06_engine_selection_guide.md)。
 
 ---
 
@@ -733,7 +733,7 @@ SELECT day, sumState(amount) AS gmv_state FROM raw GROUP BY day;
 -- 月表: SELECT sumMerge(gmv_state) FROM mv GROUP BY month ← 状态可继续合并
 ```
 
-原理详见 [05-functions/README.md §3](../04-functions/README.md)。
+原理详见 [05-functions/README.md §3](../05-functions/README.md)。
 
 ---
 
@@ -758,7 +758,7 @@ FROM events u;
 -- 比 LEFT JOIN user_dict 快 10x+
 ```
 
-字典深度详见 [06-modeling/04_dictionaries.md](../03-engines/05_special_engines.sql)（重整中）。
+字典深度详见 [06-modeling/04_dictionaries.md](../06-modeling/04_dictionaries.md)。
 
 ---
 
@@ -889,12 +889,12 @@ docker exec clickhouse-server-1 clickhouse-client --multiquery --queries-file /t
 
 ## 15. 关联章节
 
-- [02-principles](../16-principle/README.md) —— 向量化执行、查询管道、压缩 codec 底层原理 ✅
-- [04-engines](../03-engines/README.md) —— MergeTree 家族全部引擎完整对比 ✅
-- [05-functions](../04-functions/README.md) —— 聚合状态函数 `*State`/`*Merge` 详解 ✅
-- [08-performance](../11-performance/README.md) —— 查询性能调优进阶
-- [03-data-types](../05-data-type/README.md) —— 数据类型深度
-- [10-date-update](../10-date-update/README.md) —— 日期函数、数据更新策略
+- [02-principles](../02-principles/README.md) —— 向量化执行、查询管道、压缩 codec 底层原理 ✅
+- [04-engines](../04-engines/README.md) —— MergeTree 家族全部引擎完整对比 ✅
+- [05-functions](../05-functions/README.md) —— 聚合状态函数 `*State`/`*Merge` 详解 ✅
+- [08-performance](../08-performance/README.md) —— 查询性能调优进阶
+- [03-data-types](../03-data-types/README.md) —— 数据类型深度
+- [07-data-mutation](../07-data-mutation/README.md) —— 数据更新策略
 
 ---
 

@@ -5,8 +5,10 @@
 -- 集群: treasurycluster
 -- =====================================================
 
-DROP DATABASE IF EXISTS distributed_test;
-CREATE DATABASE distributed_test;
+-- 注意: 集群建库必须加 ON CLUSTER，否则 clickhouse-server-2 上数据库不存在，
+-- 后续 ON CLUSTER 建表会报 Code 81 (UNKNOWN_DATABASE)
+DROP DATABASE IF EXISTS distributed_test ON CLUSTER treasurycluster;
+CREATE DATABASE IF NOT EXISTS distributed_test ON CLUSTER treasurycluster;
 USE distributed_test;
 
 -- ========================================
@@ -231,7 +233,8 @@ ORDER BY shard_num, replica_num;
 
 -- 查看分布式表写入的累计数据量
 -- 【原理】system.query_log 记录分布式查询的详细信息
--- 注意: 本集群 query_log 可能已禁用
+-- [需启用] 本集群 config 禁用了 query_log，system.query_log 不存在；
+-- 需在 config.xml 启用 query_log 后该查询才可执行，查询主体保留
 SELECT 
     query,
     ProfileEvents['DistributedSend'] AS distributed_send_bytes,
@@ -331,4 +334,5 @@ DROP TABLE IF EXISTS local_events ON CLUSTER treasurycluster SYNC;
 DROP TABLE IF EXISTS dist_cluster_wide ON CLUSTER treasurycluster SYNC;
 DROP TABLE IF EXISTS cluster_wide_table ON CLUSTER treasurycluster SYNC;
 
-DROP DATABASE IF EXISTS distributed_test;
+-- 与开头 ON CLUSTER 建库对应，DROP 也须 ON CLUSTER
+DROP DATABASE IF EXISTS distributed_test ON CLUSTER treasurycluster;

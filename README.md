@@ -3,13 +3,13 @@
 > 基于 Docker Compose 部署的 2 副本 + 3 Keeper ClickHouse 集群，通过 14 章系统化学习，从零基础到生产级专家。
 > 集群版本：CH 25.12.1.649 ｜ 集群名：`treasurycluster`
 
-## 重整进行中（2026-08-02）
+## 重整完成（2026-08-04）
 
-本教程正在从"21 个章节、内容重叠、文件缺失"重整为"**14 主干章 + 2 附录**、文件完整、职责清晰、深度统一到专家级"。
+本教程已完成从"21 个章节、内容重叠、文件缺失"到"**14 主干章 + 2 附录**、文件完整、职责清晰、深度统一到专家级"的重整（R0-R16）。
 
 - **重整计划**：[.trae/documents/clickhouse-tutorial-reorg-plan.md](./.trae/documents/clickhouse-tutorial-reorg-plan.md)
 - **进度追踪**：[PROGRESS.md](./PROGRESS.md)
-- **当前状态**：R0（根 README + TRAINING_PLAN 重写）执行中；旧批次 1-3（04-functions/16-principle/03-engines）已细化完成
+- **当前状态**：R0-R16 全部完成。全部章节已重命名为新编号（`git mv` 保留历史），旧目录内容归档至 [\_legacy/](./_legacy/)，**新编号目录为准**
 
 ### 旧→新章节映射表
 
@@ -36,143 +36,45 @@
 | 02-advance | 拆分到各专题章 + 导航页 | 拆分 | R9-R12 |
 | 10-date-update | 拆到 03/05/06 章 | 拆分 | R2/R5 |
 
-> **注**：重整期间目录仍为旧编号，重命名在对应 R 批次执行（用 `git mv` 保留历史）。编号冲突 `11-data-update` vs `11-performance` 将在 R3 彻底解决（11-data-update 并入 07-data-mutation）。
+> **注**：所有重命名已于 2026-08-04（R16）用 `git mv` 全部执行完毕（保留 git 历史）。旧目录内容归档至 `_legacy/`，下表左侧"旧章节"即归档目录名，右侧"新章节"为当前生效目录。编号冲突 `11-data-update` vs `11-performance` 已在 R3/R7 彻底解决（分别并入 07-data-mutation / 改名为 08-performance）。
 
 ---
 
-## 当前目录结构（实际文件）
+## 当前目录结构（实际文件，新编号生效）
 
 ```
 clickhouse-doc/
-├── .trae/documents/                    # 重整计划文档
+├── .trae/documents/                    # 重整计划文档（含新旧映射与各批次计划）
 │   ├── clickhouse-doc-deep-refinement-plan.md      # 旧细化计划
 │   └── clickhouse-tutorial-reorg-plan.md          # 重整计划（升级版）
 │
-├── 00-infra/                           # 基础设施（→ 00-infra）
-│   ├── README.md
-│   ├── docker-compose.yml
-│   ├── config/                         # 7 个 xml 配置文件
-│   └── scripts/                        # 入口脚本
+├── 00-infra/                           # 基础设施：Docker Compose + 7 个 xml + 2 脚本
+├── 01-getting-started/                 # 入门（13 SQL）：定位/列存/引擎/基础SQL/集群/复制/分布式/MV/建模
+├── 02-principles/                      # 核心原理（9 文件）：列存/压缩/索引/查询执行(SIMD+Pipeline)/复制/分片
+├── 03-data-types/                      # 数据类型（10 文件）：数值/字符串/日期/复合/特殊/聚合函数类型/转换
+├── 04-engines/                         # 表引擎（8 文件）：MergeTree 家族/复制/Log/集成/特殊/选型决策树
+├── 05-functions/                       # 函数（6 文件）：基础/窗口/聚合组合子(*State/*Merge)/UDF/JSON
+├── 06-modeling/                        # 数据建模（8 文件）：宽表/主键/MV/字典/时序/案例/实时建模
+├── 07-data-mutation/                   # 数据变更（2 文件）：统一数据变更（Mutation/轻量/TTL/删除/更新）
+├── 08-performance/                     # 性能优化（31 文件）：查询/索引/分区/跳数/PREWHERE/Projections/JOIN/Profiling
+├── 09-distributed/                     # 分布式（8 文件）：Keeper Raft/复制决策/分布式表/跨集群DDL/分片键/两阶段聚合
+├── 10-security/                        # 安全权限（22 文件）：认证/RBAC/RLS/加密/审计/Quota/多租户
+├── 11-monitoring-ops/                  # 监控运维（8 文件）：系统监控/备份/告警/Prometheus/容量/分层/维护
+├── 12-troubleshooting/                 # 故障排查（12 文件）：连接/性能/存储/复制/查询/启动/升级/一致性/火焰图
+├── 13-system-tables/                   # 系统表参考（19 文件）：元数据/分区/索引/副本 + query_log 深挖 + 诊断库
+├── 14-integration/                     # 集成生态（27 文件）：Kafka/Flink/Superset/批量导入/DBT/Iceberg/Local/Cloud
+├── 15-best-practices/                  # 最佳实践（9 文件）：Schema/查询/反模式案例库/Do-Don't
+├── appendix-tech-sharing/              # 附录 A：技术分享素材（1 小时分享，中/英）
+├── appendix-blogs/                     # 附录 B：博客收藏
+├── _legacy/                            # 旧内容归档（git mv 保留历史，不作学习导航）
 │
-├── 01-base/                            # 基础使用（→ 01-getting-started）
-│   ├── README.md
-│   ├── 01_basic_operations.sql
-│   ├── 02_replicated_tables.sql
-│   └── 03_distributed_tables.sql
-│
-├── 01-understanding-clickhouse/        # 入门概念（并入 01-getting-started）
-│   ├── README.md
-│   └── 01-06 *.sql（6 个入门示例）
-│
-├── 02-advance/                         # 高级使用（拆分到各专题章）
-│   ├── README.md
-│   └── 01-07 *.sql（性能/备份/监控/安全/HA/迁移/排障）
-│
-├── 03-engines/                         # 表引擎 ✅（→ 04-engines）
-│   ├── README.md
-│   ├── 01_mergetree_engines.sql
-│   ├── 02_replicated_engines.sql
-│   ├── 03_log_engines.sql
-│   ├── 04_integration_engines.sql
-│   ├── 05_special_engines.sql
-│   ├── 06_engine_selection_guide.md
-│   └── 06_engine_selection_guide_examples.sql
-│
-├── 04-functions/                       # 函数 ✅（→ 05-functions）
-│   ├── README.md
-│   ├── 01_basic_functions_examples.sql
-│   └── 02_window_functions_examples.sql
-│
-├── 05-data-type/                       # 数据类型（→ 03-data-types，需补全 03-11）
-│   ├── README.md
-│   ├── 01_numeric_types.md + _examples.sql
-│   └── 02_string_types.md + _examples.sql
-│
-├── 06-admin/                           # 运维管理（并入 11-monitoring-ops）
-│   ├── README.md
-│   ├── BACKUP_RECOVERY_GUIDE.md + _examples.sql
-│   ├── MONITORING_ALERTING_GUIDE.md + _examples.sql
-│   ├── ROUTINE_MAINTENANCE_GUIDE.md + _examples.sql
-│   ├── TROUBLESHOOTING_GUIDE.md + _examples.sql
-│   └── cluster_admin.sql
-│
-├── 07-troubleshooting/                 # 故障排查（→ 12-troubleshooting，需补全 03-10）
-│   ├── README.md
-│   ├── 01_connection_issues.md + _examples.sql
-│   └── 02_performance_issues.md + _examples.sql
-│
-├── 08-information-schema/              # 系统表（→ 13-system-tables）
-│   ├── README.md
-│   └── 01-08 各 .md + _examples.sql（8 对）
-│
-├── 09-data-deletion/                   # 数据删除（并入 07-data-mutation）
-│   ├── README.md
-│   └── 01-07 各 .md + _examples.sql（7 对）
-│
-├── 10-date-update/                     # 日期时间（拆分到 03/05/06）
-│   ├── README.md
-│   └── 01-09 各 .md + _examples.sql（9 对）
-│
-├── 11-data-update/                     # 数据更新（并入 07-data-mutation）
-│   ├── README.md
-│   └── 01-08 各 .md + _examples.sql（8 对）
-│
-├── 11-performance/                     # 性能优化（→ 08-performance）
-│   ├── README.md
-│   └── 01-14 各 .md + _examples.sql（14 对）
-│
-├── 12-security-authentication/         # 安全认证（→ 10-security）
-│   ├── README.md
-│   └── 01-09 各 .md + _examples.sql（9 对）
-│
-├── 13-monitor/                         # 监控（并入 11-monitoring-ops）
-│   ├── README.md
-│   ├── 01-08 各 .md + _examples.sql（8 对）
-│   └── top_cpu_queries.md + _examples.sql
-│
-├── 14-use-case/                        # 用例（拆分到 06/14）
-│   ├── README.md
-│   └── 01-06 *.sql（schema/样本/视图/导入/查询/Superset）
-│
-├── 15-high-performance-bulk-import/    # 批量导入（并入 14-integration）
-│   ├── README.md
-│   ├── 01-07 *.sql/.md
-│   ├── configs/
-│   ├── scripts/
-│   └── terraform/
-│
-├── 16-principle/                       # 核心原理 ✅（→ 02-principles）
-│   ├── README.md
-│   ├── 01-03 *.sql
-│   ├── 04-07 *.md
-│   └── 08_sharding.sql
-│
-├── 17-best-practices/                  # 最佳实践（→ 15-best-practices）
-│   ├── README.md
-│   ├── 01-04 *.sql
-│   └── 05-06 *.md
-│
-├── 18-ch-introduction-cn/              # 技术分享中文（→ 附录 A）
-│   ├── README.md
-│   └── 01-06 *.sql
-│
-├── 19-ch-introduction-en/              # 技术分享英文（→ 附录 A）
-│   ├── README.md
-│   └── 01-06 *.sql
-│
-├── 20-flink-clickhouse-superset/       # Flink+CH+Superset（拆分到 06/14）
-│   ├── README.md
-│   └── 01-09 *.md/.sql
-│
-├── blogs/                              # 博客（→ 附录 B）
-│   ├── clickhouse-mergetree-deep-dive.md
-│   └── clickhouse-mergetree-deep-dive-en.md
-│
-├── PROGRESS.md                         # 进度追踪
+├── PROGRESS.md                         # 进度追踪（R0-R16 全部完成）
 ├── README.md                           # 本文件
 ├── TRAINING_PLAN.md                    # 培训计划（12 周）
 └── test.sql                            # 测试 SQL
 ```
+
+> 各目录文件数量为当前实际数量（2026-08-04）。旧→新章节映射见上方表格。
 
 ---
 
@@ -246,12 +148,12 @@ docker exec -it clickhouse-server-1 clickhouse-client -q "SELECT version()"
 
 按 [TRAINING_PLAN.md](./TRAINING_PLAN.md) 的 12 周路径学习，或按阶段选择：
 
-- **入门**：[01-base/README.md](./01-base/README.md) → [16-principle/README.md](./16-principle/README.md)
-- **进阶**：[03-engines/README.md](./03-engines/README.md) → [04-functions/README.md](./04-functions/README.md)
-- **高级**：[11-performance/README.md](./11-performance/README.md) → [12-security-authentication/README.md](./12-security-authentication/README.md)
-- **专家**：[08-information-schema/README.md](./08-information-schema/README.md) → [17-best-practices/README.md](./17-best-practices/README.md)
+- **入门**：[01-getting-started/README.md](./01-getting-started/README.md) → [02-principles/README.md](./02-principles/README.md)
+- **进阶**：[04-engines/README.md](./04-engines/README.md) → [05-functions/README.md](./05-functions/README.md)
+- **高级**：[08-performance/README.md](./08-performance/README.md) → [10-security/README.md](./10-security/README.md)
+- **专家**：[13-system-tables/README.md](./13-system-tables/README.md) → [15-best-practices/README.md](./15-best-practices/README.md)
 
-> **已细化完成的章节**（专家级深度标杆）：[04-functions](./04-functions/README.md)、[16-principle](./16-principle/README.md)、[03-engines](./03-engines/README.md)
+> **已细化完成的章节**（全部 14 章 + 2 附录均为专家级深度）：01-getting-started / 02-principles / 03-data-types / 04-engines / 05-functions / 06-modeling / 07-data-mutation / 08-performance / 09-distributed / 10-security / 11-monitoring-ops / 12-troubleshooting / 13-system-tables / 14-integration / 15-best-practices / 附录 A（技术分享）/ 附录 B（博客）
 
 ---
 
