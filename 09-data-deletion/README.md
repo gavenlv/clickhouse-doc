@@ -1,6 +1,12 @@
-# 数据删除专题
+# 数据删除专题（已合并 → 07-data-mutation）
 
-本专题介绍 ClickHouse 中各种数据删除方法、策略和最佳实践。
+> **⚠️ 本目录已合并到 [07-data-mutation](../07-data-mutation/)**
+>
+> 按重整计划（R3 批次），09-data-deletion（数据删除）与 11-data-update（数据更新）已合并为统一的 `07-data-mutation` 章节。
+>
+> 合并后的章节覆盖：Mutation 原理、分区操作、TTL、轻量操作、异步插入、并发隔离、实战案例。
+>
+> 旧文件保留用于参考，新内容请访问 [07-data-mutation/README.md](../07-data-mutation/README.md)。
 
 ## 📚 文档目录
 

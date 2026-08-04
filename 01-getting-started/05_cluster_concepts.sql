@@ -218,10 +218,11 @@ ENGINE = Distributed(treasurycluster, tutorial, local_users, rand());
 CREATE TABLE IF NOT EXISTS tutorial.dist_user_id AS tutorial.local_users
 ENGINE = Distributed(treasurycluster, tutorial, local_users, user_id);
 
--- 策略 3: 按城市分片（city）
+-- 策略 3: 按城市分片（cityHash64(city)）
 -- 优点：按地理位置聚合时更高效
+-- 【坑】分片键必须是整数类型，String 列需用 cityHash64() 转为 UInt64
 CREATE TABLE IF NOT EXISTS tutorial.dist_city AS tutorial.local_users
-ENGINE = Distributed(treasurycluster, tutorial, local_users, city);
+ENGINE = Distributed(treasurycluster, tutorial, local_users, cityHash64(city));
 
 -- 策略 4: 取模分片（intHash64(user_id) % 2）
 -- 优点：更均匀的数据分布
@@ -286,11 +287,13 @@ FROM clusterAllReplicas(treasurycluster, system.tables)
 GROUP BY node;
 
 -- 查看分布式表发送的数据量
-SELECT 
+-- 【坑】本集群 query_log 已禁用，改用 query_thread_log（需 SET log_query_threads = 1）
+SET log_query_threads = 1;
+SELECT
     hostName() AS node,
     formatReadableSize(sum(ProfileEvents['DistributedSend'])) AS data_sent
-FROM clusterAllReplicas(treasurycluster, system.query_log)
-WHERE event_date >= today() - 1
+FROM clusterAllReplicas(treasurycluster, system.query_thread_log)
+WHERE event_time >= today() - 1
 GROUP BY node;
 
 -- -----------------------------------------------------

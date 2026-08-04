@@ -266,7 +266,11 @@ GROUP BY event_date;
 
 SELECT
     name AS engine_name,
-    if(has_own_data = 1, '存储数据', '虚拟引擎') AS engine_type
+    -- 【坑】system.table_engines 无 has_own_data 列，用引擎名分类
+    multiIf(
+        name LIKE '%MergeTree%' OR name LIKE '%Log%', '存储数据',
+        '虚拟引擎'
+    ) AS engine_type
 FROM system.table_engines
 WHERE name LIKE '%MergeTree%' OR name LIKE '%Log%'
 ORDER BY engine_type, engine_name

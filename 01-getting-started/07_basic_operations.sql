@@ -112,6 +112,7 @@ USE base_test;
 --   MergeTree: 单机，无副本，测试用
 --   ReplicatedMergeTree: 通过 ZK 复制，生产必备
 -- 【坑】ReplicatedMergeTree 必须带括号()，否则语法错
+-- 【坑】使用显式 ZK 路径（加 gs_ 前缀）避免与历史残留的 ZK 节点冲突
 DROP TABLE IF EXISTS test_users ON CLUSTER 'treasurycluster' SYNC;
 
 CREATE TABLE IF NOT EXISTS test_users ON CLUSTER 'treasurycluster' (
@@ -121,7 +122,7 @@ CREATE TABLE IF NOT EXISTS test_users ON CLUSTER 'treasurycluster' (
     age UInt8,
     created_at DateTime DEFAULT now(),
     updated_at DateTime DEFAULT now()
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/gs_test_users', '{replica}')
 ORDER BY id;
 
 -- 查看表结构

@@ -12,7 +12,10 @@
 
 ---
 
-## 当前阶段：R0 已完成，下一批次 R1（01-getting-started 合并 + 补全）
+## 当前阶段：R10 已完成，下一批次 R11（14-integration 合并）
+
+> R9 完成：创建 11-monitoring-ops 目录，合并 06-admin/13-monitor/02-advance 运维内容，新增 Prometheus/容量规划/分层存储。
+> **注意**：R2-R9 的 SQL 文件待集群恢复后验证（Docker Desktop 未运行）。
 
 ### 重整计划核心结论（2026-08-02 诊断）
 
@@ -32,16 +35,16 @@
 | 批次 | 内容 | 优先级 | 状态 | 完成日期 | 说明 |
 |------|------|--------|------|----------|------|
 | **R0** | 根 README + TRAINING_PLAN 重写 + 编号冲突标注 | P0 阻塞 | ✅ | 2026-08-02 | 根 README 目录树与实际一致；TRAINING_PLAN 引用真实文件；编号冲突已标注 |
-| **R1** | 01-getting-started 合并 + 补全（01-base + 01-understanding） | P0 阻塞 | ⬜ | — | TRAINING_PLAN 引用的 6 个文件缺失 |
-| **R2** | 03-data-types 补全（原 05-data-type） | P1 完整性 | ⬜ | — | README 声称 11 实际 5 |
-| **R3** | 07-data-mutation 合并（原 09-data-deletion + 11-data-update） | P1 完整性 | ⬜ | — | 消除最大重叠组，解决 11-vs-11 编号冲突 |
-| **R4** | 12-troubleshooting 补全（原 07-troubleshooting） | P1 完整性 | ⬜ | — | README 声称 10 实际 2 |
-| **R5** | 06-modeling 新建 | P1 完整性 | ⬜ | — | 教程核心，当前完全缺失 |
-| **R6** | 09-distributed 新建 | P1 完整性 | ⬜ | — | 分布式深度，当前散落 |
-| **R7** | 08-performance 深化 + 补 Projections/JOIN（原 11-performance） | P2 深化 | ⬜ | — | 旧批次 4，性能是专家核心 |
-| **R8** | 05-functions 扩充（原 04-functions，聚合组合子/UDF/JSON） | P2 深化 | ⬜ | — | 已细化，补缺失专题 |
-| **R9** | 11-monitoring-ops 合并 + 补 Prometheus/容量 | P2 深化 | ⬜ | — | 合并 06-admin + 13-monitor + 02-advance 运维 |
-| **R10** | 10-security 深化 + 补 Quota/多租户（原 12-security-authentication） | P2 深化 | ⬜ | — | 已有 9 节，补 2 节 |
+| **R1** | 01-getting-started 合并 + 补全（01-base + 01-understanding） | P0 阻塞 | ✅ | 2026-08-03 | 13 个 SQL 全集群验证零错误，README 专家级重写 |
+| **R2** | 03-data-types 补全（原 05-data-type） | P1 完整性 | ✅ | 2026-08-03 | 补全 5 个缺失 SQL 文件，README 重写，10 个文件覆盖全部数据类型体系 |
+| **R3** | 07-data-mutation 合并（原 09-data-deletion + 11-data-update） | P1 完整性 | ✅ | 2026-08-03 | 合并为统一数据变更章，9 节覆盖全部变更手段，解决 11-vs-11 编号冲突 |
+| **R4** | 12-troubleshooting 补全（原 07-troubleshooting） | P1 完整性 | ✅ | 2026-08-03 | 补全 9 个缺失 SQL 文件，11 个专题覆盖全部故障场景，README 专家级重写 |
+| **R5** | 06-modeling 新建 | P1 完整性 | ✅ | 2026-08-03 | 创建 8 个文件（README + 7 SQL），覆盖宽表/主键/MV/字典/时序/案例/实时建模 |
+| **R6** | 09-distributed 新建 | P1 完整性 | ✅ | 2026-08-03 | 创建 8 个文件，覆盖 Keeper Raft/复制决策/分布式表/跨集群 DDL/分片键/两阶段聚合/GLOBAL JOIN |
+| **R7** | 08-performance 深化 + 补 Projections/JOIN（原 11-performance） | P2 深化 | ✅ | 2026-08-03 | 新增 Projections + JOIN 策略两个专家级专题，README 重写，16 节覆盖全性能体系 |
+| **R8** | 05-functions 扩充（原 04-functions，聚合组合子/UDF/JSON） | P2 深化 | ✅ | 2026-08-03 | 新增 3 个专家级 SQL 文件（聚合组合子/UDF/JSON），README 重写，5 个文件覆盖全函数体系 |
+| **R9** | 11-monitoring-ops 合并 + 补 Prometheus/容量 | P2 深化 | ✅ | 2026-08-03 | 合并 06-admin/13-monitor/02-advance，新增 Prometheus/容量规划/分层存储，8 个文件覆盖运维全体系 |
+| **R10** | 10-security 深化 + 补 Quota/多租户（原 12-security-authentication） | P2 深化 | ✅ | 2026-08-04 | 迁入 9 节，新增 Quota/Workload 和多租户隔离 2 个专题，README 专家级重写，共 22 文件 |
 | **R11** | 14-integration 合并 + 补 Kafka/Flink/DBT/Iceberg | P2 深化 | ⬜ | — | 合并 03-engines/04 + 14-use-case + 20-flink + 15-bulk-import |
 | **R12** | 15-best-practices 扩充（原 17-best-practices） | P3 优化 | ⬜ | — | 反模式案例库 |
 | **R13** | 13-system-tables 深化（原 08-information-schema） | P3 优化 | ⬜ | — | query_log 字段解读 |
@@ -339,27 +342,119 @@
 
 ---
 
-## 下批次计划：R1 — 01-getting-started 合并 + 补全
+## R1 完成记录（2026-08-03）
 
-> **优先级**：P0 阻塞（TRAINING_PLAN 引用的 01-base 04-09 共 6 个文件缺失）
+### 交付物
 
-**R1 范围**：
-1. 合并 `01-understanding-clickhouse/` 内容到 `01-base/`（6 个入门 sql 作为前 3 节）
-2. 重命名 `01-base/` → `01-getting-started/`（用 `git mv` 保留历史）
-3. 补全 6 个缺失文件：
-   - `04_system_queries.sql` — 系统表查询入门
-   - `05_materialized_views.sql` — 物化视图入门
-   - `06_data_modeling.sql` — 数据建模入门
-   - `07_realtime_writes.sql` — 实时写入入门
-   - `08_data_deduplication.sql` — 数据去重入门
-   - `09_advanced_features.sql` — 高级特性入门
-4. 重写 `01-getting-started/README.md` 达专家级深度（五段式：本章解决什么问题/核心原理/概念对比/常见误区/自测题）
-5. 删除 `01-understanding-clickhouse/` 目录（内容已合并）
-6. 在集群上验证所有 SQL 文件零错误
+#### 01-getting-started/README.md（专家级重写）
+- "本章解决什么问题"对标 10+ 核心痛点
+- ClickHouse 整体架构（Client/Server/Storage/Keeper 四层）
+- 列式存储 vs 行式存储 ASCII 图解 + 压缩原理（LZ4/ZSTD/Delta/Gorilla）
+- MergeTree Part 生命周期 + 稀疏索引 mark 机制 + 合并算法
+- 分片副本与 Keeper 协同 + 复制表/分布式表路由
+- 物化视图预聚合 + *State/*Merge 函数原理
+- 表引擎选型决策表 + 数据建模指南
+- 常见误区 + 最佳实践 + 自测题
 
-**深度标准**（沿用批次 1-3 标杆）：
-- 每个文件含【原理】【场景】【对比】【坑】注释
-- SQL 在 clickhouse-server-1 零错误执行
-- README 含决策表与 ASCII 图
+#### 13 个 SQL 文件（全集群验证零错误）
 
-**后续批次**按 R2→R16 顺序推进，详见上方"重整批次进度总览"表。
+| 文件 | 内容 | 状态 |
+|------|------|------|
+| 01_what_is_clickhouse.sql | CH 定位、架构、system 表入门 | ✅ |
+| 02_column_oriented.sql | 列式 vs 行式、压缩、index_granularity | ✅ |
+| 03_mergetree_engine.sql | MergeTree 家族 6 变体、Part 生命周期 | ✅ |
+| 04_basic_sql.sql | DDL/DML、聚合、JOIN、子查询 | ✅ |
+| 05_cluster_concepts.sql | 分片/副本/分布式表/分片键/GLOBAL JOIN | ✅ |
+| 06_first_replicated_table.sql | ReplicatedMergeTree 创建/复制验证/分区管理 | ✅ |
+| 07_basic_operations.sql | CRUD、批量写、聚合查询、复制表操作 | ✅ |
+| 08_replicated_tables.sql | 复制原理、system.replicas/replication_queue、Keeper | ✅ |
+| 09_distributed_tables.sql | 分布式表路由、两阶段聚合、分片键、负载均衡 | ✅ |
+| 10_system_queries.sql | system.clusters/replicas/parts/merges/query_thread_log | ✅ |
+| 11_materialized_views.sql | MV 预聚合、*State/*Merge、多级聚合链、MV vs Projection | ✅ |
+| 12_data_modeling.sql | 宽表 vs 星型、ORDER BY 设计、分区策略、时序建模 | ✅ |
+| 13_advanced_features.sql | TTL/分层存储/SAMPLE/CTE/数组/JSON/async_insert/PREWHERE | ✅ |
+
+### 修复的 ClickHouse 25.12 兼容性问题（R1 新增）
+
+| 问题 | 原因 | 修复方式 |
+|------|------|----------|
+| `system.table_engines` 无 `has_own_data` 列 | CH 25.x 列名变更 | 用 `multiIf(name LIKE '%MergeTree%'...,'存储数据','虚拟引擎')` 分类 |
+| INSERT VALUES 块内行内注释（3 处） | CH 解析器不支持 VALUES 块内 `--` 注释 | 注释移到 INSERT 语句前 |
+| Distributed 分片键类型为 String | 分片键必须整数类型 | `city` → `cityHash64(city)` |
+| `clusterAllReplicas` 查询 SELECT 缺 `hostName() AS node` 但 ORDER BY 引用 `node` | 别名缺失 | SELECT 添加 `hostName() AS node` |
+| `ReplicatedMergeTree()` 默认 ZK 路径残留导致 REPLICA_ALREADY_EXISTS | 历史 ZK 节点未清理 | 显式 ZK 路径 `/clickhouse/tables/{shard}/gs_test_users` |
+| `system.replication_queue` 无 `num_parts` 列 | CH 25.x 改用 `parts_to_merge` (Array) | `length(parts_to_merge) AS num_parts` |
+| `system.replication_queue` 无 `is_permanently_failed` 列 | CH 25.x 无此列 | 改用 `num_tries`（重试次数） |
+| `system.replicas` 无 `leader_election` 列 | CH 25.x 拆分 | `is_leader, can_become_leader` |
+| `system.merges` 无 `is_currently_running` / `elapsed_time` | CH 25.x 列名变更 | 移除 `is_currently_running`；`elapsed_time` → `elapsed` |
+| `clusterAll` 表函数不存在 | 应为 `clusterAllReplicas` | 改正函数名 |
+| `clusterAllReplicas` 查用户表时 `shard_num` 列不存在 | 虚拟列需用 `_shard_num` | `shard_num` → `_shard_num`；`host_name` → `hostName() AS host_name`；`sum(row_count)` → `count() AS row_count` |
+| `system.query_log` 不存在（本集群禁用） | config.xml `<query_log remove="1"/>` | 改用 `system.query_thread_log` + `SET log_query_threads = 1` |
+| `system.zookeeper_connection` 列名不符（status/session_id 等） | CH 25.x 列名变更 | 用 `is_expired/client_id/xid/session_uptime_elapsed_seconds` |
+| 字典属性类型 `LowCardinality(String)` 不支持 | 字典属性不能用 LowCardinality | 改为 `String` |
+| `toYYYY(month)` 函数不存在 | CH 无 toYYYY 函数 | 改用 `toYYYYMM(month)` |
+| `toStartMinute` 函数不存在 | 应为 `toStartOfMinute` | 改正函数名 |
+| `system.parts` 的 `min_age/max_age` 列不存在 | CH 25.x 用 min_date/max_date | 改用 `min_date/max_date` |
+| MV 多级聚合缺少 `*MergeState` 函数 | GROUP BY AggregateFunction 列需用 *MergeState 合并 | 添加 `sumMergeState/countMergeState` |
+| `arrayCount(arr)` 单参数要求 UInt8 数组 | 统计数组长度应用 `length()` | `arrayCount(amounts)` → `length(amounts)` |
+| SAMPLE BY 未在表定义中声明 | 表需声明 SAMPLE BY 表达式 | 添加 `SAMPLE BY user_hash` + ORDER BY 含 user_hash |
+
+### 验证结果
+- ✅ 全部 13 个 SQL 文件在 clickhouse-server-1（CH 25.12.1.649）零错误执行
+- ✅ 功能验证：物化视图预聚合、多级聚合链（日→月→年）、SAMPLE 采样查询、TTL 自动过期、数组函数、JSON 提取均正确
+- ⚠️ 跨副本同步：server-2 未同步数据，属 Windows Docker 复制环境已知限制（见 00-infra/README.md），非文档问题
+
+---
+
+---
+
+## R10 完成记录（2026-08-04）
+
+### 交付物
+
+#### 1. 从 12-security-authentication 迁移 9 节（18 个文件）
+- 01_authentication：用户认证（SHA-256/LDAP/Kerberos/SSL 证书）
+- 02_user_role_management：用户和角色管理（RBAC 核心）
+- 03_permissions：权限控制（全局/数据库/表/列级 + 权限管理）
+- 04_row_level_security：行级安全（ROW POLICY 原理和实战）
+- 05_network_security：网络安全（SSL/TLS/IP 白名单）
+- 06_data_encryption：数据加密（磁盘/列级/传输加密）
+- 07_audit_log：审计日志（query_log/session_log/mutation_log）
+- 08_best_practices：安全最佳实践（设计原则/实施指南）
+- 09_common_configs：常见安全配置（XML + SQL 三层配置对照）
+
+#### 2. 新增 Quota 与 Workload Management 专题
+- [10_quota_workload.md](./10-security/10_quota_workload.md)：专家级专题文档，含 Quota 原理（配额键/时间窗口/硬软限制）、Workload Group 调度策略、资源限制类型详解、监控诊断方法
+- [10_quota_workload_examples.sql](./10-security/10_quota_workload_examples.sql)：6 部分可运行 SQL 示例，覆盖基础操作/资源限制/多层级 SLA/多租户隔离/监控诊断全流程
+
+#### 3. 新增多租户隔离专题
+- [11_multi_tenancy.md](./10-security/11_multi_tenancy.md)：专家级专题文档，对比四种隔离策略（数据库级/表级/行级 RLS/混合）、含选择决策树、资源隔离、租户监控计量、跨租户共享、数据迁移
+- [11_multi_tenancy_examples.sql](./10-security/11_multi_tenancy_examples.sql)：9 部分可运行 SQL 示例，覆盖四种策略全流程实现/资源隔离配置/监控计量/数据迁移/跨租户共享/清理脚本
+
+#### 4. 10-security/README.md 专家级重写
+- 新增"本章解决什么问题"痛点对标表（10 个痛点 → 对应专题）
+- 新增 ClickHouse 安全五层防御全景图（网络→认证→授权→资源管控→审计加密）
+- **核心概念深度**：RBAC 用户-角色-权限三角原理、RLS SQL 解析器注入原理、Quota vs Workload Group vs Settings 三层对比表、多租户四种策略本质对比 + 选型决策树
+- 新增"快速上手：5 步搭建最小安全体系"
+- 新增 8 条常见误区纠正（default 用户/RBAC 扁平化/RLS 性能/Workload 非抢占/Quota 非并发/SSL 证书过期等）
+- 新增 6 维度安全配置检查清单（基础/网络/数据保护/访问控制/资源管控/审计监控/多租户）
+- 新增 5 天学习路径建议
+
+### 验收
+- ✅ 22 个文件全部就位（9 个迁移文件 × 2 + 2 个新增专题 × 2 + README）
+- ✅ 所有文档引用关系（跨章链接）正确
+- ✅ README 达到专家级深度（五层全景 + 核心概念对比表 + 误区纠正 + 检查清单）
+- ⬜ SQL 文件待集群恢复后验证（Docker Desktop 未运行）
+
+---
+
+## 下批次计划：R11 — 14-integration 合并 + 补 Kafka/Flink/DBT/Iceberg
+
+> **优先级**：P2 深化（合并 3 章 + 补 8 节）
+
+**R11 范围**：
+1. 合并 03-engines/04（集成引擎）+ 14-use-case + 20-flink + 15-bulk-import 到 14-integration
+2. 补全缺失专题：Kafka 深度/DBT/Iceberg/Lakehouse Format/ClickHouse Local/ClickHouse Cloud
+3. 重写 README.md 达专家级深度
+
+**后续批次**按 R12→R16 顺序推进，详见上方"重整批次进度总览"表。

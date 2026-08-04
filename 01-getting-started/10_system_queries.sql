@@ -55,11 +55,13 @@ ORDER BY shard_num, replica_num;
 -- 【场景】复制延迟排查；is_readonly=1 时无法写入，需立即处理
 
 -- 先创建一张复制表用于演示
+-- 【注意】使用显式 ZK 路径（加 gs_ 前缀）避免与历史残留的 ZK 节点冲突
+--        生产中通常用默认宏路径：ENGINE = ReplicatedMergeTree() （自动展开为 /clickhouse/tables/{shard}/{table}）
 CREATE TABLE IF NOT EXISTS replica_demo
 (
     id UInt64,
     event_time DateTime DEFAULT now()
-) ENGINE = ReplicatedMergeTree()
+) ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/gs_replica_demo', '{replica}')
 PARTITION BY toYYYYMM(event_time)
 ORDER BY id;
 
@@ -189,6 +191,7 @@ LIMIT 10;
 --   生产推荐：query_thread_log 更细，能定位单线程瓶颈
 
 -- Top 10 最慢查询（按平均耗时）
+-- 【坑】system.query_thread_log 没有 type 列（query_log 才有），不能按 type 过滤
 SELECT
     substring(query, 1, 60) AS query_preview,
     count() AS executions,
@@ -197,7 +200,6 @@ SELECT
     sum(read_rows) AS total_rows_read
 FROM system.query_thread_log
 WHERE event_time > now() - INTERVAL 1 HOUR
-  AND type = 'QueryStart'  -- 仅查询开始事件
 GROUP BY query_preview
 ORDER BY avg_ms DESC
 LIMIT 10;
@@ -228,7 +230,7 @@ SELECT
     origin,                     -- 来源
     lifetime_min, lifetime_max, -- 生命周期
     loading_start_time,         -- 加载开始时间
-    loading_duration_ms,        -- 加载耗时
+    loading_duration,           -- 加载耗时（毫秒）
     last_successful_update_time,-- 最后成功更新时间
     status                      -- 状态：LOADED/FAILED/NOT_LOADED
 FROM system.dictionaries
@@ -283,15 +285,16 @@ FROM system.disks
 FORMAT Vertical;
 
 -- 7.4 Keeper 连接状态
+-- 【坑】system.zookeeper_connection 实际列：name/host/port/index/connected_time/is_expired/client_id/xid 等
+--       没有 status/session_id/watches_count 列
 SELECT
     name,
     host,
     port,
-    status,              -- ok/failed
-    client_id,
-    session_id,
-    xid,
-    watches_count
+    is_expired,                          -- 0=正常，1=会话过期
+    client_id,                           -- 会话 ID
+    xid,                                 -- 当前事务 ID
+    session_uptime_elapsed_seconds       -- 连接已建立时长（秒）
 FROM system.zookeeper_connection
 FORMAT Vertical;
 
@@ -306,8 +309,10 @@ FORMAT Vertical;
 -- ============================================================================
 -- §8. 清理
 -- ============================================================================
+-- 【坑】ReplicatedMergeTree 的 DROP TABLE 必须加 SYNC，否则 ZK 元数据残留
+--       下次 CREATE 同名表会报 REPLICA_ALREADY_EXISTS
 DROP DICTIONARY IF EXISTS user_dict;
-DROP TABLE IF EXISTS replica_demo;
+DROP TABLE IF EXISTS replica_demo SYNC;
 DROP DATABASE IF EXISTS getting_started_test;
 
 -- ============================================================================

@@ -208,14 +208,14 @@ UNION ALL
 SELECT 'Local table count:' as source, count() as count FROM test_local_orders;
 
 -- 查看数据分布
+-- 【坑】clusterAllReplicas 查用户表时，shard_num/replica_num 是虚拟列，需用 _shard_num/_replica_num
 SELECT
-    shard_num,
-    replica_num,
-    host_name,
-    sum(row_count) as row_count
-FROM clusterAll('treasurycluster', 'default', 'test_local_orders')
-GROUP BY shard_num, replica_num, host_name
-ORDER BY shard_num, replica_num;
+    _shard_num,
+    hostName() AS host_name,
+    count() AS row_count
+FROM clusterAllReplicas('treasurycluster', 'default', 'test_local_orders')
+GROUP BY _shard_num, host_name
+ORDER BY _shard_num;
 
 -- ┌─────────────────────────────────────────────────────────────┐
 -- │           负载均衡原理                                         │

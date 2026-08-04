@@ -199,8 +199,8 @@ SELECT
     replica_name,
     position,
     node_name,
-    num_parts,
-    is_permanently_failed,
+    length(parts_to_merge) AS num_parts,    -- 【坑】CH 25.x 无 num_parts 列，用 length(parts_to_merge)
+    num_tries,                              -- 【坑】CH 25.x 无 is_permanently_failed，用 num_tries（重试次数，高值=持续失败）
     last_exception
 FROM system.replication_queue
 WHERE table = 'test_replicated_events'
@@ -224,7 +224,8 @@ SELECT
     replica_name,
     zookeeper_path,
     replica_path,
-    leader_election
+    is_leader,               -- 【坑】CH 25.x 无 leader_election 列，用 is_leader + can_become_leader
+    can_become_leader
 FROM system.replicas
 WHERE table = 'test_replicated_events';
 
@@ -411,11 +412,11 @@ WHERE database = 'base_test'
 ORDER BY table, replica_name;
 
 -- 查看合并操作状态
+-- 【坑】system.merges 只有正在执行的 merge；无 is_currently_running 列；elapsed_time 应为 elapsed
 SELECT
     database,
     table,
-    is_currently_running,
-    elapsed_time,
+    elapsed,                           -- 已耗时（秒）
     progress,
     num_parts,
     total_size_bytes_compressed,

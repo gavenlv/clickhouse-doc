@@ -1,8 +1,8 @@
 # ClickHouse 数据类型（专家级详解）
 
-> 本章是 schema 设计的基础。读完本章，你应能：为每个字段选择最省空间又最准确的类型、理解 LowCardinality 的字典编码原理、知道 Decimal vs Float 的精度与性能权衡、明白 Nullable 为什么有额外开销。
+> 本章是 schema 设计的基础。读完本章，你应能：为每个字段选择最省空间又最准确的类型、理解 LowCardinality 的字典编码原理、知道 Decimal vs Float 的精度与性能权衡、明白 Nullable 为什么有额外开销、掌握时间类型内部存储与时区处理、精通复合类型（Array/Tuple/Map/Nested）选型、理解 AggregateFunction 状态存储原理、规避类型转换陷阱。
 >
-> 配套文件：[01_numeric_types.md](./01_numeric_types.md)、[01_numeric_types_examples.sql](./01_numeric_types_examples.sql)、[02_string_types.md](./02_string_types.md)、[02_string_types_examples.sql](./02_string_types_examples.sql)
+> 配套文件：10 个文件（2 个 MD + 8 个 SQL），覆盖 CH 全部数据类型体系
 
 ---
 
@@ -14,8 +14,12 @@
 | LowCardinality 神器到底怎么省空间的？什么时候不能用？ | §3.2 LowCardinality 字典编码原理 |
 | 金额用 Float 还是 Decimal？性能差多少？ | §3.3 Decimal vs Float 精度原理 |
 | Nullable 为什么有性能开销？什么时候该用？ | §3.4 Nullable 存储原理 |
-| Date/DateTime/DateTime64 内部怎么存？时区怎么处理？ | §3.5 时间类型内部表示 |
+| Date/DateTime/DateTime64 内部怎么存？时区怎么处理？ | §3.5 时间类型内部表示 + 03_date_time_types.sql |
 | String / FixedString / LowCardinality 怎么选？ | §3.6 字符串类型决策表 |
+| Array/Tuple/Map/Nested 四类复合类型怎么选？性能差多少？ | 04_compound_types.sql 全套对比 |
+| Enum8 和 LowCardinality(String) 怎么选？UUID/IPv4 存 String 浪费多少？ | 05_special_types.sql 存储对比实验 |
+| AggregateFunction 存的是什么二进制状态？和 SimpleAggregateFunction 区别？ | 06_aggregate_function_types.sql 原理 + 实战 |
+| CAST 和隐式转换有什么陷阱？溢出不报错怎么办？ | 07_type_conversion.sql 全套陷阱演示 |
 
 ---
 
@@ -232,14 +236,17 @@ Decimal64(2) 存储 0.1 + 0.2:
 
 ## 4. 文件导航
 
-| 文件 | 主题 | 内容 |
-|------|------|------|
-| [01_numeric_types.md](./01_numeric_types.md) | 数值类型详解 | 整数/浮点/Decimal 原理与选型 |
-| [01_numeric_types_examples.sql](./01_numeric_types_examples.sql) | 数值类型示例 | 可运行示例（含溢出、精度演示） |
-| [02_string_types.md](./02_string_types.md) | 字符串类型详解 | String/FixedString/LowCardinality |
-| [02_string_types_examples.sql](./02_string_types_examples.sql) | 字符串类型示例 | LowCardinality 压缩对比、FixedString |
-
-> 注：其他类型（日期、数组、Map 等）的示例分散在各章节，日期类型详见 [10-date-update](../10-date-update/)，数组/Map 详见 [04-functions](../04-functions/)。
+| 文件 | 主题 | 内容 | 状态 |
+|------|------|------|------|
+| [01_numeric_types.md](./01_numeric_types.md) | 数值类型详解 | 整数/浮点/Decimal 原理与选型 | ✅ 已细化 |
+| [01_numeric_types_examples.sql](./01_numeric_types_examples.sql) | 数值类型示例 | 可运行示例（含溢出、精度演示） | ✅ 已细化 |
+| [02_string_types.md](./02_string_types.md) | 字符串类型详解 | String/FixedString/LowCardinality 字典编码 | ✅ 已细化 |
+| [02_string_types_examples.sql](./02_string_types_examples.sql) | 字符串类型示例 | LowCardinality 压缩对比、FixedString | ✅ 已细化 |
+| [03_date_time_types.sql](./03_date_time_types.sql) | 时间类型详解 | Date/DateTime/DateTime64 内部表示、时区处理、精度实验、时间函数、分区聚合实战 | ✅ 已创建 |
+| [04_compound_types.sql](./04_compound_types.sql) | 复合类型详解 | Array/Tuple/Map/Nested 四类复合类型原理、操作函数、选型对比 | ✅ 已创建 |
+| [05_special_types.sql](./05_special_types.sql) | 特殊类型详解 | Enum/UUID/IPv4/IPv6/Nullable/JSON/Bool 原理、存储对比、选型决策 | ✅ 已创建 |
+| [06_aggregate_function_types.sql](./06_aggregate_function_types.sql) | 聚合状态类型 | AggregateFunction vs SimpleAggregateFunction 原理、多级聚合、实时大屏实战 | ✅ 已创建 |
+| [07_type_conversion.sql](./07_type_conversion.sql) | 类型转换详解 | CAST/toType 显式转换、隐式转换陷阱、溢出/精度陷阱、安全转换 | ✅ 已创建 |
 
 ---
 
@@ -313,7 +320,7 @@ Decimal64(2) 存储 0.1 + 0.2:
 
 ## 8. 关联章节
 
-- [04-functions](../04-functions/README.md) —— 类型相关函数（转换、数组、Map）
-- [10-date-update](../10-date-update/) —— 日期时间类型与函数大全
-- [11-performance](../11-performance/README.md) —— 类型对性能的影响
-- [17-best-practices](../17-best-practices/README.md) —— schema 设计最佳实践
+- [05-functions](../05-functions/README.md) —— 类型相关函数（转换、数组、Map、聚合）
+- [06-modeling](../06-modeling/README.md) —— schema 设计、主键设计、时间序列建模（新建中）
+- [08-performance](../08-performance/README.md) —— 类型对性能的影响
+- [15-best-practices](../15-best-practices/README.md) —— schema 设计最佳实践

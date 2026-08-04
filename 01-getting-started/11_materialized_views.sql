@@ -174,18 +174,19 @@ CREATE TABLE events_monthly_agg
     amount_state AggregateFunction(sum, Float64),
     event_count_state AggregateFunction(count)
 ) ENGINE = AggregatingMergeTree()
-PARTITION BY toYYYY(month)
+PARTITION BY toYYYYMM(month)    -- 【坑】CH 没有 toYYYY 函数，按年月分区用 toYYYYMM
 ORDER BY (month, user_id);
 
 -- 3.2 MV：从日表触发（不是从源表！）
+-- 【坑】GROUP BY 时不能直接 SELECT AggregateFunction 列，必须用 *MergeState 合并状态
 CREATE MATERIALIZED VIEW mv_events_monthly
 TO events_monthly_agg
 AS
 SELECT
     toStartOfMonth(event_date) AS month,
     user_id,
-    amount_state,                -- 直接传状态（已经是 *State 类型）
-    event_count_state
+    sumMergeState(amount_state) AS amount_state,         -- 合并多个日状态为月状态
+    countMergeState(event_count_state) AS event_count_state
 FROM events_daily_agg
 GROUP BY month, user_id;
 
@@ -241,11 +242,11 @@ SELECT
 FROM page_views
 GROUP BY minute, page_id;
 
--- 测试
+-- 测试（注意：同一用户 1 在 10:00:00 和 10:00:45 两次访问 /home）
 INSERT INTO page_views VALUES
     ('2024-01-01 10:00:00', 1, '/home'),
     ('2024-01-01 10:00:30', 2, '/home'),
-    ('2024-01-01 10:00:45', 1, '/home'),    -- 同一用户多次访问
+    ('2024-01-01 10:00:45', 1, '/home'),
     ('2024-01-01 10:01:00', 3, '/home'),
     ('2024-01-01 10:00:00', 1, '/about');
 

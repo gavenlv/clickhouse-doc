@@ -1,10 +1,12 @@
-# 数据更新专题
+# 数据更新专题（已合并 → 07-data-mutation）
 
-> **⚠️ 重整标注（2026-08-02）**
-> 本章节编号 `11-data-update` 与 `11-performance` 冲突。按重整计划，本章节将在 **R3 批次** 与 `09-data-deletion` 合并为新的 `07-data-mutation` 章（INSERT 优化/Mutation/轻量删除/分区操作/TTL/异步插入/并发隔离/案例）。
-> 当前内容保留可用，详见 [重整计划](../.trae/documents/clickhouse-tutorial-reorg-plan.md)。
-
-本专题介绍 ClickHouse 中的数据更新方法、策略和最佳实践。
+> **⚠️ 本目录已合并到 [07-data-mutation](../07-data-mutation/)**
+>
+> 按重整计划（R3 批次），11-data-update（数据更新）与 09-data-deletion（数据删除）已合并为统一的 `07-data-mutation` 章节。
+>
+> 合并后的章节覆盖：Mutation 原理、分区操作、TTL、轻量操作、异步插入、并发隔离、实战案例。
+>
+> 旧文件保留用于参考，新内容请访问 [07-data-mutation/README.md](../07-data-mutation/README.md)。
 
 ## 📚 文档目录
 

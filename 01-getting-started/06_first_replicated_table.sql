@@ -172,7 +172,8 @@ GROUP BY node
 ORDER BY node;
 
 -- 详细数据对比
-SELECT 
+SELECT
+    hostName() AS node,
     event_id,
     user_id,
     username,

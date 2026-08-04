@@ -206,10 +206,10 @@ CREATE TABLE IF NOT EXISTS tutorial.replacing_demo
 ENGINE = ReplacingMergeTree(version)
 ORDER BY user_id;
 
--- 插入重复数据
+-- 插入重复数据（注意：user_id=1 有两行，version=2 是更新版本）
 INSERT INTO tutorial.replacing_demo VALUES
 (1, '2024-01-15 10:00:00', 'active', 1),
-(1, '2024-01-15 11:00:00', 'inactive', 2),  -- 同一个 user_id，更新的版本
+(1, '2024-01-15 11:00:00', 'inactive', 2),
 (2, '2024-01-15 10:00:00', 'active', 1);
 
 -- 查询（注意：ReplacingMergeTree 只在合并时去重）
@@ -229,10 +229,10 @@ CREATE TABLE IF NOT EXISTS tutorial.summing_demo
 ENGINE = SummingMergeTree()
 ORDER BY (user_id, event_date);
 
--- 插入多条记录
+-- 插入多条记录（注意：user_id=1 + event_date='2024-01-15' 有两行，SummingMergeTree 合并时会累加）
 INSERT INTO tutorial.summing_demo VALUES
 (1, '2024-01-15', 5, 100.0),
-(1, '2024-01-15', 3, 50.0),  -- 相同 (user_id, event_date)，会合并
+(1, '2024-01-15', 3, 50.0),
 (1, '2024-01-16', 2, 30.0),
 (2, '2024-01-15', 10, 200.0);
 
