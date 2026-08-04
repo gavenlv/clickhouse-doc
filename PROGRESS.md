@@ -12,7 +12,7 @@
 
 ---
 
-## 当前阶段：R10 已完成，下一批次 R11（14-integration 合并）
+## 当前阶段：R11 已完成，下一批次 R12（15-best-practices 扩充）
 
 > R9 完成：创建 11-monitoring-ops 目录，合并 06-admin/13-monitor/02-advance 运维内容，新增 Prometheus/容量规划/分层存储。
 > **注意**：R2-R9 的 SQL 文件待集群恢复后验证（Docker Desktop 未运行）。
@@ -45,7 +45,7 @@
 | **R8** | 05-functions 扩充（原 04-functions，聚合组合子/UDF/JSON） | P2 深化 | ✅ | 2026-08-03 | 新增 3 个专家级 SQL 文件（聚合组合子/UDF/JSON），README 重写，5 个文件覆盖全函数体系 |
 | **R9** | 11-monitoring-ops 合并 + 补 Prometheus/容量 | P2 深化 | ✅ | 2026-08-03 | 合并 06-admin/13-monitor/02-advance，新增 Prometheus/容量规划/分层存储，8 个文件覆盖运维全体系 |
 | **R10** | 10-security 深化 + 补 Quota/多租户（原 12-security-authentication） | P2 深化 | ✅ | 2026-08-04 | 迁入 9 节，新增 Quota/Workload 和多租户隔离 2 个专题，README 专家级重写，共 22 文件 |
-| **R11** | 14-integration 合并 + 补 Kafka/Flink/DBT/Iceberg | P2 深化 | ⬜ | — | 合并 03-engines/04 + 14-use-case + 20-flink + 15-bulk-import |
+| **R11** | 14-integration 合并 + 补 Kafka/Flink/DBT/Iceberg | P2 深化 | ✅ | 2026-08-04 | 合并 4 个源目录共 20 文件，新建 Kafka/DBT/Iceberg/Local/Cloud 6 个专题，README 专家级重写，共 27 文件 |
 | **R12** | 15-best-practices 扩充（原 17-best-practices） | P3 优化 | ⬜ | — | 反模式案例库 |
 | **R13** | 13-system-tables 深化（原 08-information-schema） | P3 优化 | ⬜ | — | query_log 字段解读 |
 | **R14** | 02-principles 扩充（原 16-principle，向量化 SIMD/Pipeline） | P3 优化 | ⬜ | — | 已细化，补汇编级 |
@@ -448,13 +448,70 @@
 
 ---
 
-## 下批次计划：R11 — 14-integration 合并 + 补 Kafka/Flink/DBT/Iceberg
+---
 
-> **优先级**：P2 深化（合并 3 章 + 补 8 节）
+## R11 完成记录（2026-08-04）
 
-**R11 范围**：
-1. 合并 03-engines/04（集成引擎）+ 14-use-case + 20-flink + 15-bulk-import 到 14-integration
-2. 补全缺失专题：Kafka 深度/DBT/Iceberg/Lakehouse Format/ClickHouse Local/ClickHouse Cloud
+### 交付物
+
+#### 1. 迁移合并 4 个源目录（20 个文件）
+
+**从 03-engines 迁移**：
+- 01_integration_engines.sql：集成引擎总览（File/S3/HDFS/MySQL/PG/Redis/Kafka/JDBC 等 13 节）
+
+**从 20-flink-clickhouse-superset 迁移**（7 个文件）：
+- 04_flink_architecture.md：Flink+CH 七层架构设计
+- 05_flink_clickhouse_sink.sql：Flink Sink 三种模式对比
+- 06_flink_clickhouse_modeling.sql：ODS/DWD/DWS/ADS 分层建模
+- 07_superset_dashboard.sql + 07_superset_drill_down.md：实时看板 + 下钻明细
+- 08_flink_optimization.md：全链路性能优化（Flink/CH/Superset 三段式）
+- 09_flink_best_practices.md + 09_flink_data_flow.md：最佳实践 + 数据流转
+- 10_flink_realtime_sla.md：秒/分/小时 SLA 分级 + 故障恢复 SOP
+
+**从 15-high-performance-bulk-import 迁移**（6 个文件）：
+- 11_bulk_import_guide.md：方案 A（单分片 8-12 分钟）vs 方案 B（多分片 2-3 分钟）
+- 12_bulk_import_gcs.sql + plan_a.sql + plan_b.sql：GCS/单分片/多分片三种导入
+- 13_bulk_import_monitoring.sql：导入监控全量 SQL
+- 14_bulk_import_error_recovery.md：错误恢复 SOP
+
+**从 14-use-case 迁移**（3 个文件）：
+- 15_prediction_case_study.md：千亿级预测数据案例（压缩率 99.8%）
+- 16_prediction_ddl.sql + views.sql + query_opt.sql：维度分离 DDL + 展开视图 + 查询优化
+
+#### 2. 新建 6 个缺失专题
+
+- [02_kafka_engine.md](./14-integration/02_kafka_engine.md)：Kafka Engine 深度专题，含 Engine vs 表函数对比、consumer group/offset 管理、虚拟列、Exactly-Once 三种策略、多 topic 消费、性能调优、rebalancing、反模式排查
+- [03_kafka_engine_examples.sql](./14-integration/03_kafka_engine_examples.sql)：8 部分可运行 SQL 示例，覆盖标准摄入模式/虚拟列去重/三级 EOS/性能配置/监控诊断
+- [17_dbt_integration.md](./14-integration/17_dbt_integration.md)：DBT 集成专题，含 6 种物化策略对比、Jinja 模板、字典/TTL 宏、测试框架、GitHub Actions CI/CD、Airflow 调度
+- [18_iceberg_lakehouse.md](./14-integration/18_iceberg_lakehouse.md)：Iceberg + Lakehouse 专题，含 Iceberg 表引擎/表函数、Schema Evolution、时间旅行、Delta Lake/Hudi 对比、混合架构三种模式
+- [19_clickhouse_local.md](./14-integration/19_clickhouse_local.md)：ClickHouse Local 专题，含 vs client 对比、8 种文件格式支持、管道模式、5 个典型场景（数据探查/ETL 预处理/日志分析/多文件聚合/格式转换）
+- [20_clickhouse_cloud.md](./14-integration/20_clickhouse_cloud.md)：ClickHouse Cloud 专题，含 vs 自管理对比、SharedMergeTree 原理、ClickPipes 托管摄入、API/Terraform 自动化、迁移方案、成本优化
+
+#### 3. README.md 专家级重写
+- 新增"本章解决什么问题"痛点对标表（9 个痛点 → 对应专题）
+- 新增集成体系全景图（数据摄入→转换建模→查询可视化→托管服务四层）
+- **核心概念深度**：集成引擎 vs 表函数选型原理、Kafka→CH 三种摄入路径对比、实时 vs 批处理决策树
+- 新增 5 个场景入口（Kafka 摄入/批量导入/实时数仓/DBT/Cloud 迁移）
+- 新增 7 条常见误区纠正（MV 必配/表函数≠引擎/批量导入≠简单 SELECT/DBT≠MV/Iceberg 延迟/Cloud 本质差异/Local 不是玩具）
+- 新增集成选型检查清单（摄入/转换/查询/运维 4 维度）
+- 新增 5 天学习路径建议
+
+### 验收
+- ✅ 27 个文件全部就位（20 迁移 + 6 新建 + README）
+- ✅ 6 个缺失专题（Kafka/DBT/Iceberg/CH Local/CH Cloud）全部补齐
+- ✅ 4 个源目录内容已合并整合（去重交叉引用）
+- ✅ README 达到专家级深度（全景图 + 三种路径对比 + 场景入口 + 误区 + 检查清单）
+- ⬜ SQL 文件待集群恢复后验证（Docker Desktop 未运行）
+
+---
+
+## 下批次计划：R12 — 15-best-practices 扩充
+
+> **优先级**：P3 优化（反模式案例库）
+
+**R12 范围**：
+1. 深化 15-best-practices（原 17-best-practices）为反模式案例库
+2. 补充 ClickHouse 特有反模式（ORDER BY 不当/FINAL 滥用/分区过多/单条 INSERT 等）
 3. 重写 README.md 达专家级深度
 
-**后续批次**按 R12→R16 顺序推进，详见上方"重整批次进度总览"表。
+**后续批次**按 R13→R16 顺序推进，详见上方"重整批次进度总览"表。
