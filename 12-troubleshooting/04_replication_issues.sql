@@ -13,6 +13,21 @@ DROP DATABASE IF EXISTS troubleshooting_test;
 CREATE DATABASE troubleshooting_test;
 USE troubleshooting_test;
 
+-- 前置：创建复制表示例（幂等，保证文件可独立运行）
+CREATE TABLE troubleshooting_test.sample_table
+(
+    event_date Date,
+    user_id UInt32,
+    amount Float64
+)
+ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/troubleshooting_test/sample_table', '{replica}')
+PARTITION BY toYYYYMM(event_date)
+ORDER BY (event_date, user_id);
+
+INSERT INTO troubleshooting_test.sample_table
+SELECT toDate('2024-01-15'), number, number / 100
+FROM numbers(1000);
+
 -- -----------------------------------------------------
 -- 1. 副本滞后
 -- -----------------------------------------------------
@@ -57,12 +72,12 @@ SELECT
     is_readonly,
     is_session_expired,
     future_parts,
-    parts_to_check,
-    zombie_parts
+    parts_to_check
 FROM system.replicas
 ORDER BY absolute_delay DESC;
 
 -- 诊断：检查复制队列详情
+-- 注：25.12 的 system.replicas 列名为 inserts_oldest_time / oldest_part_to_merge_to / oldest_part_to_mutate_to
 SELECT
     database,
     table,
@@ -72,21 +87,22 @@ SELECT
     merges_in_queue,
     part_mutations_in_queue,
     queue_oldest_time,
-    insert_queue_oldest_time,
-    oldest_part_to_merge,
-    oldest_part_to_mutate
+    inserts_oldest_time,
+    oldest_part_to_merge_to,
+    oldest_part_to_mutate_to
 FROM system.replicas
 WHERE queue_size > 0
    OR inserts_in_queue > 0
 ORDER BY queue_size DESC;
 
--- 诊断：检查复制延迟趋势（过去 1 小时）
+-- 诊断：检查复制队列趋势（过去 1 小时）
+-- 注：25.12 的 system.replication_queue 无 event_time / absolute_delay 列，改用 create_time 统计
 SELECT
-    toStartOfMinute(event_time) AS minute,
-    max(absolute_delay) AS max_delay,
-    avg(absolute_delay) AS avg_delay
+    toStartOfMinute(create_time) AS minute,
+    count() AS new_tasks,
+    countIf(is_currently_executing = 1) AS running_tasks
 FROM system.replication_queue
-WHERE event_time > now() - INTERVAL 1 HOUR
+WHERE create_time > now() - INTERVAL 1 HOUR
 GROUP BY minute
 ORDER BY minute DESC;
 
@@ -99,8 +115,9 @@ ORDER BY minute DESC;
 SYSTEM SYNC REPLICA troubleshooting_test.sample_table;
 
 -- 修复：重启复制队列
-SYSTEM STOP REPLICAS;
-SYSTEM START REPLICAS;
+-- 注：25.12 语法为 STOP/START REPLICATION QUEUES（SYSTEM STOP REPLICAS 已废弃）
+SYSTEM STOP REPLICATION QUEUES;
+SYSTEM START REPLICATION QUEUES;
 
 -- 修复：在从副本上重新拉取数据
 SYSTEM RESTART REPLICA troubleshooting_test.sample_table;
@@ -134,12 +151,21 @@ WHERE event LIKE 'Network%'
 --
 
 -- 诊断：检查 ZK 连接状态
+-- 注：25.12 的 system.zookeeper_connection 无 value 字段，直接展示各 keeper 连接信息
 SELECT
     name,
-    value,
-    description
+    host,
+    port,
+    index AS conn_index,
+    connected_time,
+    session_uptime_elapsed_seconds,
+    is_expired,
+    keeper_api_version,
+    client_id,
+    xid,
+    session_timeout_ms
 FROM system.zookeeper_connection
-WHERE name IN ('session_id', 'xid', 'keeper_api_version', 'server_url', 'connected', 'session_expired');
+ORDER BY host;
 
 -- 诊断：检查 ZK 会话指标
 SELECT
@@ -153,12 +179,12 @@ ORDER BY event;
 
 -- 诊断：检查 ZK 读延迟
 SELECT
-    host,
     name,
     value
 FROM system.asynchronous_metrics
 WHERE name LIKE '%Keeper%'
-   OR name LIKE '%ZooKeeper%';
+   OR name LIKE '%ZooKeeper%'
+ORDER BY name;
 
 -- 诊断：检查 system.zookeeper 路径是否存在
 SELECT
@@ -220,6 +246,7 @@ LIMIT 10;
 --
 
 -- 诊断：查看复制队列状态
+-- 注：25.12 的 system.replication_queue 无 parts_to_detach / parts_to_active 列
 SELECT
     database,
     table,
@@ -228,9 +255,9 @@ SELECT
     node_name,
     type,
     source_replica,
+    new_part_name,
     parts_to_merge,
-    parts_to_detach,
-    parts_to_active,
+    is_detach,
     create_time,
     required_quorum,
     is_currently_executing,
@@ -257,13 +284,14 @@ ORDER BY last_exception_time DESC
 LIMIT 20;
 
 -- 诊断：查看复制队列统计
+-- 注：25.12 的 system.replication_queue 无 status 列，用 is_currently_executing 区分执行状态
 SELECT
     database,
     table,
     count() AS total_tasks,
-    countIf(status = 'pending') AS pending,
-    countIf(status = 'running') AS running,
-    countIf(status = 'completed') AS completed,
+    countIf(is_currently_executing = 1) AS running,
+    countIf(is_currently_executing = 0) AS waiting,
+    countIf(num_tries > 0) AS retried_tasks,
     max(create_time) AS latest_task
 FROM system.replication_queue
 GROUP BY database, table;

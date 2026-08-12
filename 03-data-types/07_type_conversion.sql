@@ -47,9 +47,12 @@ SELECT
 SELECT
     toString(123) AS s1,           -- '123'
     toUInt32('123') AS i1,         -- 123
-    toInt32('123.45') AS i2,       -- 报错！含小数点
     toInt32(toFloat64('123.45')) AS i3,  -- 123（先转浮点再截断）
     toFloat64('123.45') AS f1;     -- 123.45
+
+-- [预期报错] '123.45' 含小数点，toInt32 无法直接解析，应先用 toFloat64 转换再截断
+SELECT
+    toInt32('123.45') AS i2;       -- 报错！含小数点
 
 -- 1.3 类型信息查询
 SELECT
@@ -98,9 +101,16 @@ SELECT
     CAST(123.49 AS UInt32) AS trunc_2,      -- 123
     round(123.99) AS rounded;               -- 124（用 round 函数）
 
--- 【坑】字符串转数字时，空格不影响
+-- 【坑】字符串转数字时，首尾空格会导致解析失败（Code 6），需先 trimBoth 去空格
 SELECT
-    toUInt32('  123  ') AS with_spaces,     -- 123
+    toUInt32(trimBoth('  123  ')) AS with_spaces;   -- 123
+
+-- [预期报错] 带空格的字符串无法直接解析，应先用 trimBoth 处理
+SELECT
+    toUInt32('  123  ') AS with_spaces_raw;         -- 报错！
+
+-- [预期报错] '123abc' 含非数字字符，toUInt32 无法解析
+SELECT
     toUInt32('123abc') AS with_suffix;      -- 报错！
 
 -- 【坑】超大数字转小类型会溢出

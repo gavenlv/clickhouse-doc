@@ -76,14 +76,16 @@ FROM system.processes
 ORDER BY elapsed DESC;
 
 -- 查看慢查询历史
+-- [需启用] 本集群未启用 system.query_log（查询报 UNKNOWN_TABLE），
+-- 改用 system.query_thread_log（需先 SET log_query_threads = 1），替代方案见 00-infra/README.md
+SET log_query_threads = 1;
 SELECT
     query_duration_ms / 1000 as duration_seconds,
     query,
     read_rows,
     formatReadableSize(read_bytes) as bytes_read
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND query_duration_ms > 1000
+FROM system.query_thread_log
+WHERE query_duration_ms > 1000
   AND event_time > now() - INTERVAL 1 DAY
 ORDER BY query_duration_ms DESC
 LIMIT 20;

@@ -84,6 +84,87 @@
 -- 创建数据库（如果存在则不创建）
 CREATE DATABASE IF NOT EXISTS example;
 
+-- ========================================
+-- 测试数据准备（幂等：先删后建，保证文件可独立重复运行）
+-- ========================================
+SET log_query_threads = 1;
+
+DROP TABLE IF EXISTS distributed_table;
+DROP VIEW IF EXISTS user_event_count_mv;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS active_users;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS events;
+
+-- events 事件表：按月分区，主键 (user_id, event_time)
+CREATE TABLE events (
+    event_id UInt64,
+    user_id UInt64,
+    event_type String,
+    event_time DateTime,
+    event_date Date MATERIALIZED toDate(event_time),
+    event_month String MATERIALIZED formatDateTime(event_time, '%Y-%m')
+) ENGINE = MergeTree()
+PARTITION BY toYYYYMM(event_time)
+ORDER BY (user_id, event_time)
+SAMPLE BY user_id;
+
+INSERT INTO events (event_id, user_id, event_type, event_time)
+VALUES
+    (1, 1, 'click',    now() - INTERVAL 1 DAY),
+    (2, 2, 'view',     now() - INTERVAL 2 DAY),
+    (3, 3, 'click',    now() - INTERVAL 3 DAY),
+    (4, 1, 'view',     now() - INTERVAL 5 DAY),
+    (5, 2, 'purchase', now() - INTERVAL 6 DAY),
+    (6, 1, 'click',    '2024-01-05 10:00:00'),
+    (7, 2, 'view',     '2024-01-15 12:00:00'),
+    (8, 3, 'click',    '2024-01-25 14:00:00');
+
+-- users 用户表
+CREATE TABLE users (
+    user_id UInt64,
+    username String,
+    email String,
+    created_at DateTime
+) ENGINE = MergeTree()
+ORDER BY user_id;
+
+INSERT INTO users VALUES
+    (1, 'alice', 'alice@example.com', '2024-01-10 00:00:00'),
+    (2, 'bob',   'bob@example.com',   '2024-01-20 00:00:00'),
+    (3, 'carol', 'carol@example.com', '2024-02-05 00:00:00'),
+    (123, 'dev', 'user@example.com',  '2024-03-01 00:00:00');
+
+-- orders 订单表
+CREATE TABLE orders (
+    order_id UInt64,
+    user_id UInt64,
+    amount Float64,
+    order_date DateTime
+) ENGINE = MergeTree()
+ORDER BY order_id;
+
+INSERT INTO orders VALUES
+    (1001, 1, 99.9,  now() - INTERVAL 1 DAY),
+    (1002, 2, 199.9, now() - INTERVAL 2 DAY),
+    (1003, 3, 299.9, now() - INTERVAL 3 DAY);
+
+-- active_users 活跃用户表（预计算结果）
+CREATE TABLE active_users (
+    user_id UInt64
+) ENGINE = MergeTree()
+ORDER BY user_id;
+
+INSERT INTO active_users VALUES (1), (2), (3);
+
+-- distributed_table 分布式表（用于演示 max_parallel_replicas）
+CREATE TABLE distributed_table (
+    event_id UInt64,
+    user_id UInt64,
+    event_type String,
+    event_time DateTime
+) ENGINE = Distributed('treasurycluster', 'default', 'events', rand());
+
 
 SELECT * FROM events
 WHERE event_time >= now() - INTERVAL 7 DAY;
@@ -275,14 +356,16 @@ WHERE event_time >= now() - INTERVAL 7 DAY;
 
 -- 设置分布式查询并行
 SELECT * FROM distributed_table
-SETTINGS max_parallel_replicas = 2
-WHERE event_time >= now() - INTERVAL 7 DAY;
+WHERE event_time >= now() - INTERVAL 7 DAY
+SETTINGS max_parallel_replicas = 2;
 
 -- ========================================
 -- 1. 使用分区裁剪
 -- ========================================
 
 -- 查看最近的查询
+-- 说明: 本集群禁用 system.query_log（UNKNOWN_TABLE），此处改用 system.query_thread_log 演示
+--（原写法: FROM system.query_log WHERE type = 'QueryFinish' AND ...）
 SELECT 
     query,
     query_duration_ms,
@@ -291,9 +374,8 @@ SELECT
     written_rows,
     memory_usage,
     event_time
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND event_time >= now() - INTERVAL 1 HOUR
+FROM system.query_thread_log
+WHERE event_time >= now() - INTERVAL 1 HOUR
 ORDER BY event_time DESC
 LIMIT 10;
 
@@ -302,6 +384,7 @@ LIMIT 10;
 -- ========================================
 
 -- 查看慢查询
+-- 说明: 本集群禁用 system.query_log，改用 system.query_thread_log 演示（原条件 type = 'QueryFinish' 省略）
 SELECT 
     query,
     query_duration_ms,
@@ -309,9 +392,8 @@ SELECT
     read_bytes,
     memory_usage,
     formatReadableSize(read_bytes) as readable_bytes
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND query_duration_ms > 1000
+FROM system.query_thread_log
+WHERE query_duration_ms > 1000
 ORDER BY query_duration_ms DESC
 LIMIT 20;
 
@@ -320,6 +402,7 @@ LIMIT 20;
 -- ========================================
 
 -- 查看查询统计
+-- 说明: 本集群禁用 system.query_log，改用 system.query_thread_log 演示（原条件 type = 'QueryFinish' 省略）
 SELECT 
     substring(query, 1, 50) as query_sample,
     count() as query_count,
@@ -327,9 +410,8 @@ SELECT
     max(query_duration_ms) as max_duration,
     sum(read_rows) as total_rows_read,
     sum(read_bytes) as total_bytes_read
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND event_time >= now() - INTERVAL 24 HOUR
+FROM system.query_thread_log
+WHERE event_time >= now() - INTERVAL 24 HOUR
 GROUP BY query_sample
 ORDER BY query_count DESC
 LIMIT 10;
@@ -364,7 +446,7 @@ HAVING count() > 100;
 -- ✅ 优化后（使用物化视图）
 CREATE MATERIALIZED VIEW user_event_count_mv
 ENGINE = AggregatingMergeTree()
-ORDER BY (user_id, toStartOfDay(event_time))
+ORDER BY (user_id, date)
 AS SELECT
     user_id,
     toStartOfDay(event_time) as date,
@@ -375,11 +457,11 @@ GROUP BY user_id, date;
 -- 查询物化视图
 SELECT 
     user_id,
-    sumMerge(event_count) as total_events
+    countMerge(event_count) as total_events
 FROM user_event_count_mv
 WHERE date >= now() - INTERVAL 30 DAY
 GROUP BY user_id
-HAVING sumMerge(event_count) > 100;
+HAVING countMerge(event_count) > 100;
 
 -- ========================================
 -- 1. 使用分区裁剪

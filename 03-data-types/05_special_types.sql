@@ -128,7 +128,7 @@ FROM events_with_uuid;
 -- 2.4 UUID 处理函数
 SELECT
     event_id,
-    UUIDStringToNum(event_id) AS uuid_as_int128,        -- 转为 Int128
+    UUIDStringToNum(toString(event_id)) AS uuid_as_int128,   -- 先转 String 再转 Int128
     UUIDNumToString(uuid_as_int128) AS uuid_back,        -- 转回字符串
     empty(event_id) AS is_empty,
     toUUID('00000000-0000-0000-0000-000000000000') AS nil_uuid,

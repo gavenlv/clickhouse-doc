@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS datatype_test.strings ON CLUSTER 'treasurycluster' (
     message String,
     email String,
     url String
-) ENGINE = ReplicatedMergeTree() ORDER BY id;
+) ENGINE = MergeTree() ORDER BY id;
 
 -- 插入数据
 INSERT INTO datatype_test.strings VALUES
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS datatype_test.files ON CLUSTER 'treasurycluster' (
     file_name String,
     file_hash FixedString(32),  -- MD5 32 字符
     file_size UInt64
-) ENGINE = ReplicatedMergeTree() ORDER BY id;
+) ENGINE = MergeTree() ORDER BY id;
 
 -- 插入数据
 INSERT INTO datatype_test.files VALUES
@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS datatype_test.users ON CLUSTER 'treasurycluster' (
     country LowCardinality(String),  -- 只有 200 个国家
     status LowCardinality(String),    -- 只有少量状态
     gender LowCardinality(String)     -- 只有 'M', 'F', 'U'
-) ENGINE = ReplicatedMergeTree() ORDER BY id;
+) ENGINE = MergeTree() ORDER BY id;
 
 -- 插入数据
 INSERT INTO datatype_test.users VALUES
@@ -207,7 +207,7 @@ CREATE TABLE IF NOT EXISTS datatype_test.users_good ON CLUSTER 'treasurycluster'
     id UInt64,
     country LowCardinality(String),  -- 字典编码
     status LowCardinality(String)    -- 字典编码
-) ENGINE = ReplicatedMergeTree() ORDER BY id;
+) ENGINE = MergeTree() ORDER BY id;
 
 -- ========================================
 -- String 类型
@@ -219,7 +219,7 @@ CREATE TABLE IF NOT EXISTS datatype_test.files ON CLUSTER 'treasurycluster' (
     file_name String,
     file_md5 FixedString(32),   -- MD5 32 字符
     file_uuid FixedString(36)    -- UUID 36 字符
-) ENGINE = ReplicatedMergeTree() ORDER BY id;
+) ENGINE = MergeTree() ORDER BY id;
 
 -- ========================================
 -- String 类型
@@ -236,4 +236,4 @@ CREATE TABLE IF NOT EXISTS datatype_test.logs_good ON CLUSTER 'treasurycluster' 
     id UInt64,
     log_path String,     -- 存储文件路径
     log_size UInt64
-) ENGINE = ReplicatedMergeTree() ORDER BY id;
+) ENGINE = MergeTree() ORDER BY id;

@@ -83,14 +83,29 @@
 -- 
 -- ================================================================================
 
+-- 测试数据准备（幂等：先删后建，保证文件可独立重复运行）
+DROP TABLE IF EXISTS events_read;
+DROP TABLE IF EXISTS events_write;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS events;
+
+-- 事件表（统一 schema，含后续示例所需的 event_type 列）
 CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
+    event_type String,
     event_time DateTime,
     event_data String
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (user_id, event_time);  -- user_id 高选择性
+
+INSERT INTO events (event_id, user_id, event_type, event_time, event_data)
+VALUES
+    (1, 123, 'click', '2024-01-15 10:00:00', '{}'),
+    (2, 1, 'view',    now() - INTERVAL 1 DAY, '{}'),
+    (3, 2, 'click',   now() - INTERVAL 2 DAY, '{}');
 
 -- ❌ 低选择性主键
 CREATE TABLE IF NOT EXISTS events (
@@ -275,17 +290,15 @@ WHERE database = 'my_database';
 -- ========================================
 
 -- 查看主键扫描情况
+-- 说明: 本集群禁用 system.query_log，改用 system.query_thread_log 演示；
+--       result_rows/result_bytes 为 query_log 专有列，query_thread_log 无此列，故省略
 SELECT 
     query,
     read_rows,
     read_bytes,
-    result_rows,
-    result_bytes,
-    formatReadableSize(read_bytes) as read_size,
-    formatReadableSize(result_bytes) as result_size
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND event_time >= now() - INTERVAL 24 HOUR
+    formatReadableSize(read_bytes) as read_size
+FROM system.query_thread_log
+WHERE event_time >= now() - INTERVAL 24 HOUR
   AND read_rows > 1000000
 ORDER BY read_rows DESC
 LIMIT 10;
@@ -295,14 +308,15 @@ LIMIT 10;
 -- ========================================
 
 -- 查看索引使用情况
+-- 说明: 25.12 中 system.data_skipping_indices 的列有变化（rows/bytes_on_disk/marks_count 已移除）
 SELECT 
     table,
     '',
     name,
     type,
-    rows,
-    bytes_on_disk,
-    marks_count
+    data_compressed_bytes,
+    data_uncompressed_bytes,
+    marks_bytes
 FROM system.data_skipping_indices
 WHERE database = 'my_database';
 
@@ -403,44 +417,44 @@ ORDER BY (user_id, event_time);  -- ✅ user_id 在主键中
 -- ========================================
 
 -- ✅ 高选择性列在前
-ORDER BY (user_id, event_type);
+-- ORDER BY (user_id, event_type);   -- 独立片段说明，非完整语句，仅作教学示意
 
 -- ❌ 低选择性列在前
-ORDER BY (event_type, user_id);
+-- ORDER BY (event_type, user_id);   -- 独立片段说明，非完整语句，仅作教学示意
 
 -- ========================================
 -- 原则 1: 高选择性
 -- ========================================
 
 -- ✅ 2-3 列
-ORDER BY (user_id, event_time);
+-- ORDER BY (user_id, event_time);   -- 独立片段说明，非完整语句，仅作教学示意
 
 -- ❌ 过多列
-ORDER BY (user_id, event_type, event_category, event_time);
+-- ORDER BY (user_id, event_type, event_category, event_time);   -- 独立片段说明，非完整语句，仅作教学示意
 
 -- ========================================
 -- 原则 1: 高选择性
 -- ========================================
 
 -- ✅ 时间列在最后
-ORDER BY (user_id, event_type, event_time);
+-- ORDER BY (user_id, event_type, event_time);   -- 独立片段说明，非完整语句，仅作教学示意
 
 -- ❌ 时间列在最前
-ORDER BY (event_time, user_id, event_type);
+-- ORDER BY (event_time, user_id, event_type);   -- 独立片段说明，非完整语句，仅作教学示意
 
 -- ========================================
 -- 原则 1: 高选择性
 -- ========================================
 
 -- 定期分析主键使用情况
+-- 说明: 本集群禁用 system.query_log，改用 system.query_thread_log 演示（原条件 type = 'QueryFinish' 省略）
 SELECT 
     query,
     count() as query_count,
     avg(read_rows) as avg_rows_read,
     avg(query_duration_ms) as avg_duration
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND event_time >= now() - INTERVAL 7 DAY
+FROM system.query_thread_log
+WHERE event_time >= now() - INTERVAL 7 DAY
 GROUP BY query
 ORDER BY query_count DESC
 LIMIT 10;

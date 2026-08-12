@@ -13,6 +13,50 @@ DROP DATABASE IF EXISTS troubleshooting_test;
 CREATE DATABASE troubleshooting_test;
 USE troubleshooting_test;
 
+-- 前置：创建示例表（幂等，保证文件可独立运行）
+CREATE TABLE troubleshooting_test.sample_table
+(
+    event_date Date,
+    event_time DateTime,
+    user_id UInt32,
+    amount Decimal(18, 2),
+    raw_text String
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(event_date)
+ORDER BY (event_date, user_id);
+
+INSERT INTO troubleshooting_test.sample_table
+SELECT
+    toDate('2024-01-15'),
+    toDateTime('2024-01-15 10:00:00'),
+    number,
+    number / 100,
+    concat('text_', toString(number))
+FROM numbers(1000);
+
+-- 前置：备份表（用于演示从备份表恢复分区）
+CREATE TABLE troubleshooting_test.sample_table_archive
+(
+    event_date Date,
+    event_time DateTime,
+    user_id UInt32,
+    amount Decimal(18, 2),
+    raw_text String
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(event_date)
+ORDER BY (event_date, user_id);
+
+INSERT INTO troubleshooting_test.sample_table_archive
+SELECT
+    toDate('2024-01-20'),
+    toDateTime('2024-01-20 10:00:00'),
+    number,
+    number / 100,
+    concat('archive_', toString(number))
+FROM numbers(1000);
+
 -- -----------------------------------------------------
 -- 1. 磁盘空间不足
 -- -----------------------------------------------------
@@ -70,8 +114,9 @@ SELECT
 FROM system.storage_policies;
 
 -- 修复：清理过期数据（TTL）
+-- [需外部依赖] 分层存储需在 config.xml 中配置 cold_disk，此处演示 TTL 到期自动清理语法
 ALTER TABLE troubleshooting_test.sample_table
-    MODIFY TTL event_date TO DISK 'cold_disk' AFTER 30 DAY;
+    MODIFY TTL event_date + INTERVAL 30 DAY;
 
 -- 修复：清理孤立分区文件
 SELECT
@@ -87,16 +132,19 @@ GROUP BY database, table;
 OPTIMIZE TABLE troubleshooting_test.sample_table FINAL;
 
 -- 修复：对过期分区执行 DROP
+-- 注意：toYYYYMM 产生的分区名形如 '202401'，而非 '2024-01'
 ALTER TABLE troubleshooting_test.sample_table
-    DROP PARTITION '2024-01';
+    DROP PARTITION '202401';
 
 -- 修复：使用 FREEZE 备份后清理
 ALTER TABLE troubleshooting_test.sample_table
     FREEZE WITH NAME 'backup_2024';
 
 -- 修复：删除 detached 分区中的残留
+-- 注：FREEZE 生成的 shadow/backup_2024 备份需手工复制回 detached/ 后才能 ATTACH；
+-- ATTACH PARTITION FROM 仅支持从表恢复，此处用备份表演示
 ALTER TABLE troubleshooting_test.sample_table
-    ATTACH PARTITION '2024-01' FROM 'backup_2024';
+    ATTACH PARTITION '202401' FROM troubleshooting_test.sample_table_archive;
 
 -- 修复：配置存储策略实现分层存储
 -- 示例存储策略（需在 config.xml 中配置）:
@@ -171,16 +219,16 @@ LIMIT 20;
 
 -- 修复：DETACH 损坏的 part
 ALTER TABLE troubleshooting_test.sample_table
-    DETACH PARTITION '2024-01';
+    DETACH PARTITION '202401';
 
 -- 修复：从副本恢复（如果有 ReplicatedMergeTree）
 -- 在副本节点上执行:
 -- ALTER TABLE troubleshooting_test.sample_table
---     FETCH PARTITION '2024-01' FROM 'zookeeper_path';
+--     FETCH PARTITION '202401' FROM 'zookeeper_path';
 
 -- 修复：如果无副本，尝试 ATTACH 回 detached 的 part
 ALTER TABLE troubleshooting_test.sample_table
-    ATTACH PARTITION '2024-01';
+    ATTACH PARTITION '202401';
 
 -- 修复：重建表（最后手段）
 -- 1. 创建新表
@@ -303,12 +351,13 @@ FROM system.tables
 WHERE database NOT IN ('system', 'INFORMATION_SCHEMA');
 
 -- 诊断：检查 detached 分区状态
+-- 注：25.12 的 system.detached_parts 无 detach_time 字段，用 modification_time 近似
 SELECT
     database,
     table,
     count() AS detached_parts,
-    min(detach_time) AS earliest_detach,
-    max(detach_time) AS latest_detach
+    min(modification_time) AS earliest_detach,
+    max(modification_time) AS latest_detach
 FROM system.detached_parts
 GROUP BY database, table
 ORDER BY count() DESC;
@@ -321,11 +370,11 @@ ORDER BY count() DESC;
 
 -- 修复：清理过期 detached 分区
 ALTER TABLE troubleshooting_test.sample_table
-    DROP DETACHED PARTITION '2024-01';
+    DROP DETACHED PARTITION '202401' SETTINGS allow_drop_detached = 1;
 
 -- 修复：重新挂载 detached 分区
 ALTER TABLE troubleshooting_test.sample_table
-    ATTACH PARTITION '2024-01';
+    ATTACH PARTITION '202401';
 
 -- 修复：重建元数据（metadata 丢失时）
 -- 1. 从 store/ 目录恢复：

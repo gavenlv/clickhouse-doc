@@ -47,7 +47,7 @@ ORDER BY (event_time, user_id);
 INSERT INTO events_with_array VALUES
     ('2024-01-15 10:00:00', 1001, ['hot', 'new', 'promo'], [99.9, 199.9, 299.9], [101, 102, 103]),
     ('2024-01-15 11:00:00', 1002, ['sale', 'clearance'], [49.9, 89.9], [201, 202]),
-    ('2024-01-15 12:00:00', 1003, ['hot', 'flash'], [999.0], [301]),
+    ('2024-01-15 12:00:00', 1003, ['hot', 'flash'], [999.0, 888.0], [301, 302]),
     ('2024-01-15 13:00:00', 1004, [], [], []);  -- 空数组
 
 -- 1.2 数组长度与空值判断
@@ -240,7 +240,7 @@ FROM events_with_map;
 -- 3.5 Map 操作
 SELECT
     user_id,
-    mapUpdate(properties, {'language': 'zh-CN'}) AS updated_props
+    mapUpdate(properties, map('language', 'zh-CN')) AS updated_props
 FROM events_with_map;
 
 -- 3.6 Map 与 ARRAY JOIN 展开
@@ -315,14 +315,14 @@ ORDER BY order_id, items.product_id;
 SELECT
     order_id,
     customer_id,
-    product_id,
-    product_name,
-    quantity,
-    price,
-    quantity * price AS line_total
+    items.product_id,
+    items.product_name,
+    items.quantity,
+    items.price,
+    items.quantity * items.price AS line_total
 FROM orders_with_items
 ARRAY JOIN items
-ORDER BY order_id, product_id;
+ORDER BY order_id, items.product_id;
 
 -- 4.4 Nested 聚合
 SELECT
@@ -338,13 +338,13 @@ ORDER BY order_total DESC;
 -- 4.5 Nested 条件过滤
 SELECT
     order_id,
-    product_name,
-    quantity,
-    price
+    items.product_name,
+    items.quantity,
+    items.price
 FROM orders_with_items
 ARRAY JOIN items
 WHERE items.price > 20.0
-ORDER BY order_id, product_name;
+ORDER BY order_id, items.product_name;
 
 -- ============================================================================
 -- §5. 复合类型选型对比

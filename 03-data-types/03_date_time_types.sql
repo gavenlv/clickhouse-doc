@@ -103,7 +103,11 @@ FROM events_with_timezone;
 -- 2.4 时区转换常见陷阱
 -- 【坑】时区名称必须正确（如 Asia/Shanghai 不是 Asia/Beijing）
 SELECT
-    toTimeZone(now(), 'Asia/Shanghai') AS correct,
+    toTimeZone(now(), 'Asia/Shanghai') AS correct
+FORMAT Vertical;
+
+-- [预期报错] Asia/Beijing 不是 IANA 合法时区名，正确应使用 Asia/Shanghai
+SELECT
     toTimeZone(now(), 'Asia/Beijing') AS wrong  -- 会报错
 FORMAT Vertical;
 
@@ -289,9 +293,11 @@ SELECT
     toQuarter(toDate('2024-10-01')) AS Q4;   -- 4
 
 -- 6.4 是否闰年
+-- 说明：isLeapYear 函数在 25.12 中不存在（Code 46），改用 toDayOfYear 判断：
+-- 闰年 12 月 31 日是第 366 天，平年是第 365 天
 SELECT
-    isLeapYear(toDate('2024-01-01')) AS leap_2024,  -- 1
-    isLeapYear(toDate('2023-01-01')) AS normal_2023; -- 0
+    toDayOfYear(toDate('2024-12-31')) AS days_2024,  -- 366 → 闰年
+    toDayOfYear(toDate('2023-12-31')) AS days_2023;  -- 365 → 平年
 
 -- 6.5 年龄计算
 SELECT

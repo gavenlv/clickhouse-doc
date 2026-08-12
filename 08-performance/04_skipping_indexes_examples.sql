@@ -89,13 +89,19 @@
 -- 创建数据库（如果存在则不创建）
 CREATE DATABASE IF NOT EXISTS example;
 
+-- 测试数据准备（幂等：先删后建，保证文件可独立重复运行）
+DROP TABLE IF EXISTS events;
 
+-- 事件表（统一 schema，包含后续示例所需的全部列）
 CREATE TABLE IF NOT EXISTS events (
     event_id UInt64,
     user_id UInt64,
     event_type String,
-    event_time DateTime,
-    event_data String
+    event_category String,
+    status UInt8,
+    user_email String,
+    event_data String,
+    event_time DateTime
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(event_time)
 ORDER BY (user_id, event_time)
@@ -120,7 +126,7 @@ ORDER BY (user_id, event_time);
 
 -- 添加 minmax 索引
 ALTER TABLE events
-ADD INDEX idx_status status
+ADD INDEX IF NOT EXISTS idx_status status
 TYPE minmax
 GRANULARITY 4;
 
@@ -140,7 +146,7 @@ ORDER BY (user_id, event_time);
 
 -- 添加 set 索引
 ALTER TABLE events
-ADD INDEX idx_event_type event_type
+ADD INDEX IF NOT EXISTS idx_event_type event_type
 TYPE set(0)
 GRANULARITY 4;
 
@@ -160,7 +166,7 @@ ORDER BY (user_id, event_time);
 
 -- 添加 bloom_filter 索引
 ALTER TABLE events
-ADD INDEX idx_user_email user_email
+ADD INDEX IF NOT EXISTS idx_user_email user_email
 TYPE bloom_filter(0.01)
 GRANULARITY 1;
 
@@ -179,9 +185,10 @@ PARTITION BY toYYYYMM(event_time)
 ORDER BY (user_id, event_time);
 
 -- 添加 ngrambf_v1 索引
+-- 说明: ngrambf_v1 必须恰好 4 个无符号整数参数（25.12 不接受浮点 false positive 参数），第 4 个参数为随机种子
 ALTER TABLE events
-ADD INDEX idx_event_data event_data
-TYPE ngrambf_v1(4, 256, 3, 0.01)
+ADD INDEX IF NOT EXISTS idx_event_data event_data
+TYPE ngrambf_v1(4, 256, 3, 1)
 GRANULARITY 1;
 
 -- ========================================
@@ -199,8 +206,9 @@ PARTITION BY toYYYYMM(event_time)
 ORDER BY (user_id, event_time);
 
 -- 添加 tokenbf_v1 索引
+-- 说明: 上方 ngrambf_v1 已占用 idx_event_data 名称，此处改用 idx_event_data_tok，使 tokenbf_v1 教学示例真实生效
 ALTER TABLE events
-ADD INDEX idx_event_data event_data
+ADD INDEX IF NOT EXISTS idx_event_data_tok event_data
 TYPE tokenbf_v1(256, 3, 0)
 GRANULARITY 1;
 
@@ -222,12 +230,12 @@ SETTINGS index_granularity = 8192;
 
 -- 添加索引
 ALTER TABLE events
-ADD INDEX idx_event_type event_type
+ADD INDEX IF NOT EXISTS idx_event_type event_type
 TYPE set(2)
 GRANULARITY 4;
 
 ALTER TABLE events
-ADD INDEX idx_status status
+ADD INDEX IF NOT EXISTS idx_status status
 TYPE minmax
 GRANULARITY 4;
 
@@ -245,9 +253,9 @@ SELECT
     granularity,
     data_compressed_bytes,
     data_uncompressed_bytes,
-    marks_count
+    marks_bytes
 FROM system.data_skipping_indices
-WHERE database = 'my_database'
+WHERE database = 'default'
   AND table = 'events';
 
 -- ========================================
@@ -256,17 +264,17 @@ WHERE database = 'my_database'
 
 -- 删除索引
 ALTER TABLE events
-DROP INDEX idx_event_type;
+DROP INDEX IF EXISTS idx_event_type;
 
 -- ========================================
 -- 索引粒度
 -- ========================================
 
--- 查询时禁用索引
+-- 查询时禁用跳数索引
+-- 说明: skip_unused_shards 在 25.12 不存在，禁用跳数索引使用 use_skip_indexes = 0
 SELECT * FROM events
-SETTINGS force_primary_key = 1,  -- 禁用所有跳数索引
-          skip_unused_shards = 1
-WHERE event_type = 'click';
+WHERE event_type = 'click'
+SETTINGS use_skip_indexes = 0;
 
 -- ========================================
 -- 索引粒度
@@ -283,7 +291,7 @@ ORDER BY (user_id, event_time);
 
 -- ✅ 使用 set 索引
 ALTER TABLE events
-ADD INDEX idx_event_type event_type
+ADD INDEX IF NOT EXISTS idx_event_type event_type
 TYPE set(2)
 GRANULARITY 4;
 
@@ -307,7 +315,7 @@ ORDER BY (user_id, event_time);
 
 -- ✅ 使用 bloom_filter 索引
 ALTER TABLE events
-ADD INDEX idx_user_email user_email
+ADD INDEX IF NOT EXISTS idx_user_email user_email
 TYPE bloom_filter(0.01)
 GRANULARITY 1;
 
@@ -331,8 +339,8 @@ ORDER BY (user_id, event_time);
 
 -- ✅ 使用 ngrambf_v1 索引
 ALTER TABLE events
-ADD INDEX idx_event_data event_data
-TYPE ngrambf_v1(4, 256, 3, 0.01)
+ADD INDEX IF NOT EXISTS idx_event_data event_data
+TYPE ngrambf_v1(4, 256, 3, 1)
 GRANULARITY 1;
 
 -- 查询使用索引
@@ -357,17 +365,17 @@ ORDER BY (user_id, event_time);
 
 -- ✅ 创建多个索引
 ALTER TABLE events
-ADD INDEX idx_event_type event_type
+ADD INDEX IF NOT EXISTS idx_event_type event_type
 TYPE set(2)
 GRANULARITY 4;
 
 ALTER TABLE events
-ADD INDEX idx_event_category event_category
+ADD INDEX IF NOT EXISTS idx_event_category event_category
 TYPE set(2)
 GRANULARITY 4;
 
 ALTER TABLE events
-ADD INDEX idx_status status
+ADD INDEX IF NOT EXISTS idx_status status
 TYPE minmax
 GRANULARITY 4;
 
@@ -383,15 +391,17 @@ WHERE event_type = 'click'  -- ✅ 使用 set 索引
 -- ========================================
 
 -- 查看索引使用统计
+-- 说明: 25.12 的 system.data_skipping_indices 无 rows/bytes_on_disk/marks 列，改用 data_compressed_bytes/data_uncompressed_bytes/marks_bytes
 SELECT 
-    index_name,
-    marks,
-    rows,
-    bytes_on_disk,
-    formatReadableSize(bytes_on_disk) as readable_size,
-    type
+    name AS index_name,
+    type,
+    granularity,
+    data_compressed_bytes,
+    data_uncompressed_bytes,
+    marks_bytes,
+    formatReadableSize(data_compressed_bytes) as readable_size
 FROM system.data_skipping_indices
-WHERE database = 'my_database'
+WHERE database = 'default'
   AND table = 'events';
 
 -- ========================================
@@ -399,20 +409,19 @@ WHERE database = 'my_database'
 -- ========================================
 
 -- 查看索引过滤效果
+-- 说明: 25.12 集群 system.query_log 未启用，改用 system.query_thread_log（需先 SET log_query_threads = 1）；
+--       query_thread_log 无 result_rows/result_bytes 列，故以 read_rows/read_bytes 衡量过滤效果
+SET log_query_threads = 1;
+
 SELECT 
     query,
     read_rows,
     read_bytes,
-    result_rows,
-    result_bytes,
-    formatReadableSize(read_bytes) as read_size,
-    formatReadableSize(result_bytes) as result_size,
-    read_rows / result_rows as filter_ratio
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND event_time >= now() - INTERVAL 24 HOUR
-  AND read_rows > 100000
-ORDER BY filter_ratio DESC
+    query_duration_ms,
+    formatReadableSize(read_bytes) as read_size
+FROM system.query_thread_log
+WHERE event_time >= now() - INTERVAL 24 HOUR
+ORDER BY read_rows DESC
 LIMIT 10;
 
 -- ========================================
@@ -421,19 +430,19 @@ LIMIT 10;
 
 -- 低基数字符串：set
 ALTER TABLE events
-ADD INDEX idx_event_type event_type
+ADD INDEX IF NOT EXISTS idx_event_type event_type
 TYPE set(2)
 GRANULARITY 4;
 
 -- 高基数字符串：bloom_filter
 ALTER TABLE events
-ADD INDEX idx_user_email user_email
+ADD INDEX IF NOT EXISTS idx_user_email user_email
 TYPE bloom_filter(0.01)
 GRANULARITY 1;
 
 -- 数值范围：minmax
 ALTER TABLE events
-ADD INDEX idx_status status
+ADD INDEX IF NOT EXISTS idx_status status
 TYPE minmax
 GRANULARITY 4;
 
@@ -451,8 +460,8 @@ CREATE TABLE IF NOT EXISTS events (
 ORDER BY (user_id, event_time);
 
 -- 只创建高频查询的索引
-ALTER TABLE events ADD INDEX idx_event_type event_type TYPE set(2) GRANULARITY 4;
-ALTER TABLE events ADD INDEX idx_status status TYPE minmax GRANULARITY 4;
+ALTER TABLE events ADD INDEX IF NOT EXISTS idx_event_type event_type TYPE set(2) GRANULARITY 4;
+ALTER TABLE events ADD INDEX IF NOT EXISTS idx_status status TYPE minmax GRANULARITY 4;
 
 -- ========================================
 -- 索引粒度
@@ -460,7 +469,7 @@ ALTER TABLE events ADD INDEX idx_status status TYPE minmax GRANULARITY 4;
 
 -- ✅ 适中的粒度
 ALTER TABLE events
-ADD INDEX idx_event_type event_type
+ADD INDEX IF NOT EXISTS idx_event_type event_type
 TYPE set(2)
 GRANULARITY 4;  -- 每 4 个 mark 存储索引
 
@@ -470,11 +479,12 @@ GRANULARITY 4;  -- 每 4 个 mark 存储索引
 
 -- 分析索引使用情况
 SELECT 
-    index_name,
-    marks,
+    name AS index_name,
     type,
-    bytes_on_disk
+    granularity,
+    data_compressed_bytes,
+    marks_bytes
 FROM system.data_skipping_indices
-WHERE database = 'my_database'
+WHERE database = 'default'
   AND table = 'events'
-ORDER BY bytes_on_disk DESC;
+ORDER BY data_compressed_bytes DESC;

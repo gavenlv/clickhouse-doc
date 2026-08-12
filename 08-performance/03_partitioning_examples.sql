@@ -79,20 +79,52 @@
 -- 
 -- ================================================================================
 
--- 分区类型示例
-PARTITION BY toYYYYMM(event_time)
+-- 测试数据准备（幂等：先删后建，保证文件可独立重复运行）
+DROP TABLE IF EXISTS events_new;
+DROP TABLE IF EXISTS events_archive;
+DROP TABLE IF EXISTS events_active;
+DROP TABLE IF EXISTS events_history;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS user_events;
+DROP TABLE IF EXISTS events;
+
+-- 事件表（按月分区，并写入多个月份的数据以便演示分区操作）
+CREATE TABLE IF NOT EXISTS events (
+    event_id UInt64,
+    user_id UInt64,
+    event_time DateTime,
+    event_data String
+) ENGINE = MergeTree()
+PARTITION BY toYYYYMM(event_time)  -- ✅ 按月
+ORDER BY (user_id, event_time);
+
+INSERT INTO events VALUES
+    (1, 1, '2023-01-15 10:00:00', '{}'),
+    (2, 1, '2023-02-15 10:00:00', '{}'),
+    (3, 1, '2023-03-15 10:00:00', '{}'),
+    (4, 1, '2023-04-15 10:00:00', '{}'),
+    (5, 1, '2023-05-15 10:00:00', '{}'),
+    (6, 1, '2023-06-15 10:00:00', '{}'),
+    (7, 1, '2023-07-15 10:00:00', '{}'),
+    (8, 1, '2023-08-15 10:00:00', '{}'),
+    (9, 1, '2024-01-15 10:00:00', '{}'),
+    (10, 2, '2024-02-15 10:00:00', '{}'),
+    (11, 3, '2024-03-15 10:00:00', '{}');
+
+-- 分区类型示例（独立片段说明，非完整语句，仅作教学示意）
+-- PARTITION BY toYYYYMM(event_time)
 
 -- 按月份分区
-PARTITION BY toMonth(event_time)
+-- PARTITION BY toMonth(event_time)
 
 -- 按天分区
-PARTITION BY toDate(event_time)
+-- PARTITION BY toDate(event_time)
 
 -- 按值分区
-PARTITION BY user_id % 100
+-- PARTITION BY user_id % 100
 
 -- 按枚举分区
-PARTITION BY status
+-- PARTITION BY status
 
 -- ========================================
 -- 分区类型
@@ -122,24 +154,24 @@ ORDER BY (user_id, event_time);
 -- 分区类型
 -- ========================================
 
--- ✅ 适中的分区大小（1-10 GB）
-PARTITION BY toYYYYMM(event_time)  -- 按月，通常 1-10 GB
+-- ✅ 适中的分区大小（1-10 GB）（独立片段说明，非完整语句，仅作教学示意）
+-- PARTITION BY toYYYYMM(event_time)  -- 按月，通常 1-10 GB
 
 -- ❌ 过小的分区
-PARTITION BY toYYYYMMDD(event_time)  -- 按天，可能 < 100 MB
+-- PARTITION BY toYYYYMMDD(event_time)  -- 按天，可能 < 100 MB
 
 -- ❌ 过大的分区
-PARTITION BY toYYYY(event_time)  -- 按年，可能 > 100 GB
+-- PARTITION BY toYYYY(event_time)  -- 按年，可能 > 100 GB
 
 -- ========================================
 -- 分区类型
 -- ========================================
 
--- ✅ 适中的分区数量
-PARTITION BY toYYYYMM(event_time)  -- 12 个月/年
+-- ✅ 适中的分区数量（独立片段说明，非完整语句，仅作教学示意）
+-- PARTITION BY toYYYYMM(event_time)  -- 12 个月/年
 
 -- ❌ 过多的分区
-PARTITION BY toYYYYMMDD(event_time)  -- 365 天/年
+-- PARTITION BY toYYYYMMDD(event_time)  -- 365 天/年
 
 -- ========================================
 -- 分区类型
@@ -181,9 +213,10 @@ WHERE toYYYYMM(event_time) = '202401';
 -- ========================================
 
 -- 查询特定分区
-SELECT * FROM events
-PARTITION '202401'
-WHERE user_id = 123;
+-- 说明: ClickHouse 的 SELECT 不支持 PARTITION 子句，应使用 _partition_id 过滤（见下一条）
+-- SELECT * FROM events
+-- PARTITION '202401'
+-- WHERE user_id = 123;
 
 -- 查询多个分区
 SELECT * FROM events
@@ -213,7 +246,7 @@ SELECT
     sum(bytes_on_disk) as total_bytes,
     formatReadableSize(sum(bytes_on_disk)) as readable_size
 FROM system.parts
-WHERE database = 'my_database'
+WHERE database = 'default'
   AND table = 'events'
   AND active = 1
 GROUP BY partition, name
@@ -228,12 +261,14 @@ ALTER TABLE events
 DROP PARTITION '202401';
 
 -- 删除多个分区
-ALTER TABLE events
-DROP PARTITION '202301', '202302', '202303';
+-- 说明: 25.12 的 DROP PARTITION 一次只能指定一个分区，故拆分为多条语句
+ALTER TABLE events DROP PARTITION '202301';
+ALTER TABLE events DROP PARTITION '202302';
+ALTER TABLE events DROP PARTITION '202303';
 
 -- 删除旧分区
-ALTER TABLE events
-DROP PARTITION '202301', '202302', '202303', '202304', '202305';
+ALTER TABLE events DROP PARTITION '202304';
+ALTER TABLE events DROP PARTITION '202305';
 
 -- ========================================
 -- 分区类型
@@ -251,9 +286,10 @@ FROM events;
 -- ========================================
 
 -- 交换分区
-ALTER TABLE events_archive
-EXCHANGE PARTITION '202401'
-WITH events;
+-- 说明: ClickHouse 25.12 已移除 EXCHANGE PARTITION 语法（教学保留原文，可改用 REPLACE/ATTACH PARTITION）
+-- ALTER TABLE events_archive
+-- EXCHANGE PARTITION '202401'
+-- WITH events;
 
 -- ========================================
 -- 分区类型
@@ -372,13 +408,16 @@ ORDER BY (user_id, event_time);
 -- ========================================
 
 -- 定期归档旧分区
-ALTER TABLE events
-DROP PARTITION '202301', '202302', '202303';
+-- 说明: 25.12 的 DROP PARTITION 一次只能指定一个分区，故拆分为多条语句
+ALTER TABLE events DROP PARTITION '202306';
+ALTER TABLE events DROP PARTITION '202307';
+ALTER TABLE events DROP PARTITION '202308';
 
 -- 或移动到归档表
-ALTER TABLE events_archive
-EXCHANGE PARTITION '202301', '202302', '202303'
-WITH events;
+-- 说明: ClickHouse 25.12 已移除 EXCHANGE PARTITION 语法（教学保留原文）
+-- ALTER TABLE events_archive
+-- EXCHANGE PARTITION '202301', '202302', '202303'
+-- WITH events;
 
 -- ========================================
 -- 分区类型
@@ -391,7 +430,7 @@ SELECT
     sum(bytes_on_disk) as total_bytes,
     formatReadableSize(sum(bytes_on_disk)) as readable_size
 FROM system.parts
-WHERE database = 'my_database'
+WHERE database = 'default'
   AND table = 'events'
   AND active = 1
 GROUP BY partition

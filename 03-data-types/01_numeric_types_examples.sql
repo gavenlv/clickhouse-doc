@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS datatype_test.numeric_types ON CLUSTER 'treasuryclust
     balance Int64,
     temperature Float32,
     price Float64
-) ENGINE = ReplicatedMergeTree() ORDER BY id;
+) ENGINE = MergeTree() ORDER BY id;
 
 -- 插入数据
 INSERT INTO datatype_test.numeric_types VALUES
@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS datatype_test.sales ON CLUSTER 'treasurycluster' (
     price UInt32,
     total_price UInt64,
     rating Float32
-) ENGINE = ReplicatedMergeTree() ORDER BY id;
+) ENGINE = MergeTree() ORDER BY id;
 
 -- 插入数据
 INSERT INTO datatype_test.sales VALUES
@@ -145,7 +145,7 @@ ORDER BY product_id;
 CREATE TABLE IF NOT EXISTS datatype_test.users_good ON CLUSTER 'treasurycluster' (
     id UInt64,
     age UInt8       -- 0-255，足够
-) ENGINE = ReplicatedMergeTree() ORDER BY id;
+) ENGINE = MergeTree() ORDER BY id;
 
 -- ========================================
 -- 基础使用
@@ -156,7 +156,7 @@ CREATE TABLE IF NOT EXISTS datatype_test.events ON CLUSTER 'treasurycluster' (
     id UInt64,
     user_id UInt64,
     event_time DateTime
-) ENGINE = ReplicatedMergeTree() ORDER BY (id, event_time);
+) ENGINE = MergeTree() ORDER BY (id, event_time);
 
 -- ========================================
 -- 基础使用

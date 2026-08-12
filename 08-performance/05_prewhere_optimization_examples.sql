@@ -40,6 +40,39 @@
 -- 
 -- ================================================================================
 
+-- 测试数据准备（幂等：先删后建，保证文件可独立重复运行）
+DROP TABLE IF EXISTS large_events;
+DROP TABLE IF EXISTS small_events;
+DROP TABLE IF EXISTS events;
+
+-- 事件表（统一 schema，包含后续示例所需的全部列）
+CREATE TABLE events (
+    event_id UInt64,
+    user_id UInt64,
+    event_type String,
+    status UInt8,
+    processed UInt8,
+    event_data String,
+    event_time DateTime
+) ENGINE = MergeTree()
+PARTITION BY toYYYYMM(event_time)
+ORDER BY (user_id, event_time);
+
+-- 少量示例数据（使过滤演示有实际效果）
+INSERT INTO events
+VALUES
+(1, 123, 'click', 1, 0, '{"page":"/home"}', now() - INTERVAL 1 DAY),
+(2, 123, 'view',  1, 0, '{"product":"laptop"}', now() - INTERVAL 2 DAY),
+(3, 124, 'click', 1, 0, '{"page":"/about"}', now() - INTERVAL 3 DAY),
+(4, 125, 'purchase', 2, 1, '{"order":"#1001"}', now() - INTERVAL 4 DAY),
+(5, 126, 'click', 1, 0, '{"page":"/cart"}', now() - INTERVAL 5 DAY);
+
+-- 大/小表示例（与 events 同构，用于"大表使用 PREWHERE"演示）
+CREATE TABLE large_events AS events;
+CREATE TABLE small_events AS events;
+
+-- 说明: 原教学伪代码 user_id IN (1, 2, 3, ..., 1000) 中的省略号非法，
+--       统一改写为 IN (SELECT number FROM numbers(1000))（等价于 0..999），保持"过滤大量用户"语义
 SELECT 
     user_id,
     event_type,
@@ -95,7 +128,7 @@ SELECT
     event_data
 FROM events
 PREWHERE event_time >= now() - INTERVAL 30 DAY
-WHERE user_id IN (1, 2, 3, ..., 1000);
+WHERE user_id IN (SELECT number FROM numbers(1000));
 
 -- ❌ 不使用 PREWHERE
 SELECT 
@@ -104,7 +137,7 @@ SELECT
     event_data
 FROM events
 WHERE event_time >= now() - INTERVAL 30 DAY
-  AND user_id IN (1, 2, 3, ..., 1000);
+  AND user_id IN (SELECT number FROM numbers(1000));
 
 -- ========================================
 -- 基本 PREWHERE
@@ -116,7 +149,7 @@ SELECT
     event_type
 FROM events
 PREWHERE event_data LIKE '%keyword%'  -- 过滤大列
-WHERE user_id IN (1, 2, 3, ..., 1000);
+WHERE user_id IN (SELECT number FROM numbers(1000));
 
 -- ❌ 不使用 PREWHERE
 SELECT 
@@ -124,7 +157,7 @@ SELECT
     event_type
 FROM events
 WHERE event_data LIKE '%keyword%'
-  AND user_id IN (1, 2, 3, ..., 1000);
+  AND user_id IN (SELECT number FROM numbers(1000));
 
 -- ========================================
 -- 基本 PREWHERE
@@ -137,7 +170,7 @@ SELECT
     event_time
 FROM events
 PREWHERE status = 1  -- 过滤状态
-WHERE user_id IN (1, 2, 3, ..., 1000)
+WHERE user_id IN (SELECT number FROM numbers(1000))
   AND event_time >= now() - INTERVAL 7 DAY;
 
 -- ❌ 不使用 PREWHERE
@@ -147,7 +180,7 @@ SELECT
     event_time
 FROM events
 WHERE status = 1
-  AND user_id IN (1, 2, 3, ..., 1000)
+  AND user_id IN (SELECT number FROM numbers(1000))
   AND event_time >= now() - INTERVAL 7 DAY;
 
 -- ========================================
@@ -187,7 +220,7 @@ SELECT * FROM events
 PREWHERE event_time >= now() - INTERVAL 7 DAY
   AND status = 1
   AND processed = 0
-WHERE user_id IN (1, 2, 3, ..., 1000);
+WHERE user_id IN (SELECT number FROM numbers(1000));
 
 -- ========================================
 -- 基本 PREWHERE
@@ -222,20 +255,20 @@ WHERE user_id = 123;
 -- ========================================
 
 -- 查看过滤统计
+-- 说明: 25.12 集群 system.query_log 未启用，改用 system.query_thread_log（需先 SET log_query_threads = 1）；
+--       query_thread_log 无 result_rows/result_bytes 列，故以 read_rows/read_bytes 衡量
+SET log_query_threads = 1;
+
 SELECT 
     query,
     read_rows,
     read_bytes,
-    result_rows,
-    result_bytes,
-    formatReadableSize(read_bytes) as read_size,
-    formatReadableSize(result_bytes) as result_size,
-    read_rows / result_rows as filter_ratio
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND query LIKE '%PREWHERE%'
+    query_duration_ms,
+    formatReadableSize(read_bytes) as read_size
+FROM system.query_thread_log
+WHERE query LIKE '%PREWHERE%'
   AND event_time >= now() - INTERVAL 24 HOUR
-ORDER BY filter_ratio DESC
+ORDER BY read_rows DESC
 LIMIT 10;
 
 -- ========================================
@@ -291,15 +324,16 @@ WHERE user_id = 123
 -- ========================================
 
 -- 分析 PREWHERE 效果
+-- 说明: 改用 system.query_thread_log（无 result_rows 列，故移除过滤比指标，保留平均读取行数）
+SET log_query_threads = 1;
+
 SELECT 
     substring(query, 1, 100) as query_sample,
     count() as query_count,
     avg(read_rows) as avg_rows_read,
-    avg(result_rows) as avg_rows_result,
-    avg(read_rows / result_rows) as avg_filter_ratio
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND query LIKE '%PREWHERE%'
+    avg(query_duration_ms) as avg_duration_ms
+FROM system.query_thread_log
+WHERE query LIKE '%PREWHERE%'
   AND event_time >= now() - INTERVAL 7 DAY
 GROUP BY query_sample
 ORDER BY query_count DESC

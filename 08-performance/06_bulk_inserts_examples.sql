@@ -100,6 +100,48 @@
 -- 
 -- ================================================================================
 
+-- 测试数据准备（幂等：先删后建，保证文件可独立重复运行）
+DROP TABLE IF EXISTS distributed_events;
+DROP TABLE IF EXISTS events_temp;
+DROP TABLE IF EXISTS logs;
+DROP TABLE IF EXISTS events;
+
+-- 事件表（5 列：event_id, user_id, event_type, event_time, event_data）
+CREATE TABLE events (
+    event_id UInt64,
+    user_id UInt64,
+    event_type String,
+    event_time DateTime,
+    event_data String
+) ENGINE = MergeTree()
+PARTITION BY toYYYYMM(event_time)
+ORDER BY (event_time, event_id);
+
+-- 分布式表（并行插入演示，指向本机 events）
+CREATE TABLE distributed_events
+AS events
+ENGINE = Distributed('treasurycluster', 'default', 'events', rand());
+
+-- 临时源表（INSERT SELECT 分片演示，含 shard 列）
+CREATE TABLE events_temp (
+    event_id UInt64,
+    user_id UInt64,
+    event_type String,
+    event_time DateTime,
+    event_data String,
+    shard UInt8
+) ENGINE = Memory;
+
+-- 日志表（批量插入演示）
+CREATE TABLE logs (
+    id UInt64,
+    username String,
+    level String,
+    ts DateTime,
+    message String
+) ENGINE = MergeTree()
+ORDER BY ts;
+
 INSERT INTO events
 VALUES
 (1, 100, 'click', now(), '{"page":"/home"}'),
@@ -129,8 +171,9 @@ SELECT
 FROM numbers(100000);  -- 10 万行
 
 -- ✅ 批量插入（从外部数据）
+-- [需外部依赖] 需在 /var/lib/clickhouse/user_files/ 提供 events.csv（首行为列名）
 INSERT INTO events
-FROM file('events.csv', 'CSV')
+SELECT * FROM file('events.csv', 'CSV')
 SETTINGS input_format_skip_first_lines = 1,
         input_format_allow_errors_num = 100;
 
@@ -181,19 +224,22 @@ VALUES (4, 102, 'click', now(), '{}');
 -- ========================================
 
 -- ✅ 使用压缩插入
-INSERT INTO events
-SETTINGS max_insert_threads = 4,
-        min_insert_block_size_rows = 65536,
-        min_insert_block_size_bytes = 268435456
-FORMAT Native
-FROM file('events.native', 'Native')
-SETTINGS compression = 'lz4';
+-- 说明: 原写法 FORMAT Native FROM file(...) 组合非法（双 SETTINGS），且依赖外部文件；
+--       教学示意保留为注释，等价的可运行写法见下方"Native 格式（最快）"一节
+-- INSERT INTO events
+-- SETTINGS max_insert_threads = 4,
+--         min_insert_block_size_rows = 65536,
+--         min_insert_block_size_bytes = 268435456
+-- FORMAT Native
+-- FROM file('events.native', 'Native')
+-- SETTINGS compression = 'lz4';
 
 -- ✅ 使用压缩协议
-clickhouse-client --query="INSERT INTO events FORMAT Native" \
-  --format=Native \
-  --compression=lz4 \
-  < data.bin
+-- 说明: 以下为 shell 命令示意（clickhouse-client 命令行），非 SQL，注释保留
+-- clickhouse-client --query="INSERT INTO events FORMAT Native" \
+--   --format=Native \
+--   --compression=lz4 \
+--   < data.bin
 
 -- ========================================
 -- 1. 使用 INSERT VALUES
@@ -333,25 +379,29 @@ FROM file('events.jsonl', 'JSONEachRow');
 -- ========================================
 
 -- ✅ 合理的线程数
+-- 说明: 原教学伪代码 min(8, CPU核数) 与 VALUES (...) 非法，改为可运行写法
 INSERT INTO events
-SETTINGS max_insert_threads = min(8, CPU核数)
-VALUES (...);
+SETTINGS max_insert_threads = 4
+VALUES (1, 100, 'click', now(), '{}');
 
 -- ========================================
 -- 1. 使用 INSERT VALUES
 -- ========================================
 
 -- 查看插入统计
+-- 说明: 25.12 集群 system.query_log 未启用，改用 system.query_thread_log（需先 SET log_query_threads = 1）；
+--       query_thread_log 中写入列名为 written_rows/written_bytes
+SET log_query_threads = 1;
+
 SELECT 
     query,
-    write_rows,
-    write_bytes,
+    written_rows,
+    written_bytes,
     query_duration_ms,
-    write_rows / query_duration_ms as rows_per_second,
-    formatReadableSize(write_bytes) as write_size
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND query LIKE '%INSERT%'
+    written_rows / greatest(query_duration_ms, 1) as rows_per_second,
+    formatReadableSize(written_bytes) as write_size
+FROM system.query_thread_log
+WHERE query LIKE '%INSERT%'
   AND event_time >= now() - INTERVAL 1 HOUR
 ORDER BY query_duration_ms DESC
 LIMIT 10;
