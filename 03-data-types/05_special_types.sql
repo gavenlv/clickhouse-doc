@@ -9,6 +9,16 @@
  *   - JSON 类型（实验）怎么用？和 String+JSONExtract 比哪个好？
  *   - CH 没有 Bool 类型，怎么模拟？
  *
+ * 【使用场景】特殊类型各有明确领地：
+ *   - Enum8/16：状态码、日志级别等固定集合（省空间 + 过滤快）
+ *   - UUID：分布式环境生成全局唯一 ID（无需中心发号器）
+ *   - IPv4/IPv6：网络日志、用户 IP 分析（比 String 省 4-8x 且可做范围查询）
+ *   - Nullable：少量可空的可选字段（如"退款时间"）；高频字段慎用
+ *   - JSON：上游 schema 频繁变化的半结构化数据（免 ALTER）
+ *   - Bool 模拟：CH 无 Bool 类型，用 UInt8(0/1) 承载，sum() 即计数
+ *   选择要点：Enum8 vs LowCardinality(String)——值固定不会新增选 Enum8；
+ *   会动态扩展选 LowCardinality；IPv4 一定不要存 String。
+ *
  * 【原理】
  *   特殊类型是 ClickHouse 的"列式优化"的极致体现：
  *   - Enum: 存储为 Int8/Int16，查询时映射为字符串

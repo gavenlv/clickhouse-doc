@@ -8,7 +8,9 @@
 
 -- 注意: 集群建库必须加 ON CLUSTER，否则 clickhouse-server-2 上数据库不存在，
 -- 后续 ON CLUSTER 建表会报 Code 81 (UNKNOWN_DATABASE)
-DROP DATABASE IF EXISTS distributed_test ON CLUSTER treasurycluster;
+-- DROP DATABASE 必须带 SYNC: 否则已存在副本在 ZK 中的元数据不会同步删除，
+-- 再次建同名的 ReplicatedMergeTree 表会报 REPLICA_ALREADY_EXISTS (Code 253)
+DROP DATABASE IF EXISTS distributed_test ON CLUSTER treasurycluster SYNC;
 CREATE DATABASE IF NOT EXISTS distributed_test ON CLUSTER treasurycluster;
 USE distributed_test;
 

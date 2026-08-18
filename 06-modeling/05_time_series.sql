@@ -156,38 +156,43 @@ FROM sensor_raw
 GROUP BY sensor_id, toStartOfMinute(event_time);
 
 -- 2. 小时级聚合（从分钟级聚合）
+-- 【坑】SELECT 别名不能与源列同名（window_start），否则 GROUP BY 中
+--       toStartOfHour(window_start) 会递归解析别名导致报错 215，
+--       因此这里别名改为 hour_start
 CREATE MATERIALIZED VIEW mv_sensor_1hour
 ENGINE = AggregatingMergeTree
-ORDER BY (sensor_id, window_start)
-PARTITION BY toDate(window_start)
+ORDER BY (sensor_id, hour_start)
+PARTITION BY toDate(hour_start)
 AS SELECT
     sensor_id,
-    toStartOfHour(window_start) AS window_start,
-    avgMerge(avg_temp) AS avg_temp,
-    maxMerge(max_temp) AS max_temp,
-    minMerge(min_temp) AS min_temp,
-    avgMerge(avg_humidity) AS avg_humidity,
-    avgMerge(avg_pressure) AS avg_pressure,
-    countMerge(sample_count) AS sample_count
+    toStartOfHour(window_start) AS hour_start,
+    -- 【坑】链式聚合中间层必须用 xxxMergeState() 保持聚合状态，
+    --       若用 avgMerge() 输出普通值，下一层无法再次聚合（报错 43）
+    avgMergeState(avg_temp) AS avg_temp,
+    maxMergeState(max_temp) AS max_temp,
+    minMergeState(min_temp) AS min_temp,
+    avgMergeState(avg_humidity) AS avg_humidity,
+    avgMergeState(avg_pressure) AS avg_pressure,
+    countMergeState(sample_count) AS sample_count
 FROM mv_sensor_1min
 GROUP BY sensor_id, toStartOfHour(window_start);
 
 -- 3. 天级聚合（从小时级聚合）
 CREATE MATERIALIZED VIEW mv_sensor_1day
 ENGINE = AggregatingMergeTree
-ORDER BY (sensor_id, window_start)
-PARTITION BY toDate(window_start)
+ORDER BY (sensor_id, day_start)
+PARTITION BY toDate(day_start)
 AS SELECT
     sensor_id,
-    toDate(window_start) AS window_start,
-    avgMerge(avg_temp) AS avg_temp,
-    maxMerge(max_temp) AS max_temp,
-    minMerge(min_temp) AS min_temp,
-    avgMerge(avg_humidity) AS avg_humidity,
-    avgMerge(avg_pressure) AS avg_pressure,
-    countMerge(sample_count) AS sample_count
+    toDate(hour_start) AS day_start,
+    avgMergeState(avg_temp) AS avg_temp,
+    maxMergeState(max_temp) AS max_temp,
+    minMergeState(min_temp) AS min_temp,
+    avgMergeState(avg_humidity) AS avg_humidity,
+    avgMergeState(avg_pressure) AS avg_pressure,
+    countMergeState(sample_count) AS sample_count
 FROM mv_sensor_1hour
-GROUP BY sensor_id, toDate(window_start);
+GROUP BY sensor_id, toDate(hour_start);
 
 -- 插入测试数据
 INSERT INTO sensor_raw SELECT
@@ -201,24 +206,37 @@ LIMIT 200000;
 
 -- 查询聚合结果
 SELECT '【分钟级聚合】传感器 1 的温度:';
-SELECT window_start, avg_temp, max_temp, min_temp, sample_count
+SELECT window_start,
+       avgMerge(avg_temp) AS avg_temp,
+       maxMerge(max_temp) AS max_temp,
+       minMerge(min_temp) AS min_temp,
+       countMerge(sample_count) AS sample_count
 FROM mv_sensor_1min
 WHERE sensor_id = 1
+GROUP BY window_start
 ORDER BY window_start
 LIMIT 5;
 
 SELECT '【小时级聚合】传感器 1 的温度:';
-SELECT window_start, avg_temp, max_temp, min_temp
+SELECT hour_start,
+       avgMerge(avg_temp) AS avg_temp,
+       maxMerge(max_temp) AS max_temp,
+       minMerge(min_temp) AS min_temp
 FROM mv_sensor_1hour
 WHERE sensor_id = 1
-ORDER BY window_start
+GROUP BY hour_start
+ORDER BY hour_start
 LIMIT 5;
 
 SELECT '【天级聚合】传感器 1 的温度:';
-SELECT window_start, avg_temp, max_temp, min_temp
+SELECT day_start,
+       avgMerge(avg_temp) AS avg_temp,
+       maxMerge(max_temp) AS max_temp,
+       minMerge(min_temp) AS min_temp
 FROM mv_sensor_1day
 WHERE sensor_id = 1
-ORDER BY window_start;
+GROUP BY day_start
+ORDER BY day_start;
 
 -- ============================================================
 -- 实验三：降采样（Downsampling）
@@ -304,10 +322,12 @@ ORDER BY (sensor_id, event_time)        -- 去重键：相同 sensor_id + event_
 PARTITION BY toDate(event_time);
 
 -- 插入重复数据（模拟重复上报）
+-- 【坑】VALUES 每行必须以 (...) 结束，行内 -- 注释会导致解析失败（错误 27），
+--       重复语义用注释在语句前说明即可
 INSERT INTO sensor_dedup VALUES
     (1, '2024-06-01 10:00:00', 25.5, 60.0, '2024-06-01 10:00:05', 1),
-    (1, '2024-06-01 10:00:00', 25.7, 60.1, '2024-06-01 10:00:10', 2),  -- 重复，更新温度
-    (1, '2024-06-01 10:00:00', 25.6, 60.2, '2024-06-01 10:00:15', 3),  -- 重复，更新湿度
+    (1, '2024-06-01 10:00:00', 25.7, 60.1, '2024-06-01 10:00:10', 2),
+    (1, '2024-06-01 10:00:00', 25.6, 60.2, '2024-06-01 10:00:15', 3),
     (2, '2024-06-01 10:00:00', 30.0, 55.0, '2024-06-01 10:00:08', 1),
     (2, '2024-06-01 10:05:00', 31.0, 54.0, '2024-06-01 10:05:12', 1);
 
@@ -327,13 +347,16 @@ ORDER BY sensor_id, event_time;
 -- OPTIMIZE TABLE sensor_dedup FINAL;
 
 -- 使用 argMax 获取最新版本（不需要 FINAL）
+-- 【坑】max(batch_id) AS batch_id 会遮蔽源列 batch_id，
+--       导致 argMax 中的 batch_id 被解析为聚合结果（报错 184），
+--       别名必须避开源列名
 SELECT '【去重后】使用 argMax:';
 SELECT
     sensor_id,
     event_time,
     argMax(temperature, batch_id) AS temperature,
     argMax(humidity, batch_id) AS humidity,
-    max(batch_id) AS batch_id
+    max(batch_id) AS latest_batch_id
 FROM sensor_dedup
 GROUP BY sensor_id, event_time
 ORDER BY sensor_id, event_time;
@@ -364,16 +387,16 @@ CREATE TABLE sensor_with_ttl
     temperature    Float32,
     humidity       Float32,
     pressure       Float32,
-    -- 列级别 TTL：原始数据 30 天后删除，但保留聚合值
     raw_data       String
 )
 ENGINE = MergeTree
 ORDER BY (sensor_id, event_time)
 PARTITION BY toDate(event_time)
+-- 【坑】TTL 的 TO COLUMN（列级 TTL 删除）语法已在 CH 24.x 移除（报语法错误 62），
+--       列级 TTL 改用：ALTER TABLE sensor_with_ttl MODIFY COLUMN raw_data
+--       TTL toDate(event_time) + INTERVAL 30 DAY;
 -- 行级别 TTL：90 天后删除整行
-TTL toDate(event_time) + INTERVAL 90 DAY DELETE,
-    -- 列级别 TTL：30 天后删除 raw_data 列
-    toDate(event_time) + INTERVAL 30 DAY TO COLUMN raw_data
+TTL toDate(event_time) + INTERVAL 90 DAY DELETE
 -- 设置 TTL 只在合并时执行，不会单独触发
 SETTINGS merge_with_ttl_timeout = 3600;
 
@@ -389,10 +412,9 @@ FROM system.numbers
 LIMIT 100000;
 
 -- 查看 TTL 定义
+-- 【坑】system.tables 没有 ttl_expr 列，查看 TTL 用 SHOW CREATE TABLE
 SELECT '【TTL 定义】查看表的 TTL 设置:';
-SELECT name, engine, ttl_expr
-FROM system.tables
-WHERE database = 'modeling_test' AND name = 'sensor_with_ttl';
+SHOW CREATE TABLE sensor_with_ttl;
 
 -- 【坑】TTL 的注意事项
 -- 1. TTL 不是实时删除的，依赖后台 merge
@@ -404,12 +426,14 @@ WHERE database = 'modeling_test' AND name = 'sensor_with_ttl';
 ALTER TABLE sensor_with_ttl MODIFY TTL
     toDate(event_time) + INTERVAL 60 DAY DELETE;  -- 改为 60 天
 
--- 添加新的 TTL 条件
-ALTER TABLE sensor_with_ttl ADD TTL
-    toDate(event_time) + INTERVAL 180 DAY DELETE;
+-- 【坑】ADD TTL 语法已在 CH 25.x 移除（报语法错误 62），
+--       多条件 TTL 用 MODIFY TTL 以逗号分隔一次写全：
+-- ALTER TABLE sensor_with_ttl MODIFY TTL
+--     toDate(event_time) + INTERVAL 60 DAY DELETE,
+--     toDate(event_time) + INTERVAL 180 DAY DELETE;
 
 -- 删除 TTL
--- ALTER TABLE sensor_with_ttl REMOVE TTL;
+ALTER TABLE sensor_with_ttl REMOVE TTL;
 
 -- 查询 TTL 合并进度
 SELECT '【TTL 进度】查看 TTL 合并状态:';

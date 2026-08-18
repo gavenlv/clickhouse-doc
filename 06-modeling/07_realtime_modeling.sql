@@ -56,13 +56,18 @@ CREATE TABLE realtime_logs_buffer
     host        LowCardinality(String),
     duration_ms UInt32
 )
+-- 【坑】Buffer 引擎语法：Buffer(database, table, num_layers,
+--       min_time, max_time, min_rows, max_rows, min_bytes, max_bytes)
+--       共 9 个参数（2 个字符串 + 7 个数值），少一个数值会报
+--       NUMBER_OF_ARGUMENTS_DOESNT_MATCH
 ENGINE = Buffer('modeling_test', 'realtime_logs_target',  -- 目标表
-    16,          -- 缓冲区行数下限
-    3,           -- 缓冲区时间下限（秒）
-    100,         -- 缓冲区行数上限
-    60,          -- 缓冲区时间上限（秒）
-    1048576,     -- 缓冲区最大字节数
-    2097152      -- 缓冲区刷新前的最大字节数
+    16,          -- num_layers：缓冲区层数（多个层可降低锁竞争）
+    10,          -- min_time：最小缓冲时间（秒）
+    60,          -- max_time：最大缓冲时间（秒）
+    100,         -- min_rows：最小缓冲行数
+    10000,       -- max_rows：最大缓冲行数
+    1048576,     -- min_bytes：最小缓冲字节数
+    104857600    -- max_bytes：最大缓冲字节数
 );
 
 -- 目标表（实际存储数据）
@@ -388,12 +393,18 @@ FROM raw_events
 GROUP BY event_type, toStartOfMinute(event_time);
 
 -- 步骤 4：写入模拟实时数据
-INSERT INTO raw_events SELECT
+-- 【坑】INSERT INTO ... SELECT 不带列列表时要求列数完全匹配，
+--       server_time 有 DEFAULT，需显式指定列列表（否则报错 20）
+INSERT INTO raw_events (event_id, event_type, user_id, event_time, properties) SELECT
     number AS event_id,
     ['page_view', 'click', 'purchase', 'login', 'logout'][(number % 5) + 1] AS event_type,
     number % 50000 AS user_id,
     now() - (number % 3600) AS event_time,
-    format('{{"page":"{}","duration":{}}}', concat('/page_', toString(number % 100)), rand() % 30000) AS properties
+    -- 【坑】format() 中 {{ 是字面 { 的转义，与自动编号 {} 混用会报错
+    --       "Cannot switch from automatic field numbering to manual field
+    --       specification"（错误 36），嵌套 JSON 改用 concat 拼接
+    concat('{"page":"', concat('/page_', toString(number % 100)),
+           '","duration":', toString(rand() % 30000), '}') AS properties
 FROM system.numbers
 LIMIT 50000;
 

@@ -53,7 +53,6 @@ SELECT
     host_name,
     port,
     user,
-    connections,
     errors_count,
     estimated_recovery_time
 FROM system.clusters
@@ -63,7 +62,7 @@ ORDER BY shard_num, replica_num;
 -- 1.2 查看当前节点信息
 -- 【场景】确认当前节点身份、版本和运行时长
 SELECT
-    host_name() AS current_host,
+    hostName() AS current_host,
     version() AS version,
     uptime() AS uptime_seconds,
     now() AS current_time;
@@ -233,13 +232,10 @@ SELECT
     command,
     mutation_id,
     create_time,
-    parts_to_do,
-    parts_done,
+    parts_to_do,          -- 剩余待处理 Part 数（25.12 无 parts_done/progress/bytes_* 列）
     is_done,
-    round(progress * 100, 2) AS progress_percent,
-    formatReadableSize(bytes_read) AS bytes_read,
-    formatReadableSize(bytes_written) AS bytes_written,
-    formatReadableTimeDelta(now() - create_time) AS elapsed
+    latest_fail_time,
+    latest_fail_reason
 FROM system.mutations
 WHERE is_done = 0
 ORDER BY create_time;
@@ -253,7 +249,6 @@ SELECT
     command,
     create_time,
     parts_to_do,
-    parts_done,
     formatReadableTimeDelta(now() - create_time) AS elapsed,
     latest_failed_part,
     latest_fail_time,
@@ -270,13 +265,12 @@ SELECT
     table,
     command,
     create_time,
-    done_time,
     parts_to_do,
-    elapsed,
-    exception_code,
-    exception_text
+    is_done,
+    latest_fail_time,
+    latest_fail_reason
 FROM system.mutations
-WHERE done_time >= now() - INTERVAL 1 DAY
+WHERE create_time >= now() - INTERVAL 1 DAY
 ORDER BY create_time DESC;
 
 -- ==========================================
@@ -371,14 +365,14 @@ SELECT
     table,
     type,
     replica_name,
-    parts_to_do,
-    exception_text,
+    length(parts_to_merge) AS parts_to_merge_cnt,
+    last_exception,
     num_tries,
     last_attempt_time,
     last_exception_time
 FROM system.replication_queue
-WHERE parts_to_do > 0
-ORDER BY parts_to_do DESC
+WHERE length(parts_to_merge) > 0
+ORDER BY parts_to_merge_cnt DESC
 LIMIT 20;
 
 -- 6.2 复制队列异常
@@ -390,8 +384,8 @@ SELECT
     replica_name,
     type,
     num_tries,
-    parts_to_do,
-    exception_text,
+    parts_to_merge,
+    last_exception,
     last_exception_time,
     last_attempt_time
 FROM system.replication_queue
@@ -567,15 +561,17 @@ LIMIT 20;
 
 -- 9.7 查询失败分析
 -- 【场景】分析最近的查询失败原因
+-- 【坑】25.12 的 system.query_thread_log 无 type/exception_code 列，
+--       失败分析改用 system.text_log 的错误日志聚合
 SELECT
-    exception_code,
-    exception_text,
+    level,
+    logger_name,
     count() AS error_count,
-    any(substring(query, 1, 200)) AS example_query
-FROM system.query_thread_log
-WHERE type IN ('ExceptionWhileProcessing', 'ExceptionBeforeStart')
+    any(substring(message, 1, 200)) AS example_message
+FROM system.text_log
+WHERE level IN ('Error', 'Critical', 'Warning')
   AND event_time >= now() - INTERVAL 1 DAY
-GROUP BY exception_code, exception_text
+GROUP BY level, logger_name
 ORDER BY error_count DESC
 LIMIT 20;
 

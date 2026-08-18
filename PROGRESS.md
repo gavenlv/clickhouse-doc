@@ -15,7 +15,7 @@
 ## 当前阶段：R0-R16 全部完成（2026-08-04）
 
 > 全项目重整（21 章 → 14 主干章 + 2 附录）已全部完成，所有目录重命名为新编号（git mv 保留历史），旧内容归档至 `_legacy/`。
-> **注意**：R2-R9 的 SQL 文件待集群恢复后批量验证（Docker Desktop 未运行，SQL 均已按 CH 25.12 兼容性规则编写）。
+> **注意**：R2-R8 的 SQL 文件已全部在集群验证通过（详见文末"SQL 验证进展"），R9 待验证。
 
 ### 重整计划核心结论（2026-08-02 诊断）
 
@@ -654,3 +654,47 @@
 - ✅ 16 个旧目录归档至 _legacy/，git 历史完整保留
 - ✅ 根 README / TRAINING_PLAN / PROGRESS 无旧路径引用
 - ✅ 全部活跃章节跨章链接指向新目录，导航无断链
+
+---
+
+## SQL 验证进展（2026-08-18）
+
+> 集群 treasurycluster（CH 25.12.1.649）已恢复，R2-R6 SQL 文件批量验证。
+
+### R2（03-data-types）：10/10 验证通过
+- ✅ 01-07 全部 SQL 零错误；01_numeric_types.md / 02_string_types.md / README.md 新增"使用场景详解/使用场景全景"章节（场景驱动选型）
+- ✅ 5 个 SQL 文件（03-07）头部补充【使用场景】注释后重新验证零错误
+
+### R3（07-data-mutation）：验证通过
+- ✅ 全部 SQL 零错误
+
+### R4（12-troubleshooting）：11/11 验证通过
+- ✅ 全部 SQL 零错误
+
+### R5（06-modeling）：7/7 验证通过
+- ✅ ARRAY JOIN 别名 / 跳数索引 bloom_filter / system.data_skipping_indices 列名 / 字典 city_id / 链式聚合 *MergeState / Buffer 9 参数等 CH 25.12 兼容性修复后全部零错误
+
+### R6（09-distributed）：7/7 验证通过
+- ✅ 01/04/05/07 首轮通过
+- ✅ 02/03/06 修复后通过（详见下）
+
+### R6 关键修复：复制/quorum 故障根因（重大发现）
+| 问题 | 根因 | 修复方式 |
+|------|------|----------|
+| 副本间拉取数据失败：Code 221 NO_SUCH_INTERSERVER_IO_ENDPOINT | 00-infra/config/clickhouse1.xml & clickhouse2.xml 中 `interserver_http_host` 误配为 `0.0.0.0`，副本 fetch 时请求发往错误地址 | 改为容器 hostname（clickhouse1/clickhouse2），重启容器后复制恢复 |
+| quorum 写入超时：Code 319 UNKNOWN_STATUS_OF_INSERT | 上述 interserver 配置错误导致 server-2 复制队列卡住，quorum=2 无法等到第二副本确认 | 同上修复后，insert_quorum=2 真实运行成功 |
+| 重跑报 REPLICA_ALREADY_EXISTS (Code 253) | 02/03 文件开头 `DROP DATABASE ... ON CLUSTER` 缺 SYNC，ZK 副本元数据残留 | DROP DATABASE 加 SYNC，并注释说明原因 |
+| `system.clusters` 无 database/table 列 | 该列属于 system.distributed_ddl_queue | 03 文件改查 system.distributed_ddl_queue |
+| `system.distributed_tables` 不存在（CH 25.12） | 表已改名 | 03 文件改查 system.distribution_queue（发送队列监控：data_files/error_count/last_exception） |
+| `system.query_log` 不存在（本集群禁用） | config.xml `<query_log remove="1"/>` | 03 文件改用 system.distribution_queue 监控列 |
+
+### R7（08-performance）：16/16 验证通过
+- ✅ 01-16 全部 SQL 零错误
+- ✅ CH 25.12 兼容性修复：`EXPLAIN OPTIMIZE`→`EXPLAIN SYNTAX`、`optimize_where_to_prewhere`→并入 `optimize_move_to_prewhere`、`use_page_cache_in_prefetched` 移除（改 config `<page_cache>`）、`enable_query_cache`→`use_query_cache`、`query_cache_max_size_bytes`→`query_cache_max_size_in_bytes`、`query_cache_nondeterministic_function_handling='save'`（now() 非确定性函数缓存）、系统表查询前 `SET use_query_cache=0`、`sumState(amount)`→`sumState(event_id)`（events 无 amount 列）、`countMerge` 配 `countState`、5 组 query_log 查询注释保留（本集群禁用）、orders 表补 `product_id` 列兼容 10 号文件 MV、SETTINGS 子句置于 WHERE 之后
+
+### R8（05-functions）：5/5 验证通过
+- ✅ 01-05 全部 SQL 零错误
+- ✅ CH 25.12 兼容性修复：`-Array` 组合子查询补 GROUP BY（NOT_AN_AGGREGATE）、聚合函数嵌套 State 非法（`sumMerge(sumState(x))`→`sum(x)` 等）、`sumResample(start,end,step)(x, toUnixTimestamp(ts))` 语法、SimpleAggregateFunction(Sum) 存储类型改 Decimal(38,2)、`WITH name AS (x,y)->expr` 不支持（改用 CREATE FUNCTION）、`JSONKeys`→`JSONExtractKeys`、JSON 类型子列需 `.:类型` 后缀（GROUP BY/ORDER BY/avg 均需）、JSON 类型不能直接传 JSONExtract（先 toString）、format 拼接 JSON 改 concat、Dynamic 类型禁止 GROUP BY/ORDER BY
+
+### 待验证批次
+- ⬜ R9（11-monitoring-ops）7 个文件

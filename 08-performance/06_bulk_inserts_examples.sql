@@ -172,10 +172,11 @@ FROM numbers(100000);  -- 10 万行
 
 -- ✅ 批量插入（从外部数据）
 -- [需外部依赖] 需在 /var/lib/clickhouse/user_files/ 提供 events.csv（首行为列名）
-INSERT INTO events
-SELECT * FROM file('events.csv', 'CSV')
-SETTINGS input_format_skip_first_lines = 1,
-        input_format_allow_errors_num = 100;
+-- 本集群 user_files 未提供该文件，以下查询注释保留（放入文件后取消注释即可运行）
+-- INSERT INTO events
+-- SELECT * FROM file('events.csv', 'CSV')
+-- SETTINGS input_format_csv_skip_first_lines = 1,
+--         input_format_allow_errors_num = 100;
 
 -- ========================================
 -- 1. 使用 INSERT VALUES
@@ -187,7 +188,7 @@ SETTINGS async_insert = 1,
         wait_for_async_insert = 0,
         async_insert_max_data_size = 100000000,  -- 100 MB
         async_insert_busy_timeout_ms = 5000,
-        async_insert_max_wait_time_ms = 10000
+        async_insert_stale_timeout_ms = 10000
 VALUES
 (1, 100, 'click', now(), '{"page":"/home"}'),
 (2, 100, 'view', now(), '{"product":"laptop"}');
@@ -264,9 +265,9 @@ VALUES (1, 100, 'click', now(), '{}');
 -- 1. 使用 INSERT VALUES
 -- ========================================
 
--- 设置最大并发插入数
+-- 并行插入线程数（CH 25.12 中 max_concurrent_inserts 已移除，用 max_insert_threads 控制）
 INSERT INTO events
-SETTINGS max_concurrent_inserts = 10
+SETTINGS max_insert_threads = 4
 VALUES (1, 100, 'click', now(), '{}');
 
 -- ========================================
@@ -283,6 +284,7 @@ VALUES (1, 100, 'click', now(), '{}');
 -- ========================================
 
 -- ✅ 批量插入日志数据
+-- 说明: 真实场景可写入 10 万行，这里以 4 行示例（VALUES 块内不能放注释，注释需放语句外）
 INSERT INTO logs
 SETTINGS max_insert_threads = 8,
         min_insert_block_size_rows = 100000,
@@ -291,8 +293,7 @@ VALUES
 (1, 'user1', 'INFO', '2024-01-20 10:00:00', 'Message 1'),
 (2, 'user1', 'INFO', '2024-01-20 10:00:01', 'Message 2'),
 (3, 'user2', 'INFO', '2024-01-20 10:00:02', 'Message 3'),
--- ... 100000 行
-(100000, 'user100', 'INFO', '2024-01-20 12:00:00', 'Message 100000');
+(4, 'user2', 'INFO', '2024-01-20 10:00:03', 'Message 4');
 
 -- ========================================
 -- 1. 使用 INSERT VALUES
@@ -325,8 +326,8 @@ VALUES
 (1, 100, 'click', now(), '{}'),
 (2, 100, 'view', now(), '{}'),
 (3, 101, 'click', now(), '{}'),
--- ... 10000 行
-(10000, 103, 'click', now(), '{}');
+-- 说明: 真实场景可批量写入 1 万行（VALUES 行内不能放注释）
+(4, 101, 'view', now(), '{}');
 
 -- ========================================
 -- 1. 使用 INSERT VALUES
@@ -360,19 +361,27 @@ WHERE shard % 4 = 1;  -- 第二个分片
 -- ========================================
 
 -- ✅ Native 格式（最快）
-INSERT INTO events
-FORMAT Native
-FROM file('events.native', 'Native');
+-- [需外部依赖 + 语法说明] 正确做法是把文件放入容器后通过 stdin 管道导入：
+--   cat events.native | docker exec -i clickhouse-server-1 clickhouse-client \
+--     --query="INSERT INTO events FORMAT Native"
+-- （SQL 文件内无法直接引用本地文件流，以下注释保留示意）
+-- INSERT INTO events
+-- FORMAT Native
+-- FROM file('events.native', 'Native');
 
 -- ✅ CSV 格式（通用）
-INSERT INTO events
-FORMAT CSVWithNames
-FROM file('events.csv', 'CSV');
+-- 同理：cat events.csv | docker exec -i clickhouse-server-1 clickhouse-client \
+--        --query="INSERT INTO events FORMAT CSVWithNames"
+-- INSERT INTO events
+-- FORMAT CSVWithNames
+-- FROM file('events.csv', 'CSV');
 
 -- ✅ JSONEachRow 格式（JSON 数据）
-INSERT INTO events
-FORMAT JSONEachRow
-FROM file('events.jsonl', 'JSONEachRow');
+-- 同理：cat events.jsonl | docker exec -i clickhouse-server-1 clickhouse-client \
+--        --query="INSERT INTO events FORMAT JSONEachRow"
+-- INSERT INTO events
+-- FORMAT JSONEachRow
+-- FROM file('events.jsonl', 'JSONEachRow');
 
 -- ========================================
 -- 1. 使用 INSERT VALUES

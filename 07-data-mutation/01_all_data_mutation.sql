@@ -171,7 +171,7 @@ ORDER BY partition;
 -- 【场景】清理历史数据（如只保留最近 3 个月）
 -- 【速度】秒级，不产生 Mutation
 ALTER TABLE partition_demo
-DROP PARTITION '2024-01';
+DROP PARTITION '202401';
 
 SELECT sleep(1);
 
@@ -192,7 +192,7 @@ ORDER BY (id, event_time);
 
 -- 将 2 月分区移动到归档表
 ALTER TABLE partition_demo
-MOVE PARTITION '2024-02' TO TABLE archive_demo;
+MOVE PARTITION '202402' TO TABLE archive_demo;
 
 SELECT sleep(1);
 
@@ -220,7 +220,7 @@ INSERT INTO new_data_demo VALUES
 
 -- 替换原表 3 月分区
 ALTER TABLE partition_demo
-REPLACE PARTITION '2024-03' FROM new_data_demo;
+REPLACE PARTITION '202403' FROM new_data_demo;
 
 SELECT sleep(1);
 
@@ -228,17 +228,19 @@ SELECT sleep(1);
 SELECT * FROM partition_demo ORDER BY id;
 
 -- 2.6 EXCHANGE PARTITION —— 原子交换分区
--- 【场景】零停机分区替换
--- 【注意】EXCHANGE 是原子操作，但要求两张表结构完全相同
--- 本例中 new_data_demo 和 partition_demo 结构相同
--- 将 new_data_demo 的 3 月分区与 partition_demo 的 3 月分区交换
-ALTER TABLE partition_demo EXCHANGE PARTITION '2024-03' WITH TABLE new_data_demo;
+-- 【场景】零停机分区替换（蓝绿发布）
+-- 【注意】EXCHANGE 是原子操作，但要求两张表结构完全相同（分区键、ORDER BY、主键一致）
+-- 【坑】CH 25.12 已不再支持 EXCHANGE PARTITION（语法错误列表中没有该操作）
+--       等价实现：REPLACE PARTITION（整分区替换）+ DROP PARTITION（清理旧数据）
+-- 步骤 1：REPLACE 已把 new_data_demo 的 3 月分区替换进 partition_demo（见 2.5）
+-- 步骤 2：清理 new_data_demo 中的 3 月分区，避免双份数据
+ALTER TABLE new_data_demo DROP PARTITION '202403';
 
 SELECT sleep(1);
 
--- 验证：两个表的 3 月分区已交换
+-- 验证：partition_demo 保留替换后的新数据，new_data_demo 已清空
 SELECT 'partition_demo' AS table_name, * FROM partition_demo ORDER BY id;
-SELECT 'new_data_demo' AS table_name, * FROM new_data_demo ORDER BY id;
+SELECT 'new_data_demo' AS table_name, count() AS rows FROM new_data_demo;
 
 -- ============================================================================
 -- §3. TTL（自动数据过期）
@@ -280,15 +282,19 @@ ALTER TABLE ttl_row_demo
 MODIFY TTL event_time + INTERVAL 180 DAY;  -- 改为 180 天
 
 -- 3.4 查看 TTL 配置
+-- 【方法】system.parts 没有 ttl 表达式列（CH 25.x），用 SHOW CREATE TABLE 查看 DDL 中的 TTL 定义
+SHOW CREATE TABLE ttl_row_demo;
+
+-- 查看各 Part 的 TTL 生效时间窗口（行级 TTL 拆分为 delete_ttl_info_min/max）
 SELECT
     table,
-    expression,
-    min(ttl_expression) AS ttl_expr
+    name,
+    delete_ttl_info_min,
+    delete_ttl_info_max
 FROM system.parts
 WHERE database = 'mutation_test'
   AND table LIKE 'ttl_%'
-  AND active = 1
-GROUP BY table, expression;
+  AND active = 1;
 
 -- 3.5 TTL 注意事项
 -- 【坑】TTL 不是实时触发的，默认合并间隔由 merge_with_ttl_timeout 控制
@@ -370,14 +376,17 @@ WHERE database = 'mutation_test'
 ORDER BY create_time DESC;
 
 -- 5.2 查看正在运行的 Mutation
+-- 【坑】CH 25.x 的 system.mutations 已无 elapsed/progress/memory_usage 列，
+--       剩余待处理 Part 数用 parts_to_do，出错信息看 latest_fail_reason
 SELECT
     database,
     table,
     mutation_id,
     command,
-    elapsed,
-    progress,
-    formatReadableSize(memory_usage) AS memory
+    create_time,
+    parts_to_do AS parts_remaining,
+    is_killed,
+    latest_fail_reason
 FROM system.mutations
 WHERE NOT is_done
 ORDER BY create_time;
@@ -705,7 +714,7 @@ WHERE order_date >= '2024-01-01'
   AND order_date < '2024-02-01';
 
 -- 3. 替换原分区
-ALTER TABLE orders REPLACE PARTITION '2024-01' FROM orders_corrected;
+ALTER TABLE orders REPLACE PARTITION '202401' FROM orders_corrected;
 
 -- 验证
 SELECT * FROM orders ORDER BY order_id;

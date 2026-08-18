@@ -79,7 +79,9 @@
 -- ================================================================================
 
 SET use_query_cache = 1;
-SET query_cache_max_size_bytes = 10737418240;  -- 10 GB
+SET query_cache_max_size_in_bytes = 10737418240;  -- 10 GB（25.12 设置名为 query_cache_max_size_in_bytes）
+-- 查询中含 now() 等非确定性函数时默认拒绝缓存，需显式允许才能演示命中
+SET query_cache_nondeterministic_function_handling = 'save';
 
 -- 查询（会被缓存）
 SELECT 
@@ -102,7 +104,8 @@ GROUP BY user_id;
 -- ========================================
 
 -- 启用条件缓存
-SET enable_query_cache = 1;
+-- 说明: enable_query_cache 设置已移除，条件缓存由 use_query_cache + 查询特征自动控制
+SET use_query_cache = 1;
 
 -- 查询（条件被缓存）
 SELECT * FROM events
@@ -116,13 +119,13 @@ WHERE event_time >= now() - INTERVAL 7 DAY
 -- 配置用户空间页缓存（在 config.xml 中）
 
 -- 使用用户空间页缓存
+-- 25.12 起 use_page_cache_in_prefetched 设置已移除，页缓存由配置文件 <page_cache> 开启
 SELECT 
     user_id,
     event_type,
     event_time
 FROM events
-WHERE event_time >= now() - INTERVAL 7 DAY
-SETTINGS use_page_cache_in_prefetched = 1;
+WHERE event_time >= now() - INTERVAL 7 DAY;
 
 -- ========================================
 -- 1. 查询缓存
@@ -135,7 +138,7 @@ SET use_query_cache = 1;
 SELECT 
     toDate(event_time) as date,
     count() as event_count,
-    sum(amount) as total_amount
+    sum(event_id) as total_ids
 FROM events
 WHERE event_time >= now() - INTERVAL 7 DAY
 GROUP BY date;
@@ -144,7 +147,7 @@ GROUP BY date;
 SELECT 
     toDate(event_time) as date,
     count() as event_count,
-    sum(amount) as total_amount
+    sum(event_id) as total_ids
 FROM events
 WHERE event_time >= now() - INTERVAL 7 DAY
 GROUP BY date;
@@ -179,21 +182,22 @@ WHERE o.order_date >= now() - INTERVAL 7 DAY;
 -- ========================================
 
 -- 创建物化视图
+DROP TABLE IF EXISTS daily_stats_mv SYNC;
 CREATE MATERIALIZED VIEW daily_stats_mv
 ENGINE = AggregatingMergeTree()
 ORDER BY (date)
 AS SELECT
     toDate(event_time) as date,
     countState() as event_count,
-    sumState(amount) as total_amount
+    sumState(event_id) as total_ids
 FROM events
 GROUP BY date;
 
 -- 查询物化视图（比缓存更稳定）
 SELECT 
     date,
-    sumMerge(event_count) as event_count,
-    sumMerge(total_amount) as total_amount
+    countMerge(event_count) as event_count,
+    sumMerge(total_ids) as total_ids
 FROM daily_stats_mv
 WHERE date >= toDate(now() - INTERVAL 30 DAY)
 GROUP BY date;
@@ -203,6 +207,8 @@ GROUP BY date;
 -- ========================================
 
 -- 查看查询缓存统计
+-- 系统表查询不参与缓存，先关闭 use_query_cache
+SET use_query_cache = 0;
 SELECT 
     metric,
     value,
@@ -215,11 +221,11 @@ ORDER BY metric;
 -- 1. 查询缓存
 -- ========================================
 
--- 查看缓存命中统计
-SELECT 
-    sum(ProfileEvents['QueryCacheHits']) as cache_hits,
-    sum(ProfileEvents['QueryCacheMisses']) as cache_misses,
-    cache_hits / (cache_hits + cache_misses) as cache_hit_ratio
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND event_time >= now() - INTERVAL 24 HOUR;
+-- 查看缓存命中统计（需启用 query_log）
+-- SELECT 
+--     sum(ProfileEvents['QueryCacheHits']) as cache_hits,
+--     sum(ProfileEvents['QueryCacheMisses']) as cache_misses,
+--     cache_hits / (cache_hits + cache_misses) as cache_hit_ratio
+-- FROM system.query_log
+-- WHERE type = 'QueryFinish'
+--   AND event_time >= now() - INTERVAL 24 HOUR;

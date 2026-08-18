@@ -43,8 +43,8 @@
 --   └─────────────────────────────────────────────────────────────────────────┘
 --   
 --   enable_optimizer = 1              启用新优化器
---   optimize_move_to_prewhere = 1     自动将条件移到 PREWHERE
---   optimize_where_to_prewhere = 1    WHERE 转 PREWHERE
+--   optimize_move_to_prewhere = 1     自动将 WHERE 条件移到 PREWHERE
+--   （25.12 起不再有独立的 optimize_where_to_prewhere）
 --   parallel_replicas_count = N       并行副本数
 --   distributed_product_mode          分布式 JOIN 模式
 --   
@@ -63,9 +63,10 @@
 -- 
 -- ================================================================================
 
-SET enable_optimizer = 1;
+-- 说明: CH 25.12 中新版查询分析器（Analyzer）默认启用且无法关闭，enable_optimizer 设置已移除
+-- SET enable_optimizer = 1;   -- 25.12 中不存在，默认已是新分析器
 SET optimize_move_to_prewhere = 1;
-SET optimize_where_to_prewhere = 1;
+-- SET optimize_where_to_prewhere = 1;  -- 25.12 中不存在，已并入 optimize_move_to_prewhere
 
 -- 查询
 SELECT 
@@ -79,7 +80,7 @@ WHERE event_time >= now() - INTERVAL 7 DAY;
 -- ========================================
 
 -- 查看查询重写
-EXPLAIN OPTIMIZE
+EXPLAIN SYNTAX
 SELECT 
     user_id,
     count() as event_count
@@ -105,7 +106,7 @@ WHERE event_time >= now() - INTERVAL 7 DAY;
 -- ========================================
 
 -- 查看重写后的查询
-EXPLAIN OPTIMIZE
+EXPLAIN SYNTAX
 SELECT DISTINCT user_id
 FROM events
 WHERE event_time >= now() - INTERVAL 7 DAY;
@@ -116,9 +117,8 @@ WHERE event_time >= now() - INTERVAL 7 DAY;
 
 -- 并行化查询
 SELECT * FROM events
--- REMOVED SET max_threads (not supported) 8,
-        parallel_replicas_count = 2
-WHERE event_time >= now() - INTERVAL 7 DAY;
+WHERE event_time >= now() - INTERVAL 7 DAY
+SETTINGS parallel_replicas_count = 2;
 
 -- ========================================
 -- 1. 查询优化
@@ -126,7 +126,7 @@ WHERE event_time >= now() - INTERVAL 7 DAY;
 
 -- 分布式查询优化
 SELECT * FROM distributed_events
+WHERE event_time >= now() - INTERVAL 7 DAY
 SETTINGS 
     distributed_product_mode = 'global',
-    parallel_replicas_count = 2
-WHERE event_time >= now() - INTERVAL 7 DAY;
+    parallel_replicas_count = 2;

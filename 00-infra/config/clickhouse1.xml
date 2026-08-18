@@ -11,7 +11,10 @@
     <http_port>8123</http_port>
     <tcp_port>9000</tcp_port>
     <interserver_http_port>9009</interserver_http_port>
-    <interserver_http_host>0.0.0.0</interserver_http_host>
+    <!-- 必须填其他副本可达的地址（容器 hostname），不能填 0.0.0.0:
+         否则副本间拉取数据时会请求 http://0.0.0.0:9009 导致
+         NO_SUCH_INTERSERVER_IO_ENDPOINT (Code 221)，复制队列卡住 -->
+    <interserver_http_host>clickhouse1</interserver_http_host>
 
     <!-- 禁用系统日志以减少 CPU 占用 -->
     <enable_play_ui>1</enable_play_ui>

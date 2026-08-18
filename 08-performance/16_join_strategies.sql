@@ -157,7 +157,7 @@ FROM orders o
 INNER JOIN customers c ON o.customer_id = c.customer_id
 WHERE o.order_date >= '2024-06-01';
 
--- 实验 1.2: 强制 Merge Join
+-- 实验 1.2: 强制 Merge Join（25.12 的算法名为 full_sorting_merge，'merge' 已不存在）
 -- 【场景】右表太大，内存不足时使用
 SELECT
     o.order_id,
@@ -168,7 +168,7 @@ FROM orders o
 INNER JOIN customers c ON o.customer_id = c.customer_id
 WHERE o.order_date >= '2024-06-01'
 LIMIT 10
-SETTINGS join_algorithm = 'merge';
+SETTINGS join_algorithm = 'full_sorting_merge';
 
 -- 实验 1.3: 强制 Partial Merge Join
 -- 【场景】右表巨大且未排序，分块处理
@@ -185,7 +185,7 @@ SETTINGS join_algorithm = 'partial_merge';
 
 -- 【对比】三种算法性能差异
 -- 1. Hash Join: 最快，但右表必须能放入内存
--- 2. Merge Join: 需要排序，适合大表，额外排序开销
+-- 2. Full Sorting Merge: 需要排序，适合大表，额外排序开销
 -- 3. Partial Merge: 避免全量加载，但最慢
 
 -- ============================================================================

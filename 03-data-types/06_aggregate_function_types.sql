@@ -7,6 +7,15 @@
  *   - 什么时候用 AggregateFunction？什么时候用普通列？
  *   - *State/*Merge 函数和 AggregateFunction 类型的关系？
  *
+ * 【使用场景】AggregateFunction 用于"预聚合 + 多级聚合"场景：
+ *   - 实时大屏：写入时用 *State 聚合，查询时 *Merge 秒出
+ *   - 多级聚合：分钟→小时→天 逐层消费，无需重扫原始数据
+ *   - 高写入低查询：把聚合计算分摊到写入路径
+ *   - 会话/漏斗分析：聚合状态可跨查询复用
+ *   典型：物化视图 + AggregatingMergeTree + sumState/sumMerge 两阶段聚合
+ *   （见 06-modeling/05_time_series.sql 的链式聚合）
+ *   注意：uniqState 用 HLL 是近似去重，精确去重要 uniqExactState。
+ *
  * 【原理】
  *   AggregateFunction(func, T) 存储的是"聚合函数的中间状态"，不是最终值。
  *   这个状态可以被合并（*Merge），所以多级聚合（日→月→年）不需要重新扫描原始数据。

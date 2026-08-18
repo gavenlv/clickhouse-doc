@@ -283,10 +283,10 @@ CREATE TABLE IF NOT EXISTS orders (
 ) ENGINE = MergeTree()
 ORDER BY order_id;
 
--- ✅ 使用 Enum16（高基数）
+-- ✅ 使用 Enum16（高基数，最多 65535 个值）
 CREATE TABLE IF NOT EXISTS products (
     product_id UInt32,
-    category Enum16('electronics'=1, 'clothing'=2, 'food'=3, ..., 'books'=100),
+    category Enum16('electronics'=1, 'clothing'=2, 'food'=3, 'books'=4, 'toys'=100),
     created_at DateTime
 ) ENGINE = MergeTree()
 ORDER BY product_id;

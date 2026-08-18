@@ -232,12 +232,13 @@ SELECT
     arrayMap((x, y) -> x * y, [1, 2, 3], [10, 20, 30]) AS element_wise_product;
 
 -- 3.5 Lambda 在 GROUP BY 中复用
--- 【场景】定义一个 lambda 计算折扣后金额，在查询中多次使用
-WITH discounted AS (x, discount) -> x * (1 - discount)
+-- 【场景】定义一个计算折扣后金额的表达式，在查询中多次使用
+-- 【坑】WITH 子句只能定义标量别名，不能定义带参数的 lambda；
+--       复用带参表达式需用 CREATE FUNCTION（见上方 discounted_price）
 SELECT
     region,
-    sum(discounted(unit_price * quantity, discount_rate)) AS revenue_after_discount,
-    avg(discounted(unit_price, discount_rate)) AS avg_discounted_price
+    sum(discounted_price(unit_price * quantity, discount_rate)) AS revenue_after_discount,
+    avg(discounted_price(unit_price, discount_rate)) AS avg_discounted_price
 FROM sales
 GROUP BY region
 ORDER BY revenue_after_discount DESC;

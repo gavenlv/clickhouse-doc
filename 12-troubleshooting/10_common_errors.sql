@@ -312,27 +312,29 @@ WHERE level IN ('Error', 'Critical')
 ORDER BY event_time DESC
 LIMIT 50;
 
--- 诊断：查询 query_log 中的错误
+-- 诊断：查询最近的查询错误
+-- 【坑】演示集群禁用了 system.query_log（config.xml <query_log remove="1"/>），
+--       改用 system.text_log（服务器日志，含异常文本）+ system.query_thread_log
 SELECT
-    query_id,
-    query,
-    exception,
-    query_duration_ms,
-    formatReadableSize(memory_usage) AS memory,
-    event_time
-FROM system.query_log
-WHERE type = 'ExceptionBeforeFinish'
+    event_time,
+    level,
+    logger_name,
+    message
+FROM system.text_log
+WHERE (level = 'Error' OR level = 'Fatal')
+  AND message LIKE '%Code:%'
   AND event_time > now() - INTERVAL 1 DAY
 ORDER BY event_time DESC
 LIMIT 50;
 
 -- 诊断：按错误码分组统计
+-- 从 text_log 的异常文本提取错误码（格式 "Code: 47"）
 SELECT
-    extractAllGroups(exception, 'Code: (\\d+)')[1][1] AS error_code,
+    extractAllGroups(message, 'Code: (\\d+)')[1][1] AS error_code,
     count() AS occurrences,
-    any(exception) AS sample_error
-FROM system.query_log
-WHERE type = 'ExceptionBeforeFinish'
+    any(message) AS sample_error
+FROM system.text_log
+WHERE message LIKE '%Code: %'
   AND event_time > now() - INTERVAL 7 DAY
 GROUP BY error_code
 ORDER BY occurrences DESC;
@@ -383,9 +385,9 @@ SELECT
     ) AS error_category,
     count() AS occurrences
 FROM (
-    SELECT extractAllGroups(exception, 'Code: (\\d+)')[1][1] AS error_code
-    FROM system.query_log
-    WHERE type = 'ExceptionBeforeFinish'
+    SELECT extractAllGroups(message, 'Code: (\\d+)')[1][1] AS error_code
+    FROM system.text_log
+    WHERE message LIKE '%Code: %'
       AND event_time > now() - INTERVAL 7 DAY
 )
 WHERE error_code != ''

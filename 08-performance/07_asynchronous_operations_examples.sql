@@ -88,7 +88,54 @@
 --   └──────────┘    └──────────┘    └──────────┘
 -- 
 -- ================================================================================
+-- §0. 准备演示数据
+-- ================================================================================
+-- 本文件依赖 events / users 两张表，先自建并填充，保证可独立重复运行
+DROP TABLE IF EXISTS user_stats_mv_async;
+DROP TABLE IF EXISTS users;
+CREATE TABLE users
+(
+    user_id UInt64,
+    username String,
+    email String,
+    status String,
+    created_at DateTime
+)
+ENGINE = MergeTree()
+ORDER BY user_id;
 
+INSERT INTO users
+SELECT
+    number + 1 AS user_id,
+    concat('user_', toString(number + 1)) AS username,
+    concat('user_', toString(number + 1), '@example.com') AS email,
+    'active' AS status,
+    now() AS created_at
+FROM numbers(1000);
+
+DROP TABLE IF EXISTS events;
+CREATE TABLE events
+(
+    event_id UInt64,
+    user_id UInt32,
+    event_type String,
+    event_time DateTime,
+    event_data String
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(event_time)
+ORDER BY (user_id, event_time);
+
+INSERT INTO events
+SELECT
+    number + 1 AS event_id,
+    (number % 1000) + 1 AS user_id,
+    ['click', 'view', 'purchase'][number % 3 + 1] AS event_type,
+    toDateTime('2024-01-10 00:00:00') + INTERVAL number MINUTE AS event_time,
+    concat('{"page":"/p', toString(number % 10), '"}') AS event_data
+FROM numbers(10000);
+
+-- ================================================================================
 
 -- 查询级别配置
 INSERT INTO events
@@ -96,7 +143,7 @@ SETTINGS async_insert = 1,
         wait_for_async_insert = 0,
         async_insert_max_data_size = 100000000,
         async_insert_busy_timeout_ms = 5000,
-        async_insert_max_wait_time_ms = 10000
+        async_insert_stale_timeout_ms = 10000
 VALUES (1, 100, 'click', now(), '{}');
 
 -- ========================================
@@ -113,7 +160,7 @@ VALUES (1, 100, 'click', now(), '{}');
 INSERT INTO events
 SETTINGS async_insert = 1,
         wait_for_async_insert = 1,
-        async_insert_max_wait_time_ms = 5000
+        async_insert_stale_timeout_ms = 5000
 VALUES (2, 100, 'view', now(), '{}');
 
 -- 示例 3: 批量异步插入
@@ -132,13 +179,14 @@ VALUES (3, 101, 'click', now(), '{}'),
 -- ========================================
 
 -- 示例 1: 使用 HTTP 接口异步查询
-curl 'http://localhost:8123/?query=SELECT+sleep(1)&wait_end_of_query=0&query_id=async_query_1'
+-- （shell 命令示例，SQL 文件中仅作说明，不可直接执行）
+-- curl 'http://localhost:8123/?query=SELECT+sleep(1)&wait_end_of_query=0&query_id=async_query_1'
 
 -- 示例 2: 检查查询状态
-curl 'http://localhost:8123/?query=SELECT+*+FROM+system.query_log+WHERE+query_id+=+async_query_1'
+-- curl 'http://localhost:8123/?query=SELECT+*+FROM+system.query_log+WHERE+query_id+=+async_query_1'
 
 -- 示例 3: 获取查询结果
-curl 'http://localhost:8123/?query=SELECT+*+FROM+system.query_log+WHERE+query_id+=+async_query_1+AND+type+=+QueryFinish'
+-- curl 'http://localhost:8123/?query=SELECT+*+FROM+system.query_log+WHERE+query_id+=+async_query_1+AND+type+=+QueryFinish'
 
 -- ========================================
 -- 配置异步插入
@@ -153,10 +201,10 @@ AS SELECT
     user_id,
     toDate(event_time) as date,
     countState() as event_count,
-    sumState(amount) as total_amount
+    sumState(event_id) as total_event_id  -- 演示用：events 无金额列，对 event_id 求和
 FROM events
 GROUP BY user_id, date
-SETTINGS mv_insert_thread = 2;  -- 异步插入
+SETTINGS max_insert_threads = 2;  -- 并行写入物化视图（mv_insert_thread 不是有效设置）
 
 -- ========================================
 -- 配置异步插入
@@ -197,43 +245,47 @@ SETTINGS mutations_sync = 2;
 -- ========================================
 
 -- 查看异步插入统计
-SELECT 
-    event_time,
-    type,
-    query_duration_ms,
-    async_insert_wait_time_ms,
-    async_insert_busy_wait_time_ms,
-    async_insert_success,
-    async_insert_failed
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND query LIKE '%async_insert%'
-  AND event_time >= now() - INTERVAL 24 HOUR
-ORDER BY event_time DESC
-LIMIT 20;
+-- [需启用] 本集群 config 禁用了 query_log，system.query_log 不存在；
+-- 生产环境启用 query_log 后运行以下查询（保留原文）：
+-- SELECT 
+--     event_time,
+--     type,
+--     query_duration_ms,
+--     async_insert_wait_time_ms,
+--     async_insert_busy_wait_time_ms,
+--     async_insert_success,
+--     async_insert_failed
+-- FROM system.query_log
+-- WHERE type = 'QueryFinish'
+--   AND query LIKE '%async_insert%'
+--   AND event_time >= now() - INTERVAL 24 HOUR
+-- ORDER BY event_time DESC
+-- LIMIT 20;
 
 -- ========================================
 -- 配置异步插入
 -- ========================================
 
 -- 查看异步查询状态
-SELECT 
-    query_id,
-    query,
-    type,
-    event_time,
-    query_duration_ms,
-    exception_text
-FROM system.query_log
-WHERE query_id LIKE 'async%'
-ORDER BY event_time DESC
-LIMIT 20;
+-- [需启用] 本集群禁用了 query_log（同上，生产启用后运行）：
+-- SELECT 
+--     query_id,
+--     query,
+--     type,
+--     event_time,
+--     query_duration_ms,
+--     exception_text
+-- FROM system.query_log
+-- WHERE query_id LIKE 'async%'
+-- ORDER BY event_time DESC
+-- LIMIT 20;
 
 -- ========================================
 -- 配置异步插入
 -- ========================================
 
 -- 查看 Mutation 状态
+-- 说明: 25.12 的 system.mutations 列名为 create_time / latest_fail_reason（无 progress/created_at/done_at）
 SELECT 
     database,
     table,
@@ -241,11 +293,9 @@ SELECT
     command,
     is_done,
     parts_to_do,
-    progress,
-    created_at,
-    done_at
+    latest_fail_reason
 FROM system.mutations
-ORDER BY created DESC
+ORDER BY create_time DESC
 LIMIT 20;
 
 -- ========================================
@@ -258,38 +308,40 @@ SETTINGS async_insert = 1,
         wait_for_async_insert = 0,
         async_insert_max_data_size = 100000000,  -- 100 MB
         async_insert_busy_timeout_ms = 5000,
-        async_insert_max_wait_time_ms = 10000
-VALUES (...);
+        async_insert_stale_timeout_ms = 10000
+VALUES (999, 100, 'click', now(), '{}');
 
 -- ========================================
 -- 配置异步插入
 -- ========================================
 
 -- 定期监控异步操作
-SELECT 
-    type,
-    count() as count,
-    avg(query_duration_ms) as avg_duration,
-    max(query_duration_ms) as max_duration
-FROM system.query_log
-WHERE event_time >= now() - INTERVAL 24 HOUR
-  AND (query LIKE '%async%' OR type LIKE 'Mutation%')
-GROUP BY type
-ORDER BY count DESC;
+-- [需启用] 本集群禁用了 query_log（同上，生产启用后运行）：
+-- SELECT 
+--     type,
+--     count() as count,
+--     avg(query_duration_ms) as avg_duration,
+--     max(query_duration_ms) as max_duration
+-- FROM system.query_log
+-- WHERE event_time >= now() - INTERVAL 24 HOUR
+--   AND (query LIKE '%async%' OR type LIKE 'Mutation%')
+-- GROUP BY type
+-- ORDER BY count DESC;
 
 -- ========================================
 -- 配置异步插入
 -- ========================================
 
 -- 查看失败的异步操作
-SELECT 
-    query_id,
-    query,
-    exception_code,
-    exception_text
-FROM system.query_log
-WHERE type = 'ExceptionWhileProcessing'
-  AND query LIKE '%async%'
-  AND event_time >= now() - INTERVAL 24 HOUR
-ORDER BY event_time DESC
-LIMIT 20;
+-- [需启用] 本集群禁用了 query_log（同上，生产启用后运行）：
+-- SELECT 
+--     query_id,
+--     query,
+--     exception_code,
+--     exception_text
+-- FROM system.query_log
+-- WHERE type = 'ExceptionWhileProcessing'
+--   AND query LIKE '%async%'
+--   AND event_time >= now() - INTERVAL 24 HOUR
+-- ORDER BY event_time DESC
+-- LIMIT 20;

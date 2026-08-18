@@ -265,12 +265,12 @@ ORDER BY id;
 
 
 -- ============================================================
--- 4. JSONHas / JSONLength / JSONKeys / JSONType
+-- 4. JSONHas / JSONLength / JSONExtractKeys / JSONType
 -- ============================================================
 -- 【原理】这些函数用于检查 JSON 结构，不提取值：
 --   JSONHas(json, path)  → 检查路径是否存在（返回 1/0）
 --   JSONLength(json, path) → 返回数组或对象的长度
---   JSONKeys(json, path)  → 返回对象的 key 列表（Array(String)）
+--   JSONExtractKeys(json) → 返回对象的所有 key（Array(String)，25.12 起替代旧 JSONKeys）
 --   JSONType(json, path)  → 返回值的类型名（String）
 -- 【场景】数据验证、模式发现、脏数据检测
 
@@ -296,14 +296,14 @@ SELECT
 FROM api_logs
 ORDER BY id;
 
--- 4.3 JSONKeys：获取对象的所有 key
+-- 4.3 JSONExtractKeys：获取对象的所有 key
 -- 【场景】发现 JSON 对象的结构
 SELECT
     id,
     endpoint,
-    JSONKeys(request_body) AS request_keys,
-    JSONKeys(response_body) AS response_keys,
-    JSONKeys(headers) AS header_keys
+    JSONExtractKeys(request_body) AS request_keys,
+    JSONExtractKeys(response_body) AS response_keys,
+    JSONExtractKeys(headers) AS header_keys
 FROM api_logs
 ORDER BY id;
 
@@ -482,7 +482,7 @@ ORDER BY id;
 --   visitParamExtractBool(s,k)    | JSONExtractBool(s,k)
 --   visitParamExtractRaw(s,k)     | JSONExtractRaw(s,k)
 --   visitParamHas(s,k)            | JSONHas(s,k)
---   visitParamKeys(s)             | JSONKeys(s)
+--   visitParamKeys(s)             | JSONExtractKeys(s)（25.12 起）
 --   visitParamNum(s)              | JSONLength(s)
 
 
@@ -532,21 +532,24 @@ ORDER BY id;
 
 -- 7.5 JSON 类型子列聚合
 -- 【场景】按 JSON 子列分组聚合
+-- 【坑】Dynamic 类型不能直接 GROUP BY / 聚合，需用 `.:类型` 后缀取具体子列
 SELECT
-    profile.preferences.theme AS theme,
+    profile.preferences.theme.:String AS theme,
     count() AS user_count,
-    avg(profile.age) AS avg_age
+    avg(profile.age.:Int64) AS avg_age
 FROM user_profiles
 GROUP BY theme
 ORDER BY user_count DESC;
 
--- 7.6 JSON 类型与 JSONExtract 混合使用
--- 【场景】JSON 类型列也可以使用 JSONExtract 函数
+-- 7.6 JSON 类型子列与函数混合使用
+-- 【场景】JSON 类型列用子列访问 + 普通 String 列用 JSONExtract
+-- 【坑】JSON 类型列不能直接传给 JSONExtract*（类型不是 String），
+--       混合数据源时先用 toString(profile) 转成 String 再解析
 SELECT
     id,
     name,
-    profile.age,
-    JSONExtractString(profile, 'city') AS city_alt
+    profile.age.:Int64 AS age,
+    JSONExtractString(toString(profile), 'city') AS city_alt
 FROM user_profiles
 ORDER BY id;
 
@@ -640,16 +643,21 @@ CREATE TABLE perf_json_type (
 ORDER BY id;
 
 -- 插入相同数据
+-- 注：拼 JSON 字符串用 concat 更直观；format 的 {{ }} 转义与 {n} 占位混用易歧义
 INSERT INTO perf_json_string SELECT
     number,
-    format('{{"user_id":{},"name":"User_{}","score":{},"active":{}}}',
-           number, number, number % 100, if(number % 2 = 0, 'true', 'false'))
+    concat('{"user_id":', toString(number),
+           ',"name":"User_', toString(number),
+           '","score":', toString(number % 100),
+           ',"active":', if(number % 2 = 0, 'true', 'false'), '}')
 FROM numbers(1000);
 
 INSERT INTO perf_json_type SELECT
     number,
-    format('{{"user_id":{},"name":"User_{}","score":{},"active":{}}}',
-           number, number, number % 100, if(number % 2 = 0, 'true', 'false'))
+    concat('{"user_id":', toString(number),
+           ',"name":"User_', toString(number),
+           '","score":', toString(number % 100),
+           ',"active":', if(number % 2 = 0, 'true', 'false'), '}')
 FROM numbers(1000);
 
 -- 9.2 查询性能对比
@@ -667,12 +675,12 @@ LIMIT 10;
 
 -- 方案 B：JSON 类型
 SELECT
-    data.user_id,
-    data.name,
-    data.score
+    data.user_id.:UInt64 AS user_id,
+    data.name.:String AS name,
+    data.score.:UInt8 AS score
 FROM perf_json_type
-WHERE data.score > 50
-ORDER BY data.score DESC
+WHERE data.score.:UInt8 > 50
+ORDER BY data.score.:UInt8 DESC
 LIMIT 10;
 
 -- 9.3 性能结论
@@ -710,12 +718,12 @@ ORDER BY total_requests DESC;
 SET allow_experimental_json_type = 1;
 
 SELECT
-    profile.preferences.theme AS theme,
-    profile.preferences.lang AS lang,
+    profile.preferences.theme.:String AS theme,
+    profile.preferences.lang.:String AS lang,
     count() AS user_count,
-    avg(profile.age) AS avg_age,
-    -- 数组长度
-    length(profile.tags) AS avg_tag_count
+    avg(profile.age.:Int64) AS avg_age,
+    -- 数组长度（数组子列已推断类型，可直接访问；用 avg 聚合）
+    avg(length(profile.tags)) AS avg_tag_count
 FROM user_profiles
 GROUP BY theme, lang
 ORDER BY user_count DESC;

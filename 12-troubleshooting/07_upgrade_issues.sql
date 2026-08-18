@@ -13,6 +13,21 @@ DROP DATABASE IF EXISTS troubleshooting_test;
 CREATE DATABASE troubleshooting_test;
 USE troubleshooting_test;
 
+-- 创建演示表（供 OPTIMIZE 重写数据演示）
+DROP TABLE IF EXISTS troubleshooting_test.sample_table;
+CREATE TABLE troubleshooting_test.sample_table
+(
+    id UInt32,
+    event_date Date,
+    value String
+) ENGINE = MergeTree()
+PARTITION BY toYYYYMM(event_date)
+ORDER BY id;
+
+INSERT INTO troubleshooting_test.sample_table
+SELECT number, toDate('2024-01-01') + number % 90, concat('data', toString(number))
+FROM numbers(1000);
+
 -- -----------------------------------------------------
 -- 1. 版本兼容
 -- -----------------------------------------------------
@@ -44,27 +59,22 @@ SELECT
     timezone() AS server_timezone;
 
 -- 诊断：检查集群中所有节点的版本
+-- 【坑】system.clusters 用 host_name（不是 hostname）
 SELECT
-    hostname,
+    host_name,
     version(),
     uptime()
 FROM system.clusters
 WHERE cluster = 'treasurycluster';
 
--- 诊断：检查当前版本的关键配置
+-- 诊断：记录升级前所有表的结构信息（metadata_version 记录表结构版本号）
 SELECT
-    name,
-    value,
-    default,
-    changed,
-    description
-FROM system.settings
-WHERE changed = 1
-ORDER BY name;
-
--- 修复：升级前记录当前配置
--- SELECT * FROM system.settings WHERE changed = 1
--- INTO OUTFILE '/tmp/current_settings_before_upgrade.tsv';
+    database,
+    table,
+    engine,
+    metadata_version
+FROM system.tables
+WHERE database NOT IN ('system', 'INFORMATION_SCHEMA');
 
 -- 修复：升级前检查不兼容变更
 -- 1. 查阅 CHANGELOG 中的 Backward Incompatible Change 部分
@@ -101,8 +111,7 @@ SELECT
     database,
     table,
     engine,
-    metadata_version,
-    format_version
+    metadata_version
 FROM system.tables
 WHERE database NOT IN ('system', 'INFORMATION_SCHEMA');
 

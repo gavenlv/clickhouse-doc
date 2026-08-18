@@ -75,6 +75,72 @@
 --              └─────────────────┘              └─────────────────┘
 -- 
 -- ================================================================================
+-- §0. 准备演示数据
+-- ================================================================================
+-- 本文件依赖 5 张演示表（events / orders / active_users / users / products），
+-- 为保证可独立重复运行，先统一重建并填充数据。
+-- 注意: 先删物化视图再删源表（MV 依赖源表）
+DROP TABLE IF EXISTS event_daily_stats_mv;
+DROP TABLE IF EXISTS event_daily_stats_mv2;
+DROP TABLE IF EXISTS event_ids_mv;
+DROP TABLE IF EXISTS user_event_stats_mv;
+DROP TABLE IF EXISTS order_user_product_mv;
+DROP TABLE IF EXISTS events;
+CREATE TABLE events
+(
+    event_id UInt64,
+    user_id UInt32,
+    event_type String,
+    event_time DateTime,
+    event_data String
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(event_time)
+ORDER BY (user_id, event_time);
+
+INSERT INTO events
+SELECT
+    number + 1 AS event_id,
+    (number % 1000) + 1 AS user_id,
+    ['click', 'view', 'purchase'][number % 3 + 1] AS event_type,
+    toDateTime('2024-01-10 00:00:00') + INTERVAL number MINUTE AS event_time,
+    concat('{"keyword":', toString(number % 10), '}') AS event_data
+FROM numbers(100000);
+
+DROP TABLE IF EXISTS orders;
+CREATE TABLE orders
+(
+    order_id UInt64,
+    user_id UInt32,
+    product_id UInt32,
+    amount Float64,
+    order_date Date
+)
+ENGINE = MergeTree()
+ORDER BY order_id;
+
+INSERT INTO orders
+SELECT
+    number + 1 AS order_id,
+    (number % 1000) + 1 AS user_id,
+    (number % 100) + 1 AS product_id,
+    (number % 1000) + 0.5 AS amount,
+    toDate('2024-01-10') + INTERVAL (number % 30) DAY AS order_date
+FROM numbers(10000);
+
+DROP TABLE IF EXISTS active_users;
+CREATE TABLE active_users (user_id UInt32) ENGINE = MergeTree() ORDER BY user_id;
+INSERT INTO active_users SELECT DISTINCT user_id FROM events LIMIT 500;
+
+DROP TABLE IF EXISTS users;
+CREATE TABLE users (user_id UInt32, username String) ENGINE = MergeTree() ORDER BY user_id;
+INSERT INTO users SELECT number + 1, concat('user_', toString(number + 1)) FROM numbers(1000);
+
+DROP TABLE IF EXISTS products;
+CREATE TABLE products (product_id UInt32, product_name String) ENGINE = MergeTree() ORDER BY product_id;
+INSERT INTO products SELECT number + 1, concat('product_', toString(number + 1)) FROM numbers(100);
+
+-- ================================================================================
 
 SELECT * FROM events
 WHERE event_time >= now() - INTERVAL 7 DAY;
@@ -144,15 +210,9 @@ FROM events
 GROUP BY toDate(event_time);
 
 -- ✅ 推荐
--- 方法 1: 使用物化列
-CREATE TABLE IF NOT EXISTS events (
-    event_id UInt64,
-    user_id UInt32,
-    event_time DateTime,
-    event_date Date MATERIALIZED toDate(event_time)
-) ENGINE = MergeTree()
-PARTITION BY toYYYYMM(event_time)
-ORDER BY (user_id, event_time);
+-- 方法 1: 使用物化列（events 已在 §0 创建，这里用 ALTER 添加物化列）
+ALTER TABLE events
+ADD COLUMN IF NOT EXISTS event_date Date MATERIALIZED toDate(event_time);
 
 -- 查询
 SELECT 
@@ -162,7 +222,7 @@ FROM events
 GROUP BY event_date;
 
 -- 方法 2: 使用物化视图
-CREATE MATERIALIZED VIEW event_daily_stats_mv
+CREATE MATERIALIZED VIEW IF NOT EXISTS event_daily_stats_mv
 ENGINE = AggregatingMergeTree()
 ORDER BY (event_date)
 AS SELECT
@@ -174,7 +234,7 @@ GROUP BY event_date;
 -- 查询
 SELECT 
     event_date,
-    sumMerge(event_count) as event_count
+    countMerge(event_count) as event_count
 FROM event_daily_stats_mv
 GROUP BY event_date;
 
@@ -207,7 +267,7 @@ ORDER BY event_time
 LIMIT 100;
 
 -- 方法 2: 使用物化视图
-CREATE MATERIALIZED VIEW event_ids_mv
+CREATE MATERIALIZED VIEW IF NOT EXISTS event_ids_mv
 ENGINE = MergeTree()
 ORDER BY (event_time, event_id)
 AS SELECT 
@@ -243,7 +303,7 @@ FROM events
 GROUP BY user_id;
 
 -- 方法 2: 使用物化视图
-CREATE MATERIALIZED VIEW user_event_stats_mv
+CREATE MATERIALIZED VIEW IF NOT EXISTS user_event_stats_mv
 ENGINE = AggregatingMergeTree()
 ORDER BY (user_id)
 AS SELECT
@@ -295,18 +355,15 @@ SELECT * FROM events
 WHERE hasToken(event_data, 'keyword');
 
 -- 方法 2: 使用 ngrambf_v1 索引
-CREATE TABLE IF NOT EXISTS events (
-    event_id UInt64,
-    user_id UInt32,
-    event_data String,
-    event_time DateTime
-) ENGINE = MergeTree()
-ORDER BY (user_id, event_time);
-
+-- 说明: events 已在 §0 创建（含 event_data 列），直接在其上添加跳数索引；
+--       CREATE TABLE ... 结构示意不再重复建表
 ALTER TABLE events
-ADD INDEX idx_event_data event_data
-TYPE ngrambf_v1(4, 256, 3, 0.01)
+ADD INDEX IF NOT EXISTS idx_event_data event_data
+TYPE ngrambf_v1(4, 256, 3, 0)
 GRANULARITY 1;
+
+-- 重建索引（对已有数据生效，否则只对新写入数据生效；MATERIALIZE 不支持 IF NOT EXISTS）
+ALTER TABLE events MATERIALIZE INDEX idx_event_data;
 
 -- 查询
 SELECT * FROM events
@@ -349,7 +406,9 @@ SELECT * FROM events
 WHERE event_time >= now() - INTERVAL 30 DAY;
 
 -- 或使用物化视图汇总
-CREATE MATERIALIZED VIEW event_daily_stats_mv
+-- 说明: 前面已建同名 AggregatingMergeTree 版 event_daily_stats_mv，
+--       这里改用 SummingMergeTree 演示另一种实现，命名 event_daily_stats_mv2
+CREATE MATERIALIZED VIEW IF NOT EXISTS event_daily_stats_mv2
 ENGINE = SummingMergeTree()
 ORDER BY (date)
 AS SELECT
@@ -362,7 +421,7 @@ GROUP BY date;
 SELECT 
     date,
     sum(event_count) as total_events
-FROM event_daily_stats_mv
+FROM event_daily_stats_mv2
 WHERE date >= toDate(now() - INTERVAL 365 DAY)
   AND date <= toDate(now())
 GROUP BY date;
@@ -396,7 +455,7 @@ WHERE o.order_date >= now() - INTERVAL 7 DAY
 SETTINGS distributed_product_mode = 'global';
 
 -- 方法 2: 使用物化视图
-CREATE MATERIALIZED VIEW order_user_product_mv
+CREATE MATERIALIZED VIEW IF NOT EXISTS order_user_product_mv
 ENGINE = MergeTree()
 ORDER BY (order_id)
 AS SELECT
@@ -409,9 +468,10 @@ LEFT JOIN users u ON o.user_id = u.user_id
 LEFT JOIN products p ON o.product_id = p.product_id;
 
 -- 查询物化视图
+-- 增量处理示意：业务侧记录已处理的最大 order_id，下次从该值继续（伪代码占位符已改为实际值）
 SELECT *
 FROM order_user_product_mv
-WHERE order_id >= last_processed_order_id
+WHERE order_id >= 9000
 LIMIT 1000;
 
 -- ========================================

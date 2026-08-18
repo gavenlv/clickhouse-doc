@@ -13,6 +13,22 @@ DROP DATABASE IF EXISTS troubleshooting_test;
 CREATE DATABASE troubleshooting_test;
 USE troubleshooting_test;
 
+-- 创建演示表（用于 CHECK TABLE 校验和检查与分区修复演示）
+-- 【注意】PARTITION BY toYYYYMM(event_date) 的分区 ID 是 '202401' 形式
+DROP TABLE IF EXISTS troubleshooting_test.sample_table;
+CREATE TABLE troubleshooting_test.sample_table
+(
+    id UInt32,
+    event_date Date,
+    value String
+) ENGINE = MergeTree()
+PARTITION BY toYYYYMM(event_date)
+ORDER BY id;
+
+INSERT INTO troubleshooting_test.sample_table
+SELECT number, toDate('2024-01-01') + number % 90, concat('data', toString(number))
+FROM numbers(1000);
+
 -- -----------------------------------------------------
 -- 1. 主从数据不一致
 -- -----------------------------------------------------
@@ -69,6 +85,8 @@ WHERE parts_to_check > 0;
 
 -- 诊断：检查副本间差异
 -- 使用 system.replicas 对比各副本状态
+-- 【坑】25.12 的 system.replicas 没有 zombie_parts 列（该列已在旧版本移除），
+--       差异判断改用 parts_to_check + log_lag
 SELECT
     database,
     table,
@@ -78,7 +96,6 @@ SELECT
     absolute_delay,
     queue_size,
     parts_to_check,
-    zombie_parts,
     log_max_index,
     log_pointer,
     (log_max_index - log_pointer) AS log_lag
@@ -115,18 +132,20 @@ CHECK TABLE troubleshooting_test.sample_table;
 
 -- 诊断：校验指定分区
 CHECK TABLE troubleshooting_test.sample_table
-    PARTITION '2024-01';
+    PARTITION '202401';
 
 -- 诊断：使用 system.checksums 查看全局校验和
+-- 【坑】CH 25.x 已移除 system.checksums 系统表，
+--       校验和检查统一使用 CHECK TABLE（见上）与 system.parts（file_checksum 等）
 SELECT
     database,
     table,
-    part_name,
-    file_name,
-    file_size,
-    checksum
-FROM system.checksums
+    partition_id,
+    rows,
+    bytes_on_disk
+FROM system.parts
 WHERE database = 'troubleshooting_test'
+  AND active = 1
 LIMIT 20;
 
 -- 诊断：使用 RAID 级别的校验
@@ -138,15 +157,17 @@ LIMIT 20;
 --    diff /tmp/checksums_before.txt /tmp/checksums_after.txt
 
 -- 修复：手动触发数据校验和一致性检查
-SYSTEM SYNC REPLICA troubleshooting_test.sample_table;
+-- 【坑】SYSTEM SYNC REPLICA 仅对 ReplicatedMergeTree 生效，非复制表（MergeTree）会报
+--       "Table is not replicated"（BAD_ARGUMENTS）。以下命令在复制表上执行：
+-- SYSTEM SYNC REPLICA <replicated_table>;
 
 -- 修复：重建校验和文件
 -- 通过 DETACH + ATTACH 触发校验和重建
 ALTER TABLE troubleshooting_test.sample_table
-    DETACH PARTITION '2024-01';
+    DETACH PARTITION '202401';
 
 ALTER TABLE troubleshooting_test.sample_table
-    ATTACH PARTITION '2024-01';
+    ATTACH PARTITION '202401';
 
 -- 修复：使用 REPAIR TABLE 修复损坏
 -- REPAIR TABLE troubleshooting_test.sample_table;
@@ -174,10 +195,12 @@ ALTER TABLE troubleshooting_test.sample_table
 --
 
 -- 修复方法 1：同步复制队列（轻度不一致）
-SYSTEM SYNC REPLICA troubleshooting_test.sample_table;
+-- 仅 ReplicatedMergeTree 可用，非复制表（本演示 MergeTree）无需同步：
+-- SYSTEM SYNC REPLICA <replicated_table>;
 
 -- 修复方法 2：重启复制
-SYSTEM RESTART REPLICA troubleshooting_test.sample_table;
+-- 仅 ReplicatedMergeTree 可用（本演示表为 MergeTree，注释说明）：
+-- SYSTEM RESTART REPLICA <replicated_table>;
 
 -- 修复方法 3：重新拉取特定分区
 -- 在不同的副本上对比数据后，找到正确的副本，在错误副本上:
@@ -185,20 +208,20 @@ SYSTEM RESTART REPLICA troubleshooting_test.sample_table;
 --     FETCH PARTITION '2024-01' FROM '/clickhouse/tables/...';
 -- 然后 ATTACH:
 -- ALTER TABLE troubleshooting_test.sample_table
---     ATTACH PARTITION '2024-01';
+--     ATTACH PARTITION '202401';
 
 -- 修复方法 4：DROP 后重新创建分区
 -- 在错误副本上:
 -- ALTER TABLE troubleshooting_test.sample_table
---     DROP PARTITION '2024-01';
+--     DROP PARTITION '202401';
 -- -- 等待复制队列自动拉取
 
 -- 修复方法 5：DETACH + ATTACH 重建
 ALTER TABLE troubleshooting_test.sample_table
-    DETACH PARTITION '2024-01';
+    DETACH PARTITION '202401';
 
 ALTER TABLE troubleshooting_test.sample_table
-    ATTACH PARTITION '2024-01';
+    ATTACH PARTITION '202401';
 
 -- 修复方法 6：使用 MUTATION 修复数据
 -- ALTER TABLE troubleshooting_test.sample_table

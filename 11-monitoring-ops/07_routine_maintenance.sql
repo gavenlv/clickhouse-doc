@@ -143,7 +143,7 @@ ORDER BY id;
 -- 【原理】通过 system.replicas、system.disks、system.merges 等系统表综合评估
 SELECT
     'Replica Delay' AS check_type,
-    max(absolute_delay) AS value,
+    toFloat64(max(absolute_delay)) AS value,
     CASE
         WHEN max(absolute_delay) > 300 THEN 'CRITICAL'
         WHEN max(absolute_delay) > 60 THEN 'WARNING'
@@ -153,7 +153,7 @@ FROM system.replicas
 UNION ALL
 SELECT
     'Disk Free (%)',
-    min(free_space / total_space * 100),
+    toFloat64(min(free_space / total_space * 100)),
     CASE
         WHEN min(free_space / total_space) < 0.1 THEN 'CRITICAL'
         WHEN min(free_space / total_space) < 0.2 THEN 'WARNING'
@@ -163,7 +163,7 @@ FROM system.disks
 UNION ALL
 SELECT
     'Merge Backlog',
-    count(*),
+    toFloat64(count(*)),
     CASE
         WHEN count(*) > 50 THEN 'CRITICAL'
         WHEN count(*) > 20 THEN 'WARNING'
@@ -173,7 +173,7 @@ FROM system.merges
 UNION ALL
 SELECT
     'Session Expired',
-    sum(CASE WHEN is_session_expired = 1 THEN 1 ELSE 0 END),
+    toFloat64(sum(CASE WHEN is_session_expired = 1 THEN 1 ELSE 0 END)),
     CASE
         WHEN sum(CASE WHEN is_session_expired = 1 THEN 1 ELSE 0 END) > 0 THEN 'CRITICAL'
         ELSE 'OK'
@@ -375,9 +375,7 @@ SELECT
     mutation_id,
     command,
     create_time,
-    parts_to_do,
-    parts_done,
-    round(parts_done / greatest(parts_to_do + parts_done, 1) * 100, 1) AS progress_percent,
+    parts_to_do,          -- 剩余待处理 Part 数（25.12 无 parts_done 列）
     is_done,
     latest_fail_time,
     latest_fail_reason
@@ -413,17 +411,23 @@ ORDER BY database, name;
 -- 【原理】系统表也是 MergeTree 引擎，数据会持续累积
 -- 【坑】系统表不能直接 DROP，需要谨慎使用 ALTER TABLE DELETE
 SELECT
-    database,
-    name AS table_name,
-    engine,
-    formatReadableSize(total_bytes) AS size,
-    formatReadableSize(total_rows) AS rows,
-    min_date,
-    max_date
-FROM system.tables
-WHERE database = 'system'
-  AND engine LIKE '%MergeTree%'
-ORDER BY total_bytes DESC;
+    t.database,
+    t.name AS table_name,
+    t.engine,
+    formatReadableSize(t.total_bytes) AS size,
+    t.total_rows AS rows,
+    p.min_date,
+    p.max_date
+FROM system.tables AS t
+LEFT JOIN (
+    SELECT database, table, min(min_date) AS min_date, max(max_date) AS max_date
+    FROM system.parts
+    WHERE active = 1
+    GROUP BY database, table
+) AS p ON t.database = p.database AND t.name = p.table
+WHERE t.database = 'system'
+  AND t.engine LIKE '%MergeTree%'
+ORDER BY t.total_bytes DESC;
 
 -- 4.2 清理 query_thread_log（保留最近 7 天）
 -- 【场景】定期清理查询日志，防止系统表无限增长
@@ -451,15 +455,21 @@ ORDER BY total_bytes DESC;
 -- 【坑】DELETE 只是标记数据为删除状态，不立即释放空间
 --       需要等待合并任务处理后才能回收磁盘空间
 SELECT
-    database,
-    name AS table_name,
-    formatReadableSize(total_bytes) AS size,
-    min_date,
-    max_date
-FROM system.tables
-WHERE database = 'system'
-  AND engine LIKE '%MergeTree%'
-ORDER BY total_bytes DESC;
+    t.database,
+    t.name AS table_name,
+    formatReadableSize(t.total_bytes) AS size,
+    p.min_date,
+    p.max_date
+FROM system.tables AS t
+LEFT JOIN (
+    SELECT database, table, min(min_date) AS min_date, max(max_date) AS max_date
+    FROM system.parts
+    WHERE active = 1
+    GROUP BY database, table
+) AS p ON t.database = p.database AND t.name = p.table
+WHERE t.database = 'system'
+  AND t.engine LIKE '%MergeTree%'
+ORDER BY t.total_bytes DESC;
 
 -- ==========================================
 -- 5. 索引与 Projection 维护
@@ -558,35 +568,42 @@ LIMIT 20;
 -- 【场景】了解各表的数据量分布，发现异常增长的表
 -- 【原理】system.tables 和 system.parts 提供表级和 Part 级元数据
 SELECT
-    database,
-    name AS table_name,
-    engine,
-    formatReadableSize(total_rows) AS rows,
-    formatReadableSize(total_bytes) AS size,
-    min_date,
-    max_date
-FROM system.tables
-WHERE database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
-ORDER BY total_bytes DESC
+    t.database,
+    t.name AS table_name,
+    t.engine,
+    t.total_rows AS rows,
+    formatReadableSize(t.total_bytes) AS size,
+    p.min_date,
+    p.max_date
+FROM system.tables AS t
+LEFT JOIN (
+    SELECT database, table, min(min_date) AS min_date, max(max_date) AS max_date
+    FROM system.parts
+    WHERE active = 1
+    GROUP BY database, table
+) AS p ON t.database = p.database AND t.name = p.table
+WHERE t.database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
+ORDER BY t.total_bytes DESC
 LIMIT 50;
 
 -- 6.2 检查数据倾斜
 -- 【场景】发现分片间数据分布不均的情况
--- 【原理】通过 system.parts 的 shard_num 分析各分片的数据量
+-- 【原理】通过 system.parts 分析各表的数据量
 -- 【坑】数据倾斜会影响查询性能，倾斜严重时需要重新分片
 --       差异超过 30% 需要关注，超过 50% 需要干预
+-- 【坑】25.12 的 system.parts 无 shard_num 列，分片分布需用 cluster() 表函数
 SELECT
     database,
     table,
-    shard_num,
     sum(rows) AS row_count,
     formatReadableSize(sum(bytes_on_disk)) AS size,
     count(DISTINCT partition) AS partition_count
 FROM system.parts
 WHERE active = 1
   AND database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
-GROUP BY database, table, shard_num
-ORDER BY database, table, shard_num;
+GROUP BY database, table
+ORDER BY row_count DESC
+LIMIT 50;
 
 -- 6.3 查看数据分布趋势
 -- 【场景】了解数据在时间维度上的分布，发现异常
@@ -651,7 +668,6 @@ SELECT
     command,
     create_time,
     parts_to_do,
-    parts_done,
     is_done
 FROM system.mutations
 WHERE database = 'ops_test'
@@ -667,7 +683,7 @@ ORDER BY create_time DESC;
 -- 【原理】汇总各系统表的健康状态指标
 SELECT
     now() AS check_time,
-    host_name() AS node,
+    hostName() AS node,
     (SELECT max(absolute_delay) FROM system.replicas) AS max_replica_delay,
     (SELECT min(free_space / total_space * 100) FROM system.disks) AS min_disk_free_pct,
     (SELECT count(*) FROM system.merges) AS active_merges,
@@ -778,7 +794,6 @@ SELECT
     command,
     create_time,
     parts_to_do,
-    parts_done,
     is_done,
     latest_fail_time,
     latest_fail_reason
@@ -846,14 +861,13 @@ SELECT
     replica_name,
     type,
     source_replica,
-    parts_to_do,
-    result_part_name,
-    exception_text,
+    parts_to_merge,
     num_tries,
+    last_exception,
     last_attempt_time,
     last_exception_time
 FROM system.replication_queue
-WHERE exception_code != 0
+WHERE last_exception != ''
 ORDER BY last_exception_time DESC
 LIMIT 20;
 

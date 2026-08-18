@@ -166,7 +166,7 @@ ADD PROJECTION daily_category_stats
         sum(amount) as total_amount,
         sum(quantity) as total_quantity,
         avg(amount) as avg_amount
-    GROUP BY (order_date, category_id)
+    GROUP BY order_date, category_id  -- 注意: 投影内 GROUP BY 不能加括号（25.12 报 NOT_AN_AGGREGATE）
 );
 
 -- 物化聚合 Projection
@@ -224,8 +224,8 @@ GROUP BY customer_id;
 -- 原始表排序: (order_date, customer_id) -> 需要扫描大量数据
 -- Projection 排序: (customer_id, order_date) -> 直接定位
 
--- 开启查询计时
-SET enable_optimizer = 1;
+-- 开启查询计时（25.12 中新分析器默认启用，enable_optimizer 已移除，无需设置）
+-- SET enable_optimizer = 1;
 
 -- 查询 1: 按 customer_id 查询（应该使用 Projection）
 SELECT
@@ -388,34 +388,33 @@ FROM system.projection_parts
 WHERE database = 'perf_test'
 ORDER BY table, name, partition;
 
--- 查看 Projection 查询命中统计
--- 需要在 system.query_log 中查看 Projection 使用情况
-SELECT
-    query,
-    query_duration_ms,
-    read_rows,
-    read_bytes,
-    ProfileEvents['ProjectionWriterCreated'] as proj_writer_created,
-    ProfileEvents['ProjectionWriterBlocks'] as proj_writer_blocks
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND database = 'perf_test'
-  AND event_time >= now() - INTERVAL 1 HOUR
-ORDER BY event_time DESC
-LIMIT 10;
+-- 查看 Projection 查询命中统计（需启用 query_log）
+-- SELECT
+--     query,
+--     query_duration_ms,
+--     read_rows,
+--     read_bytes,
+--     ProfileEvents['ProjectionWriterCreated'] as proj_writer_created,
+--     ProfileEvents['ProjectionWriterBlocks'] as proj_writer_blocks
+-- FROM system.query_log
+-- WHERE type = 'QueryFinish'
+--   AND database = 'perf_test'
+--   AND event_time >= now() - INTERVAL 1 HOUR
+-- ORDER BY event_time DESC
+-- LIMIT 10;
 
--- 查看 Projection 写入性能
-SELECT
-    event_time,
-    ProfileEvents['ProjectionWriterCreated'] as proj_created,
-    ProfileEvents['ProjectionWriterBlocks'] as proj_blocks,
-    ProfileEvents['ProjectionWriterBlocksAlreadyWritten'] as proj_blocks_written
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND query LIKE '%INSERT%'
-  AND event_time >= now() - INTERVAL 1 HOUR
-ORDER BY event_time DESC
-LIMIT 5;
+-- 查看 Projection 写入性能（需启用 query_log）
+-- SELECT
+--     event_time,
+--     ProfileEvents['ProjectionWriterCreated'] as proj_created,
+--     ProfileEvents['ProjectionWriterBlocks'] as proj_blocks,
+--     ProfileEvents['ProjectionWriterBlocksAlreadyWritten'] as proj_blocks_written
+-- FROM system.query_log
+-- WHERE type = 'QueryFinish'
+--   AND query LIKE '%INSERT%'
+--   AND event_time >= now() - INTERVAL 1 HOUR
+-- ORDER BY event_time DESC
+-- LIMIT 5;
 
 -- ============================================================================
 -- 8. 实战：多 Projection 策略

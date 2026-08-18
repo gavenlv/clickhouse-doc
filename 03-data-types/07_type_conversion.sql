@@ -7,6 +7,14 @@
  *   - 如何处理字符串转数字、数字转字符串的常见陷阱？
  *   - 如何检查列的类型和存储大小？
  *
+ * 【使用场景】类型转换主要出现在数据管道边界：
+ *   - ETL 清洗：CSV/JSON 导入的字符串列 → 数值/时间（toInt32/toDateTime）
+ *   - 老 schema 兼容：上游类型变更后按需转换
+ *   - 分区键/排序键构造：toYYYYMM(event_time) 构造分区表达式
+ *   - 精度换算：金额分→元（toDecimal64(v, 2)）
+ *   原则：写入时一次性转好存对类型，不要每次查询时转换（查询期转换浪费 CPU）。
+ *   字符串→数字务必用 toInt32OrNull 等安全函数，失败返回 NULL 而非抛错。
+ *
  * 【原理】
  *   ClickHouse 的类型转换分两类：
  *   - 隐式转换：INSERT 时自动转换，SELECT 时按需转换
@@ -50,9 +58,12 @@ SELECT
     toInt32(toFloat64('123.45')) AS i3,  -- 123（先转浮点再截断）
     toFloat64('123.45') AS f1;     -- 123.45
 
--- [预期报错] '123.45' 含小数点，toInt32 无法直接解析，应先用 toFloat64 转换再截断
+-- [坑] '123.45' 含小数点，toInt32 无法直接解析，会抛 CANNOT_PARSE_TEXT 异常
+-- 必须先 toFloat64 再 toInt32 截断：
 SELECT
-    toInt32('123.45') AS i2;       -- 报错！含小数点
+    toInt32(toFloat64('123.45')) AS i3;   -- 123（先转浮点再截断）
+-- 如需"取整失败返回 0"，可用 toInt32OrZero('123.45') 或 toInt32OrNull('123.45')
+SELECT toInt32OrZero('abc') AS z, toInt32OrNull('abc') AS n;
 
 -- 1.3 类型信息查询
 SELECT
@@ -105,13 +116,11 @@ SELECT
 SELECT
     toUInt32(trimBoth('  123  ')) AS with_spaces;   -- 123
 
--- [预期报错] 带空格的字符串无法直接解析，应先用 trimBoth 处理
-SELECT
-    toUInt32('  123  ') AS with_spaces_raw;         -- 报错！
+-- [坑] 带空格的字符串无法直接解析，会抛 CANNOT_PARSE_TEXT 异常，必须先 trimBoth：
+-- SELECT toUInt32('  123  ') AS with_spaces_raw;  -- 报错！
 
--- [预期报错] '123abc' 含非数字字符，toUInt32 无法解析
-SELECT
-    toUInt32('123abc') AS with_suffix;      -- 报错！
+-- [坑] '123abc' 含非数字字符，toUInt32 无法解析，应使用 toUInt32OrZero/toUInt32OrNull：
+SELECT toUInt32OrZero('123abc') AS zero_on_fail, toUInt32OrNull('123abc') AS null_on_fail;
 
 -- 【坑】超大数字转小类型会溢出
 SELECT
@@ -166,23 +175,25 @@ ORDER BY position;
 
 -- 4.2 检查值是否可转换
 -- 【场景】导入数据时验证字段值
+-- 【坑】toFloat64('abc') 直接抛错，应先验证再转换
 SELECT
     toTypeName('123') AS t1,
     toTypeName(123) AS t2,
-    -- 验证字符串是否为有效数字
-    isFinite(toFloat64('123.45')) AS valid_number,
-    isFinite(toFloat64('abc')) AS invalid_number,  -- 0
+    -- 验证字符串是否为有效数字：OrNull 变体不抛错，解析失败返回 NULL
+    toFloat64OrNull('123.45') AS valid_number,   -- 123.45
+    toFloat64OrNull('abc') AS invalid_number,    -- NULL
     -- 验证字符串是否为有效日期
     toDate('2024-01-15') AS valid_date;
     -- toDate('2024-13-15') AS invalid_date;  -- 报错
 
--- 4.3 安全转换：使用 try 前缀（某些版本支持）
--- tryToInt32('abc') 返回 NULL 而不是报错（CH 21.x+）
+-- 4.3 安全转换：*OrNull / *OrZero 变体（不抛错）
+-- 【坑】CH 无 tryToInt32 函数，安全转换请用 toInt32OrNull / toInt32OrZero
 SELECT
-    tryToInt32('123') AS valid_int,         -- 123
-    tryToInt32('abc') AS invalid_int,       -- NULL
-    tryToDate('2024-01-15') AS valid_date,  -- 2024-01-15
-    tryToDate('bad-date') AS invalid_date;  -- NULL
+    toInt32OrNull('123') AS valid_int,       -- 123
+    toInt32OrNull('abc') AS invalid_int,     -- NULL
+    toInt32OrZero('abc') AS invalid_int_0,   -- 0
+    toDateOrNull('2024-01-15') AS valid_date,  -- 2024-01-15
+    toDateOrNull('bad-date') AS invalid_date;  -- NULL
 
 -- ============================================================================
 -- §5. 类型转换常见陷阱
@@ -250,7 +261,7 @@ FROM conversion_perf;
 SELECT
     'toString' AS op,
     count() AS rows,
-    length(toString(int_val)) AS result
+    avg(length(toString(int_val))) AS result
 FROM conversion_perf;
 
 -- 【结论】CAST 和 toType 性能几乎相同，toType 更简洁

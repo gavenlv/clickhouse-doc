@@ -216,10 +216,15 @@ WHERE event LIKE '%Directory%'
 --
 
 -- 诊断：检查 Keeper 状态（通过 system.zookeeper_connection）
+-- 【坑】25.12 的 system.zookeeper_connection 没有 value/description 列，
+--       连接信息字段为 host/port/session_timeout_ms/is_expired 等
 SELECT
     name,
-    value,
-    description
+    host,
+    port,
+    is_expired,
+    session_timeout_ms,
+    last_zxid_seen
 FROM system.zookeeper_connection;
 
 -- 诊断：检查 Keeper 相关事件

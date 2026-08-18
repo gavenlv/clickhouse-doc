@@ -7,7 +7,9 @@
 
 -- 注意: 集群建库必须加 ON CLUSTER，否则 clickhouse-server-2 上数据库不存在，
 -- 后续 ON CLUSTER 建表会报 Code 81 (UNKNOWN_DATABASE)
-DROP DATABASE IF EXISTS distributed_test ON CLUSTER treasurycluster;
+-- DROP DATABASE 必须带 SYNC: 否则已存在副本在 ZK 中的元数据不会同步删除，
+-- 再次建同名的 ReplicatedMergeTree 表会报 REPLICA_ALREADY_EXISTS (Code 253)
+DROP DATABASE IF EXISTS distributed_test ON CLUSTER treasurycluster SYNC;
 CREATE DATABASE IF NOT EXISTS distributed_test ON CLUSTER treasurycluster;
 USE distributed_test;
 
@@ -206,44 +208,56 @@ ORDER BY _shard_num;
 -- system.clusters 显示集群配置
 
 -- 查看分布式 DDL 队列
+-- 【坑】system.clusters 没有 database/table 列（那是 system.distributed_ddl_queue），
+--       查看 DDL 队列需用 system.distributed_ddl_queue
 SELECT 
-    database,
-    table,
-    host_name,
-    host_address,
+    cluster,
+    query,
+    host,
     port,
-    is_local
-FROM system.clusters
-WHERE cluster = 'treasurycluster';
+    status,
+    query_create_time
+FROM system.distributed_ddl_queue
+WHERE cluster = 'treasurycluster'
+ORDER BY query_create_time DESC
+LIMIT 20;
 
 -- 查看分布式表的分片信息
 -- 【场景】排查分布式表配置
+-- 【坑】system.clusters 没有 database/table 列（那是 system.distributed_ddl_queue 的），
+--       查看 Distributed 表发送队列要用 system.distribution_queue
 SELECT 
-    cluster,
     database AS db,
     table AS tbl,
-    shard_num,
-    replica_num,
-    host_name,
-    port,
-    is_local
-FROM system.clusters
-WHERE cluster = 'treasurycluster'
-ORDER BY shard_num, replica_num;
+    data_path,
+    is_blocked,
+    data_files,
+    data_compressed_bytes,
+    error_count,
+    last_exception
+FROM system.distribution_queue
+WHERE database = 'distributed_test'
+ORDER BY db, tbl;
 
 -- 查看分布式表写入的累计数据量
--- 【原理】system.query_log 记录分布式查询的详细信息
--- [需启用] 本集群 config 禁用了 query_log，system.query_log 不存在；
--- 需在 config.xml 启用 query_log 后该查询才可执行，查询主体保留
+-- 【原理】system.distribution_queue 展示了 Distributed 表异步发送队列的状态：
+--         data_files 待发送的本地暂存文件数、data_compressed_bytes 待发送字节数、
+--         error_count 发送失败次数、last_exception 最近一次失败原因
+-- （原版本用 system.query_log 的 ProfileEvents 统计，但本集群禁用了 query_log，
+--   改为用 system.distribution_queue 的监控列，信息更直接）
 SELECT 
-    query,
-    ProfileEvents['DistributedSend'] AS distributed_send_bytes,
-    ProfileEvents['DistributedInsertedRows'] AS distributed_inserted_rows
-FROM system.query_log
-WHERE query LIKE '%dist_events%'
-  AND type = 'QueryFinish'
-ORDER BY event_time DESC
-LIMIT 10;
+    database AS db,
+    table AS tbl,
+    data_files,
+    data_compressed_bytes,
+    broken_data_files,
+    broken_data_compressed_bytes,
+    error_count,
+    last_exception_time,
+    last_exception
+FROM system.distribution_queue
+WHERE database = 'distributed_test'
+ORDER BY db, tbl;
 
 -- -----------------------------------------------------
 -- 【对比】本地写入 vs 远程写入
@@ -335,4 +349,5 @@ DROP TABLE IF EXISTS dist_cluster_wide ON CLUSTER treasurycluster SYNC;
 DROP TABLE IF EXISTS cluster_wide_table ON CLUSTER treasurycluster SYNC;
 
 -- 与开头 ON CLUSTER 建库对应，DROP 也须 ON CLUSTER
-DROP DATABASE IF EXISTS distributed_test ON CLUSTER treasurycluster;
+-- 结尾同样带 SYNC，确保 ZK 中副本元数据一并清理
+DROP DATABASE IF EXISTS distributed_test ON CLUSTER treasurycluster SYNC;

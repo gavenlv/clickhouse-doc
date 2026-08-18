@@ -65,14 +65,14 @@ SELECT
         THEN round(sum(total_bytes_uncompressed) / sum(total_bytes), 2)
         ELSE 0
     END AS compression_ratio,
-    sum(rows) AS total_rows
+    sum(total_rows) AS total_rows
 FROM (
     SELECT
         database,
         name AS table,
         total_bytes,
         total_bytes_uncompressed,
-        total_rows AS rows
+        total_rows
     FROM system.tables
     WHERE database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
       AND engine NOT LIKE '%View%'
@@ -87,7 +87,7 @@ SELECT
     formatReadableSize(sum(total_bytes)) AS compressed_size,
     formatReadableSize(sum(total_bytes_uncompressed)) AS uncompressed_size,
     round(sum(total_bytes_uncompressed) / greatest(sum(total_bytes), 1), 2) AS compression_ratio,
-    sum(rows) AS total_rows,
+    sum(total_rows) AS total_rows,
     round(sum(total_bytes) * 100.0 / greatest(sum(sum(total_bytes)) OVER (), 1), 2) AS storage_percent
 FROM system.tables
 WHERE database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
@@ -103,7 +103,7 @@ ORDER BY sum(total_bytes) DESC;
 SELECT
     toDate(modification_time) AS day,
     formatReadableSize(sum(bytes_on_disk)) AS bytes_added_compressed,
-    formatReadableSize(sum(bytes_uncompressed)) AS bytes_added_uncompressed,
+    formatReadableSize(sum(data_uncompressed_bytes)) AS bytes_added_uncompressed,
     sum(rows) AS rows_added,
     round(sum(bytes_on_disk) / greatest(sum(rows), 1), 2) AS avg_bytes_per_row
 FROM system.parts
@@ -155,7 +155,7 @@ SELECT
         (SELECT
             (n * sum_xy - sum_x * sum_y) / (n * sum_xx - sum_x * sum_x) * (max_x + 90) +
             (sum_y - (n * sum_xy - sum_x * sum_y) / (n * sum_xx - sum_x * sum_x) * sum_x) / n
-        FROM stats, (SELECT max(x) + 90 AS max_x FROM cumulative))
+        FROM stats, (SELECT max(x) + 90 AS max_x FROM cumulative) AS future_x)
     ) AS predicted_90day_size,
     round(
         (SELECT
@@ -243,11 +243,11 @@ SELECT
     database,
     table,
     formatReadableSize(sum(bytes_on_disk)) AS compressed_size,
-    formatReadableSize(sum(bytes_uncompressed)) AS uncompressed_size,
-    round(sum(bytes_uncompressed) / greatest(sum(bytes_on_disk), 1), 2) AS compression_ratio,
+    formatReadableSize(sum(data_uncompressed_bytes)) AS uncompressed_size,
+    round(sum(data_uncompressed_bytes) / greatest(sum(bytes_on_disk), 1), 2) AS compression_ratio,
     CASE
-        WHEN sum(bytes_uncompressed) / greatest(sum(bytes_on_disk), 1) < 2 THEN '低(需优化)'
-        WHEN sum(bytes_uncompressed) / greatest(sum(bytes_on_disk), 1) < 5 THEN '中等'
+        WHEN sum(data_uncompressed_bytes) / greatest(sum(bytes_on_disk), 1) < 2 THEN '低(需优化)'
+        WHEN sum(data_uncompressed_bytes) / greatest(sum(bytes_on_disk), 1) < 5 THEN '中等'
         ELSE '高'
     END AS compression_efficiency
 FROM system.parts
@@ -296,8 +296,7 @@ SELECT
     countIf(memory_usage > 1073741824) AS queries_over_1gb,
     countIf(memory_usage > 10737418240) AS queries_over_10gb
 FROM system.query_thread_log
-WHERE type = 'QueryFinish'
-  AND event_time >= now() - INTERVAL 7 DAY
+WHERE event_time >= now() - INTERVAL 7 DAY
   AND memory_usage > 0;
 
 -- 2.3 并发查询规划
@@ -437,16 +436,15 @@ SELECT '  分片数 = ceil(40.8 / 10) = 5 分片';
 -- 【场景】检查数据在各分片上的分布是否均匀
 -- 【原理】通过 cluster 函数查询所有分片的数据分布
 SELECT
-    shard_num,
-    host_name,
+    _shard_num AS shard_num,
     formatReadableSize(sum(bytes_on_disk)) AS total_size,
     sum(rows) AS total_rows,
     count(DISTINCT concat(database, '.', table)) AS table_count
 FROM cluster('treasurycluster', system, parts)
 WHERE active = 1
   AND database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
-GROUP BY shard_num, host_name
-ORDER BY shard_num;
+GROUP BY _shard_num
+ORDER BY _shard_num;
 
 -- 4.3 节点资源规格建议
 SELECT '===== 节点规格建议 =====' AS node_spec;

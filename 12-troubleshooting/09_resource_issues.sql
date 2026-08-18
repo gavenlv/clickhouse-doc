@@ -61,21 +61,26 @@ WHERE event LIKE '%CPU%'
 ORDER BY event;
 
 -- 诊断：查看系统资源使用情况
+-- 【坑】system.asynchronous_metrics 只有 metric/value/description 三列，
+--       CPU 时间指标按 metric 名过滤（如 OSUserTime/OSSystemTime 等）
 SELECT
-    formatReadableSize(total_cpu_time) AS total_cpu,
-    formatReadableSize(user_cpu_time) AS user_cpu,
-    formatReadableSize(system_cpu_time) AS system_cpu,
-    formatReadableSize(idle_cpu_time) AS idle_cpu
+    metric,
+    value,
+    description
 FROM system.asynchronous_metrics
-WHERE name LIKE '%CPU%';
+WHERE metric LIKE '%CPU%'
+ORDER BY metric;
 
 -- 修复：限制并发查询数
-SET max_concurrent_queries = 100;
-SET max_concurrent_queries_for_user = 10;
+-- 【坑】max_concurrent_queries 是服务端配置项（config.xml 的 <max_concurrent_queries>），
+--       不允许通过 SET 修改（会报 UNKNOWN_SETTING），需改 config.xml 并重启：
+--   <max_concurrent_queries>100</max_concurrent_queries>
+--   <max_concurrent_queries_for_user>10</max_concurrent_queries_for_user>
 
 -- 修复：限制查询使用的 CPU 线程数
+-- 【坑】max_threads 可 SET 修改，但 max_threads_for_interactive_query 不是
+--       内置设置（报 UNKNOWN_SETTING），只在部分版本存在，这里只设置 max_threads
 SET max_threads = 8;
-SET max_threads_for_interactive_query = 4;
 
 -- 修复：使用优先级队列区分高低优查询
 -- 在 config.xml 中:
@@ -133,12 +138,14 @@ ORDER BY elapsed DESC;
 --
 
 -- 诊断：查看当前内存使用分布
+-- 【坑】system.memory 表不存在（CH 25.x），内存指标在 system.asynchronous_metrics
 SELECT
-    formatReadableSize(total_memory) AS total,
-    formatReadableSize(free_memory) AS free,
-    formatReadableSize(total_memory - free_memory) AS used,
-    round((total_memory - free_memory) / total_memory * 100, 2) AS used_pct
-FROM system.memory;
+    metric,
+    value,
+    description
+FROM system.asynchronous_metrics
+WHERE metric IN ('OSMemoryTotal', 'OSMemoryAvailable', 'MemoryResident')
+ORDER BY metric;
 
 -- 诊断：查看各查询的内存使用
 SELECT
@@ -191,7 +198,7 @@ SET max_bytes_before_external_sort = 4000000000;       -- 4GB 后使用磁盘
 -- 修复：限制不同操作的缓冲区大小
 SET max_block_size = 65536;
 SET max_insert_block_size = 1048576;
-SET max_join_block_size = 65536;
+-- max_join_block_size 不是 CH 25.x 内置设置（报 UNKNOWN_SETTING），JOIN 内存上限用 max_bytes_in_join：
 SET max_bytes_in_join = 104857600;  -- 100MB
 
 -- 修复：使用低内存消耗的聚合函数
@@ -319,20 +326,20 @@ WHERE event LIKE '%Network%'
 ORDER BY event;
 
 -- 诊断：检查分布式查询性能
+-- 【坑】演示集群禁用了 system.query_log，改用 system.query_thread_log（线程级）
 SELECT
     query_id,
     query,
     formatReadableSize(read_bytes) AS bytes_read,
-    formatReadableSize(memory_usage) AS memory,
+    formatReadableSize(peak_memory_usage) AS memory,
     read_rows,
-    elapsed,
+    query_duration_ms AS elapsed_ms,
     initial_query_id,
     initial_user
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND has(initial_query_id) AND initial_query_id != query_id
-  AND event_time > now() - INTERVAL 1 DAY
-ORDER BY elapsed DESC
+FROM system.query_thread_log
+WHERE event_time > now() - INTERVAL 1 DAY
+  AND initial_query_id != '' AND initial_query_id != query_id
+ORDER BY elapsed_ms DESC
 LIMIT 20;
 
 -- 诊断：检查副本间网络延迟

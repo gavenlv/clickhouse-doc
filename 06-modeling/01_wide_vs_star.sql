@@ -229,9 +229,9 @@ INSERT INTO product_tags VALUES
 
 -- ARRAY JOIN 查询（宽表，无需 JOIN）
 SELECT '【ARRAY JOIN】宽表查询标签:';
-SELECT p.product_id, p.product_name, t.tag, t.weight
+SELECT p.product_id, p.product_name, tag, weight
 FROM products_wide p
-ARRAY JOIN tags AS t, tag_weights AS weight
+ARRAY JOIN tags AS tag, tag_weights AS weight
 WHERE p.category = 'Electronics';
 
 -- 多表 JOIN 查询（星型）

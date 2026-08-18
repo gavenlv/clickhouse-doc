@@ -225,23 +225,30 @@ ORDER BY category;
 
 -- 3.1 sumArray：数组求和
 -- 【场景】每个用户事件的总分
+-- 【原理】sumArray 是聚合函数：对组内所有行的数组逐位求和；
+--         而 arraySum 是普通函数：只对单行数组求和（逐行计算）
 SELECT
     user_id,
+    sumArray(event_scores) AS total_score_per_user
+FROM user_events
+GROUP BY user_id
+ORDER BY user_id;
+
+-- 对比：arraySum 是普通函数，逐行计算（非聚合，单行内求和）
+SELECT
     event_scores,
-    sumArray(event_scores) AS total_score_per_user,
-    -- 等价写法（展开后聚合，多一步 arrayJoin）
-    -- 注意：这会把行数展开，结果不同，仅作对比
     arraySum(event_scores) AS array_sum
 FROM user_events
-ORDER BY user_id;
+ORDER BY event_scores;
 
 -- 3.2 uniqArray：数组元素去重计数
 -- 【场景】每个用户涉及的不同事件类型数
+-- 【原理】uniqArray 是聚合函数：收集组内所有行的数组并取去重计数
 SELECT
     user_id,
-    event_tags,
     uniqArray(event_tags) AS unique_tag_count
 FROM user_events
+GROUP BY user_id
 ORDER BY user_id;
 
 -- 3.3 sumArray 配合 GROUP BY
@@ -249,20 +256,21 @@ ORDER BY user_id;
 SELECT
     user_id,
     sumArray(event_scores) AS total_score,
-    uniqArray(arrayFlatten(groupArray(event_tags))) AS all_unique_tags
+    uniqArray(event_tags) AS all_unique_tags
 FROM user_events
 GROUP BY user_id
 ORDER BY user_id;
 
 -- 3.4 avgArray / minArray / maxArray
 -- 【场景】数组元素的统计量
+-- 【原理】avgArray 等是聚合函数：对组内所有行的数组元素统一计算统计量
 SELECT
     user_id,
-    event_scores,
     avgArray(event_scores) AS avg_score,
     minArray(event_scores) AS min_score,
     maxArray(event_scores) AS max_score
 FROM user_events
+GROUP BY user_id
 ORDER BY user_id;
 
 
@@ -281,7 +289,7 @@ ORDER BY user_id;
 SELECT
     category,
     sumState(amount) AS gmv_state,  -- ← 这是二进制，不可读
-    sumMerge(sumState(amount)) AS gmv  -- ← 先 State 再 Merge 还原
+    sum(amount) AS gmv              -- ← 直接聚合还原数值
 FROM orders
 GROUP BY category
 ORDER BY category;
@@ -343,7 +351,7 @@ ORDER BY category;
 SELECT
     category,
     uniqState(id) AS uv_state,     -- HLL 状态
-    uniqMerge(uniqState(id)) AS uv  -- 合并出 UV
+    uniq(id) AS uv                 -- 直接聚合得到 UV（等价结果）
 FROM orders
 GROUP BY category
 ORDER BY category;
@@ -352,8 +360,7 @@ ORDER BY category;
 -- 【场景】跨分片收集元素并合并
 SELECT
     category,
-    groupArrayState(region) AS region_state,
-    groupArrayMerge(region_state) AS regions
+    groupArray(region) AS regions
 FROM (
     SELECT category, region FROM orders ORDER BY region
 )
@@ -427,8 +434,8 @@ SELECT
 FROM (
     SELECT
         sensor_id,
-        sumResample(3600, 0, 86400)(temperature, temperature) AS sum_temperature,
-        countResample(3600, 0, 86400)(temperature, temperature) AS count_temperature
+        sumResample(0, 86400, 3600)(temperature, toUnixTimestamp(event_time)) AS sum_temperature,
+        countResample(0, 86400, 3600)(temperature, toUnixTimestamp(event_time)) AS count_temperature
     FROM sensor_data
     GROUP BY sensor_id
 )
@@ -478,7 +485,7 @@ DROP TABLE IF EXISTS orders_daily_simple;
 CREATE TABLE orders_daily_simple (
     d Date,
     category String,
-    total_amount SimpleAggregateFunction(Sum, Decimal(10, 2)),
+    total_amount SimpleAggregateFunction(Sum, Decimal(38, 2)),
     max_amount SimpleAggregateFunction(Max, Decimal(10, 2)),
     min_amount SimpleAggregateFunction(Min, Decimal(10, 2))
 ) ENGINE = AggregatingMergeTree()

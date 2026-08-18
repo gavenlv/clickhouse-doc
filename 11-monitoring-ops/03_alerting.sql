@@ -212,8 +212,8 @@ SELECT
     elapsed_seconds AS current_value,
     command,
     parts_to_do,
-    parts_done,
-    round(progress * 100, 2) AS progress_percent,
+    parts_to_do AS parts_done,  -- 25.12 无 parts_done/progress 列，用剩余量近似
+    latest_fail_reason,
     3600 AS warning_threshold,
     14400 AS critical_threshold
 FROM (
@@ -222,8 +222,7 @@ FROM (
         table,
         command,
         parts_to_do,
-        parts_done,
-        progress,
+        latest_fail_reason,
         dateDiff('second', create_time, now()) AS elapsed_seconds
     FROM system.mutations
     WHERE is_done = 0
@@ -275,8 +274,7 @@ SELECT
     10 AS warning_threshold_seconds,
     60 AS critical_threshold_seconds
 FROM system.query_thread_log
-WHERE type = 'QueryFinish'
-  AND event_time >= now() - INTERVAL 5 MINUTE
+WHERE event_time >= now() - INTERVAL 5 MINUTE
   AND query NOT LIKE '%system.%'
   AND query_duration_ms > 10000
 ORDER BY query_duration_ms DESC
@@ -284,6 +282,8 @@ LIMIT 20;
 
 -- 3.6 查询失败率检查
 -- 【场景】突然升高的查询失败率可能表明集群存在问题
+-- 【坑】25.12 的 system.query_thread_log 已无 type 列（QueryFinish/ExceptionWhileProcessing），
+--       失败率改用 system.events 的累计计数器 Query / FailedQuery
 SELECT
     now() AS alert_time,
     'Query Errors' AS category,
@@ -300,10 +300,8 @@ SELECT
     5 AS critical_threshold_pct
 FROM (
     SELECT
-        countIf(type = 'QueryFinish') AS total,
-        countIf(type = 'ExceptionWhileProcessing') AS failed
-    FROM system.query_thread_log
-    WHERE event_time >= now() - INTERVAL 5 MINUTE
+        (SELECT value FROM system.events WHERE event = 'Query') AS total,
+        (SELECT value FROM system.events WHERE event = 'FailedQuery') AS failed
 )
 HAVING (failed * 100.0 / total) > 1;
 
@@ -350,7 +348,7 @@ SELECT
         ELSE 'OK'
     END AS level,
     count() AS error_count,
-    max(exception_code) AS last_error_code,
+    max(num_tries) AS max_retries,
     max(last_exception_time) AS last_error_time
 FROM system.replication_queue
 WHERE last_exception_time > now() - INTERVAL 1 HOUR
@@ -369,7 +367,7 @@ SELECT
     formatReadableSize(total_bytes) AS table_size,
     total_bytes AS bytes,
     engine,
-    rows AS total_rows
+    total_rows AS total_rows
 FROM system.tables
 WHERE database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
   AND engine NOT LIKE '%Replicated%'
@@ -536,6 +534,25 @@ SELECT * FROM ops_test.alert_escalation_policy;
 
 -- 6.3 告警历史统计
 -- 【场景】分析告警趋势，优化告警规则
+-- 创建告警历史示例表（生产环境通常来自告警系统/日志表）
+CREATE TABLE IF NOT EXISTS ops_test.active_alerts (
+    category String,
+    resource String,
+    alert_type String,
+    level String,
+    database String,
+    table String,
+    created_at DateTime DEFAULT now()
+)
+ENGINE = MergeTree()
+ORDER BY (category, resource, alert_type);
+
+INSERT INTO ops_test.active_alerts (category, resource, alert_type, level, database, table) VALUES
+('Replication', 'Replica', 'Replica Lag', 'CRITICAL', 'playground', 'orders'),
+('Replication', 'Replica', 'Replica Lag', 'WARNING', 'ops_test', 'users'),
+('Storage', 'Disk', 'Low Space', 'WARNING', 'playground', 'events'),
+('Operation', 'Merge', 'Merge Backlog', 'WARNING', 'ops_test', 'orders');
+
 SELECT
     category,
     resource,

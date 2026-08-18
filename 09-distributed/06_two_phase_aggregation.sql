@@ -224,13 +224,15 @@ GROUP BY event_type
 ORDER BY event_type;
 
 -- 对比: 错误地直接对各分片 uniq 求和
--- 【坑】这个结果是不正确的！
-SELECT 
-    event_type,
-    sum(uniq(user_id)) AS wrong_unique_users
-FROM agg_test_dist
-GROUP BY event_type
-ORDER BY event_type;
+-- 【坑】uniq() 不能嵌套在 sum() 中（报错误 184 ILLEGAL_AGGREGATION），
+--       且即使可执行，相同 user_id 出现在多个分片也会被重复计算，
+--       正确写法是 uniqState + uniqMerge（见上文的两阶段执行计划）
+-- SELECT 
+--     event_type,
+--     sum(uniq(user_id)) AS wrong_unique_users
+-- FROM agg_test_dist
+-- GROUP BY event_type
+-- ORDER BY event_type;
 
 -- -----------------------------------------------------
 -- 【原理】quantile 的特殊处理

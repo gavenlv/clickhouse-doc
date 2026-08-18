@@ -139,15 +139,16 @@ INSERT INTO users VALUES
 CREATE TABLE orders (
     order_id UInt64,
     user_id UInt64,
+    product_id UInt32,
     amount Float64,
     order_date DateTime
 ) ENGINE = MergeTree()
 ORDER BY order_id;
 
 INSERT INTO orders VALUES
-    (1001, 1, 99.9,  now() - INTERVAL 1 DAY),
-    (1002, 2, 199.9, now() - INTERVAL 2 DAY),
-    (1003, 3, 299.9, now() - INTERVAL 3 DAY);
+    (1001, 1, 1, 99.9,  now() - INTERVAL 1 DAY),
+    (1002, 2, 2, 199.9, now() - INTERVAL 2 DAY),
+    (1003, 3, 3, 299.9, now() - INTERVAL 3 DAY);
 
 -- active_users 活跃用户表（预计算结果）
 CREATE TABLE active_users (

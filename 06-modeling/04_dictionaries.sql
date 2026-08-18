@@ -75,12 +75,14 @@ SELECT dictGet('modeling_test.dict_city_hashed', 'population', toUInt64(3));
 
 -- 批量查询
 SELECT '【HASHED 字典】批量查询:';
+-- 【坑】system.numbers 只有 number 列，不能直接引用 city_id，
+--       需要把 number 重命名为 city_id 作为字典键
 SELECT
-    city_id,
-    dictGet('modeling_test.dict_city_hashed', 'city_name', city_id) AS city_name,
-    dictGet('modeling_test.dict_city_hashed', 'province', city_id) AS province
+    number AS city_id,
+    dictGet('modeling_test.dict_city_hashed', 'city_name', number) AS city_name,
+    dictGet('modeling_test.dict_city_hashed', 'province', number) AS province
 FROM system.numbers
-WHERE city_id IN (1, 2, 3, 4, 5)
+WHERE number IN (1, 2, 3, 4, 5)
 LIMIT 5;
 
 -- -----------------------------------------------------------

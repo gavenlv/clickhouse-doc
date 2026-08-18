@@ -234,7 +234,120 @@ Decimal64(2) 存储 0.1 + 0.2:
 
 ---
 
-## 4. 文件导航
+## 4. 使用场景全景（场景驱动选型）
+
+**核心理念**：不要从"类型"出发想"能存什么"，而要从"业务字段"出发想"该用什么类型"。同一语义的字段在不同业务域，量级和精度要求完全不同，选型也随之不同。下面按 6 大业务域给出"字段 → 类型 → 理由"的完整答案。
+
+### 4.1 电商交易域
+
+| 字段 | 数据类型 | 为什么 |
+|------|---------|--------|
+| order_id | UInt64 | 订单号全局唯一、只增不减，用无符号防溢出；亿级订单也远达不到 UInt64 上限 |
+| user_id | UInt64 | 用户量可能突破 42 亿（UInt32 上限），一旦溢出数据直接损坏，主键/外键一律用 UInt64 兜底 |
+| product_id / sku_id | UInt32 | 商品量级远低于用户（百万级），4B 足够，节省一半空间 |
+| 实付金额 amount | Decimal(18, 2) | 金额必须精确。Float64 存 0.1+0.2=0.30000000000000004，对账会差钱 |
+| unit_price 单价 | Decimal(18, 2) | 单价要存"下单时快照"，不能 JOIN 时读现价，否则历史订单金额会漂移 |
+| 优惠/运费 | Decimal(18, 2) | 逐项精确计算再相加 |
+| order_status | Enum8 或 LowCardinality(String) | 状态值少且固定（pending/paid/shipped/completed/cancelled），Enum8 最省；若状态可动态扩展用 LowCardinality |
+| payment_method | LowCardinality(String) | 基数 < 10（支付宝/微信/银行卡/现金），字典编码省 5-10x |
+| 收货地址 | String | 变长自由文本，不可枚举，不能用 LowCardinality |
+| 订单扩展属性 | Map(String, String) | 不同品类字段不同（手机要内存、衣服要尺码），用 Map 兜底免 ALTER |
+| 商品标签 | Array(String) | 一件商品多个标签，用 Array 天然表达 |
+
+> 场景故事：某电商曾用 Float64 存金额，月结对账差 0.03 元查了 3 天。金额相关的**每一列**（售价、折扣、运费、税、退款）都必须 Decimal，且小数位统一（分=2 位）。
+
+### 4.2 日志与可观测域
+
+| 字段 | 数据类型 | 为什么 |
+|------|---------|--------|
+| event_time | DateTime 或 DateTime64(3) | 日志按秒够用选 DateTime（4B）；APM 延迟分析要毫秒级用 DateTime64(3)（8B） |
+| log_level | Enum8 | DEBUG/INFO/WARN/ERROR 固定 4 值，Enum8 比 String 省 10 倍且过滤更快 |
+| service_name | LowCardinality(String) | 服务名有限（几十个），字典编码让 GROUP BY 秒回 |
+| host / instance | LowCardinality(String) | 机器数量有限（几十到几百），同上 |
+| trace_id | FixedString(16) 或 String | 32 位十六进制 ID 可转成 16 字节二进制；若直接存 String 用 UInt128/FixedString(16) |
+| message 原文 | String | 自由文本不可枚举，String；不要为了省空间截断，会丢排障信息 |
+| duration_ms | UInt16 或 UInt32 | 毫秒级耗时；<65s 用 UInt16，超时任务可能到分钟级用 UInt32 |
+| 标签集合 | Map(String, String) | Prometheus 风格标签，键值对集合用 Map |
+| 请求路径 | String | 高基数（含参数），**绝对禁用 LowCardinality** |
+
+> 场景故事：日志平台把 level 存成 String，2 亿条/天的日志级别列占了 40GB；改成 Enum8 后仅 4GB，且 `WHERE level = 'ERROR'` 的过滤性能提升 3 倍。
+
+### 4.3 金融与风控域
+
+| 字段 | 数据类型 | 为什么 |
+|------|---------|--------|
+| 交易金额 | Decimal(18, 2) 或 Decimal(38, 2) | 跨境/大额场景用 Decimal128；分是硬通货，绝不用 Float |
+| 利率 / 汇率 | Decimal(18, 6) | 利率 6 位小数精度（0.000001），Decimal 保证复利计算精确 |
+| 账户余额 | Decimal(18, 2) | 余额可负（透支），Decimal 天然有符号语义 |
+| 交易状态 | Enum8 | 成功/失败/处理中/已冲正，固定集合 |
+| 渠道类型 | LowCardinality(String) | 渠道有限（网银/手机/柜面/POS），字典编码 |
+| 商户号 | UInt64 | 商户 ID 量级大，8B 兜底 |
+| 批次号 / 流水号 | UInt64 | 全局递增流水，UInt64 防溢出 |
+| 风控特征向量 | Array(Float32) | 模型特征定长数组，Array(Float32) 比 JSON 省且可向量计算 |
+| 时间戳 | DateTime64(6) | 交易时序强，微秒级可用于精确排序/对账 |
+
+> 场景故事：风控要"同卡 5 分钟 3 次大额"实时判定，交易时间用 DateTime64(6) 才能精确排序，秒级 DateTime 会在并发高峰产生并列，误杀正常交易。
+
+### 4.4 物联网（IoT）域
+
+| 字段 | 数据类型 | 为什么 |
+|------|---------|--------|
+| device_id / sensor_id | UInt32 或 UInt64 | 设备量亿级用 UInt32 够；若预留接入规模用 UInt64 |
+| event_time | DateTime | 秒级采集够用；毫秒级采样用 DateTime64(3) |
+| temperature / humidity | Float32 | 传感器读数本身有精度上限（±0.1°C），Float32 足够且省一半 |
+| 电压 / 电流 | Float32 | 连续模拟量，Float32 |
+| GPS 经纬度 | Float64 | 经纬度需要 6-7 位小数（约 0.1 米），Float64 精度才能覆盖 |
+| battery 电量 | UInt8 | 0-100 整数百分比，UInt8 |
+| 设备状态 | Enum8 | 在线/离线/故障/维护，固定值 |
+| 固件版本 | LowCardinality(String) | 版本号有限（几十个），字典编码 |
+| 原始报文 | String | 不可控长度自由文本 |
+
+> 场景故事：车联网每车每秒上报 100 条信号，温度用 Float64 比 Float32 多存一倍（8B vs 4B），1 亿辆车一年的存储成本差距巨大。传感器数据**不要**用 Decimal——采集精度本来就低，Decimal 的高精度是浪费。
+
+### 4.5 用户行为分析域
+
+| 字段 | 数据类型 | 为什么 |
+|------|---------|--------|
+| event_name | LowCardinality(String) | 埋点事件名有限（几百个），字典编码后 GROUP BY 极快 |
+| user_id | UInt64 | 用户主键，防溢出 |
+| 页面 URL | String | 高基数含参数，禁用 LowCardinality |
+| 属性字典 | Map(String, String) | 事件属性键值对，用 Map 免 ALTER |
+| session_id | UUID 或 String | 会话 ID 高基数唯一，String/UUID 均可，禁用 LowCardinality |
+| 停留时长 | UInt32 | 秒数，UInt32 覆盖 136 年 |
+| device_type | LowCardinality(String) | iOS/Android/Web/H5 等几十种 |
+| 渠道来源 | LowCardinality(String) | 渠道有限（几百个） |
+| 漏斗步骤 | UInt8 | 步骤编号 0-N，UInt8 或 Enum8 |
+
+> 场景故事：埋点事件名如果存 String，每日 5 亿事件的 event_name 列（平均 15 字节）约 75GB；LowCardinality 后字典索引 2 字节/行，仅 10GB，且 `GROUP BY event_name` 从秒级降到毫秒级。
+
+### 4.6 广告与增长域
+
+| 字段 | 数据类型 | 为什么 |
+|------|---------|--------|
+| impression / click | UInt8（0/1） | 布尔语义，1 字节，sum() 即曝光/点击量 |
+| campaign_id | UInt32 | 广告计划量级百万级，4B |
+| creative_id | UInt32 | 创意量级同上 |
+| 花费 spend | Decimal(18, 4) | 广告结算精确到 4 位小数（千分之），Decimal 保证对账 |
+| ctr / cvr 指标 | Float32 | 计算得出的比率，本身是浮点结果，Float 即可（**计算指标**与**存储金额**要分清） |
+| 定向人群标签 | Array(String) 或 Array(UInt32) | 人群包是集合，Array 表达 |
+| 投放时间窗 | DateTime | 秒级够用 |
+
+> 关键区分：**"业务原始值"要精确存 Decimal，"计算派生的比率"用 Float**。ctr = click / impression 的结果天然是近似值，用 Float32 无损表达，不需要 Decimal。
+
+### 4.7 选错类型的代价（反面教材）
+
+| 错误 | 后果 | 正确做法 |
+|------|------|---------|
+| 用户 ID 用 UInt32 | 42 亿后溢出变负数，数据损坏 | UInt64 |
+| 金额用 Float64 | 对账不平、报表差钱 | Decimal(18, 2)+ |
+| 日志级别用 String | 存储膨胀 5-10x，过滤慢 | Enum8 / LowCardinality |
+| URL 用 LowCardinality | 字典退化成普通 String，且每次写入有字典查找开销 | String |
+| 传感器温度用 Decimal | 高精度浪费 4 倍空间，无收益 | Float32 |
+| 所有字符串用 FixedString | 变长文本被截断/补 \0，数据错误 | String |
+
+---
+
+## 5. 文件导航
 
 | 文件 | 主题 | 内容 | 状态 |
 |------|------|------|------|
@@ -250,7 +363,7 @@ Decimal64(2) 存储 0.1 + 0.2:
 
 ---
 
-## 5. 类型选择决策树
+## 6. 类型选择决策树
 
 ```
 字段是什么?
@@ -288,7 +401,7 @@ Decimal64(2) 存储 0.1 + 0.2:
 
 ---
 
-## 6. 常见误区与最佳实践
+## 7. 常见误区与最佳实践
 
 ### 误区
 1. **所有整数用 UInt64**：浪费空间，年龄用 UInt8 即可
@@ -307,7 +420,7 @@ Decimal64(2) 存储 0.1 + 0.2:
 
 ---
 
-## 7. 自测题
+## 8. 自测题
 
 1. 为什么 UInt8 比 UInt64 省 8 倍空间？对压缩率有什么影响？
 2. LowCardinality(String) 的字典编码原理是什么？基数超过多少会退化？
@@ -315,12 +428,30 @@ Decimal64(2) 存储 0.1 + 0.2:
 4. Nullable(UInt8) 比普通 UInt8 多了什么开销？为什么不能做主键？
 5. Date 内部如何存储？为什么只占 2 字节？
 6. FixedString(32) 适合存什么？不适合存什么？
+7. 场景判断：以下字段各该选什么类型？（答案见文末）
+   - 电商订单表 user_id → ？
+   - 传感器温度 → ？
+   - 日志级别 → ？
+   - 请求 URL → ？
+   - 账户余额 → ？
 
 ---
 
-## 8. 关联章节
+## 9. 关联章节
 
 - [05-functions](../05-functions/README.md) —— 类型相关函数（转换、数组、Map、聚合）
 - [06-modeling](../06-modeling/README.md) —— schema 设计、主键设计、时间序列建模（新建中）
 - [08-performance](../08-performance/README.md) —— 类型对性能的影响
 - [15-best-practices](../15-best-practices/README.md) —— schema 设计最佳实践
+
+---
+
+## 10. 自测题答案
+
+1. UInt8 每行 1 字节，UInt64 每行 8 字节；列式存储下全列 I/O 差 8 倍，且小整数列连续重复值多、压缩率更高，向量化时一条 SIMD 指令能处理 8 倍行数。
+2. LowCardinality 建立"值→整数索引"字典，列只存 1-2 字节索引；基数超过 10,000 自动退化为普通 String（每次写入多一次字典查找，得不偿失）。
+3. Float64 二进制无法精确表示十进制小数，0.1+0.2 = 0.30000000000000004；金额累计、对账、税费计算都会因舍入产生误差，必须用 Decimal。
+4. 多一个 NULL 掩码列（每行 1 bit + 独立文件）；查询每行要检查掩码破坏向量化；Nullable 列不能作为主键/排序键。
+5. Date 内部是 UInt16，存"距 1970-01-01 的天数"，2 字节覆盖到 2149 年。
+6. 适合：定长二进制标识（MD5 的 16 字节、UUID 的 16 字节、哈希）；不适合：任意变长文本（会被截断或补 \0）。
+7. 场景答案：user_id → UInt64（防溢出）；传感器温度 → Float32（采集精度有限）；日志级别 → Enum8（固定集合）；请求 URL → String（高基数含参数）；账户余额 → Decimal(18, 2)（金额精确）。

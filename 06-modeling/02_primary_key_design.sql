@@ -239,15 +239,17 @@ CREATE TABLE events_with_skip_index
     status_code   UInt16,
     response_time UInt32,
     url           String,
-    user_agent    String
+    user_agent    String,
+    -- 主键覆盖 user_id 和 event_time 的过滤
+    -- 对 status_code 和 response_time 建跳数索引
+    -- 【坑】跳数索引必须定义在列定义括号内（ENGINE 之前），
+    --       set 类型已在 CH 24.x 移除（报语法错误 62），改用 bloom_filter
+    INDEX idx_status_code status_code TYPE bloom_filter(0.01) GRANULARITY 4,
+    INDEX idx_response_time response_time TYPE minmax GRANULARITY 3,
+    INDEX idx_event_type event_type TYPE bloom_filter(0.01) GRANULARITY 3
 )
 ENGINE = MergeTree
-ORDER BY (user_id, event_time)
--- 主键覆盖 user_id 和 event_time 的过滤
--- 对 status_code 和 response_time 建跳数索引
-INDEX idx_status_code status_code TYPE set(100) GRANULARITY 4,
-INDEX idx_response_time response_time TYPE minmax GRANULARITY 3,
-INDEX idx_event_type event_type TYPE bloom_filter(0.01) GRANULARITY 3;
+ORDER BY (user_id, event_time);
 
 -- 插入数据
 INSERT INTO events_with_skip_index SELECT
@@ -290,10 +292,11 @@ WHERE event_type = 'error';
 
 -- 查看跳数索引大小
 SELECT '【跳数索引存储】查看索引大小:';
-SELECT table, index_name, formatReadableSize(sum(data_compressed_bytes)) AS size
+-- 【坑】system.data_skipping_indices 的列名是 name（不是 index_name）
+SELECT table, name AS index_name, formatReadableSize(sum(data_compressed_bytes)) AS size
 FROM system.data_skipping_indices
 WHERE database = 'modeling_test'
-GROUP BY table, index_name;
+GROUP BY table, name;
 
 -- ============================================================
 -- 实验五：复合主键的列顺序对查询的影响
@@ -381,7 +384,7 @@ CREATE TABLE best_practice_orders
     product_id    UInt32,       -- 高基数，查询频率一般 → 第 3 位
     amount        Decimal(10, 2),
     -- 其他字段...
-    INDEX idx_status order_status TYPE set(10) GRANULARITY 4
+    INDEX idx_status order_status TYPE bloom_filter(0.01) GRANULARITY 4
 )
 ENGINE = MergeTree
 ORDER BY (user_id, order_time, product_id)

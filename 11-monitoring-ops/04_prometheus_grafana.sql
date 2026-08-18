@@ -178,7 +178,7 @@ UNION ALL
 SELECT
     'clickhouse_queries_total',
     'counter',
-    value,
+    toInt64(value),
     '自启动以来总查询数'
 FROM system.events
 WHERE event = 'Query'
@@ -188,7 +188,7 @@ UNION ALL
 SELECT
     'clickhouse_queries_failed_total',
     'counter',
-    value,
+    toInt64(value),
     '自启动以来失败查询数'
 FROM system.events
 WHERE event = 'FailedQuery'
@@ -198,7 +198,7 @@ UNION ALL
 SELECT
     'clickhouse_queries_inserted_rows',
     'counter',
-    value,
+    toInt64(value),
     '自启动以来插入行数'
 FROM system.events
 WHERE event = 'InsertedRows'
@@ -208,7 +208,7 @@ UNION ALL
 SELECT
     'clickhouse_queries_selected_rows',
     'counter',
-    value,
+    toInt64(value),
     '自启动以来查询行数'
 FROM system.events
 WHERE event = 'SelectedRows';
@@ -227,7 +227,7 @@ UNION ALL
 SELECT
     'clickhouse_merges_total',
     'counter',
-    value,
+    toInt64(value),
     '自启动以来合并总次数'
 FROM system.events
 WHERE event = 'Merge'
@@ -237,7 +237,7 @@ UNION ALL
 SELECT
     'clickhouse_merges_parts_total',
     'counter',
-    value,
+    toInt64(value),
     '自启动以来合并的 Part 数'
 FROM system.events
 WHERE event = 'PartMerged'
@@ -247,7 +247,7 @@ UNION ALL
 SELECT
     'clickhouse_merges_rows_total',
     'counter',
-    value,
+    toInt64(value),
     '自启动以来合并的行数'
 FROM system.events
 WHERE event = 'MergedRows';
@@ -258,7 +258,7 @@ WHERE event = 'MergedRows';
 SELECT
     'clickhouse_replicas_delay_seconds' AS prometheus_metric,
     'gauge' AS metric_type,
-    max(absolute_delay) AS current_value,
+    toFloat64(max(absolute_delay)) AS current_value,
     '最大副本延迟秒数' AS description
 FROM system.replicas
 
@@ -267,7 +267,7 @@ UNION ALL
 SELECT
     'clickhouse_replicas_readonly',
     'gauge',
-    countIf(is_readonly = 1),
+    toFloat64(countIf(is_readonly = 1)),
     '只读副本数'
 FROM system.replicas
 
@@ -276,7 +276,7 @@ UNION ALL
 SELECT
     'clickhouse_replicas_session_expired',
     'gauge',
-    countIf(is_session_expired = 1),
+    toFloat64(countIf(is_session_expired = 1)),
     '会话过期副本数'
 FROM system.replicas
 
@@ -285,7 +285,7 @@ UNION ALL
 SELECT
     'clickhouse_replicas_queue_size',
     'gauge',
-    sum(queue_size),
+    toFloat64(sum(queue_size)),
     '复制队列总大小'
 FROM system.replicas;
 
@@ -294,7 +294,7 @@ FROM system.replicas;
 SELECT
     'clickhouse_disk_free_bytes' AS prometheus_metric,
     'gauge' AS metric_type,
-    sum(free_space) AS current_value,
+    toFloat64(sum(free_space)) AS current_value,
     '磁盘总剩余空间(字节)' AS description
 FROM system.disks
 
@@ -303,7 +303,7 @@ UNION ALL
 SELECT
     'clickhouse_disk_total_bytes',
     'gauge',
-    sum(total_space),
+    toFloat64(sum(total_space)),
     '磁盘总容量(字节)'
 FROM system.disks
 
@@ -321,25 +321,25 @@ FROM system.disks;
 SELECT
     'clickhouse_memory_tracking_bytes' AS prometheus_metric,
     'gauge' AS metric_type,
-    (SELECT value FROM system.metrics WHERE metric = 'MemoryTracking') AS current_value,
+    toFloat64((SELECT value FROM system.metrics WHERE metric = 'MemoryTracking')) AS current_value,
     '查询内存跟踪(字节)' AS description
 UNION ALL
 SELECT
     'clickhouse_memory_os_total_bytes',
     'gauge',
-    (SELECT value FROM system.asynchronous_metrics WHERE metric = 'OSMemoryTotal'),
+    toFloat64((SELECT value FROM system.asynchronous_metrics WHERE metric = 'OSMemoryTotal')),
     'OS 总内存(字节)'
 UNION ALL
 SELECT
     'clickhouse_memory_os_active_bytes',
     'gauge',
-    (SELECT value FROM system.asynchronous_metrics WHERE metric = 'OSMemoryActive'),
+    toFloat64((SELECT value FROM system.asynchronous_metrics WHERE metric = 'OSMemoryActive')),
     'OS 活跃内存(字节)'
 UNION ALL
 SELECT
     'clickhouse_memory_os_free_bytes',
     'gauge',
-    (SELECT value FROM system.asynchronous_metrics WHERE metric = 'OSMemoryFree'),
+    toFloat64((SELECT value FROM system.asynchronous_metrics WHERE metric = 'OSMemoryFree')),
     'OS 空闲内存(字节)';
 
 -- 2.6 Part 相关指标

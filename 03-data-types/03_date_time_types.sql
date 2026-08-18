@@ -7,6 +7,15 @@
  *   - DateTime64(N) 的 N 到底决定了什么精度？
  *   - 时间函数（toStartOfMonth、dateDiff、date_add）怎么用？
  *
+ * 【使用场景】时间类型的选择 = 业务精度要求
+ *   - 只需日期（报表分区、归档表）→ Date（2B 最省）
+ *   - 秒级（电商订单、埋点事件、物联网采集）→ DateTime（4B）
+ *   - 毫秒级（日志、APM 延迟分析、广告竞价）→ DateTime64(3)
+ *   - 微秒级（金融交易排序、精确对账）→ DateTime64(6)
+ *   同一张表可混用：业务发生时间 event_time 用 DateTime，
+ *   数据写入时间 ingest_time 用 DateTime64(3)（毫秒定位写入批次）。
+ *   注意：Date 分区粒度是"天"，日志按小时查必须用 DateTime 分区到小时。
+ *
  * 【原理】
  *   时间类型本质是整数存储，函数是对整数的算术运算：
  *   - Date: UInt16（从 1970-01-01 的天数）
@@ -101,15 +110,14 @@ SELECT
 FROM events_with_timezone;
 
 -- 2.4 时区转换常见陷阱
--- 【坑】时区名称必须正确（如 Asia/Shanghai 不是 Asia/Beijing）
+-- 【坑】时区名称必须是 IANA 标准名：Asia/Shanghai 合法，Asia/Beijing 不存在
 SELECT
     toTimeZone(now(), 'Asia/Shanghai') AS correct
 FORMAT Vertical;
 
--- [预期报错] Asia/Beijing 不是 IANA 合法时区名，正确应使用 Asia/Shanghai
-SELECT
-    toTimeZone(now(), 'Asia/Beijing') AS wrong  -- 会报错
-FORMAT Vertical;
+-- [坑] 不存在的时区名（如 Asia/Beijing）会抛 BAD_ARGUMENTS 异常
+-- 演示环境 tzdata 无法加载该时区，故此处仅注释说明，不实际执行：
+-- SELECT toTimeZone(now(), 'Asia/Beijing') AS wrong;  -- 会报错
 
 -- ============================================================================
 -- §3. DateTime64 精度实验

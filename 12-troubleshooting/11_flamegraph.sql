@@ -57,49 +57,58 @@ WHERE name IN (
 );
 
 -- 诊断：查看 trace_log 表结构
+-- 【坑】演示集群未在 config.xml 启用 <trace_log>，故 system.trace_log 表不存在。
+--       启用方法（config.xml 添加 <trace_log> 配置段并重启）：
+--         <trace_log>
+--             <database>system</database>
+--             <table>trace_log</table>
+--             <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+--         </trace_log>
+--       本环境改用 system.query_thread_log 做线程级诊断（已启用）：
 SELECT
     name,
     type,
-    default_expression,
     comment
 FROM system.columns
 WHERE database = 'system'
-  AND table = 'trace_log'
-ORDER BY position;
+  AND table = 'query_thread_log'
+ORDER BY position
+LIMIT 10;
 
--- 诊断：查看 trace_log 中的采样数据
+-- 诊断：查看 query_thread_log 中的线程执行数据（替代 trace_log）
+-- 【说明】trace_log 记录 CPU/内存采样的调用栈；query_thread_log 记录每个查询线程的
+--         执行耗时、读写行数、内存峰值，可用于定位"哪个查询哪个线程慢"
 SELECT
-    trace_type,
-    count() AS sample_count,
-    min(timestamp) AS first_sample,
-    max(timestamp) AS last_sample
-FROM system.trace_log
-WHERE event_time > now() - INTERVAL 1 HOUR
-GROUP BY trace_type
-ORDER BY sample_count DESC;
+    query_id,
+    thread_name,
+    query_duration_ms,
+    read_rows,
+    read_bytes,
+    peak_memory_usage
+FROM system.query_thread_log
+WHERE event_time > now() - INTERVAL 1 DAY
+ORDER BY query_duration_ms DESC
+LIMIT 10;
 
--- 诊断：查看内存分配追踪
-SELECT
-    arrayStringConcat(arrayMap(x -> demangle(addressToSymbol(x)), trace), '; ') AS stack_trace,
-    size,
-    count() AS allocation_count
-FROM system.trace_log
-WHERE trace_type = 'MemorySample'
-  AND event_time > now() - INTERVAL 1 HOUR
-GROUP BY trace, size
-ORDER BY size DESC
-LIMIT 20;
-
--- 诊断：查看 CPU 采样热点
-SELECT
-    arrayStringConcat(arrayMap(x -> demangle(addressToSymbol(x)), trace), '; ') AS stack_trace,
-    count() AS sample_count
-FROM system.trace_log
-WHERE trace_type = 'CPU'
-  AND event_time > now() - INTERVAL 1 HOUR
-GROUP BY trace
-ORDER BY sample_count DESC
-LIMIT 20;
+-- 【说明】trace_log 中的采样数据查询（CPU/MemorySample）在启用 <trace_log> 后可用：
+-- SELECT trace_type, count() AS sample_count, min(timestamp) AS first_sample, max(timestamp) AS last_sample
+-- FROM system.trace_log
+-- WHERE event_time > now() - INTERVAL 1 HOUR
+-- GROUP BY trace_type ORDER BY sample_count DESC;
+--
+-- 【说明】内存分配追踪（MemorySample）：
+-- SELECT arrayStringConcat(arrayMap(x -> demangle(addressToSymbol(x)), trace), '; ') AS stack_trace,
+--        size, count() AS allocation_count
+-- FROM system.trace_log
+-- WHERE trace_type = 'MemorySample' AND event_time > now() - INTERVAL 1 HOUR
+-- GROUP BY trace, size ORDER BY size DESC LIMIT 20;
+--
+-- 【说明】CPU 采样热点（trace_type = 'CPU'）：
+-- SELECT arrayStringConcat(arrayMap(x -> demangle(addressToSymbol(x)), trace), '; ') AS stack_trace,
+--        count() AS sample_count
+-- FROM system.trace_log
+-- WHERE trace_type = 'CPU' AND event_time > now() - INTERVAL 1 HOUR
+-- GROUP BY trace ORDER BY sample_count DESC LIMIT 20;
 
 -- -----------------------------------------------------
 -- 2. query_profiler 配置
@@ -150,23 +159,18 @@ SET trace_profile_events = 1;
 -- SELECT ...  -- 慢查询
 
 -- 修复：查询完成后查看分析结果
--- 在 query_log 中查看 ProfileEvents:
+-- 【坑】演示集群禁用了 system.query_log，改用 system.query_thread_log
+--       （线程级日志，含 read_rows/read_bytes/peak_memory_usage 等指标）
 SELECT
     query_id,
     query,
     query_duration_ms,
-    ProfileEvents['RealTimeMicroseconds'] / 1000000 AS real_time_sec,
-    ProfileEvents['UserTimeMicroseconds'] / 1000000 AS user_time_sec,
-    ProfileEvents['SystemTimeMicroseconds'] / 1000000 AS system_time_sec,
-    ProfileEvents['ReadCompressedBytes'] AS read_compressed_bytes,
-    ProfileEvents['WrittenCompressedBytes'] AS written_compressed_bytes,
-    ProfileEvents['SelectedRows'] AS selected_rows,
-    ProfileEvents['SelectedBytes'] AS selected_bytes,
-    ProfileEvents['MergeTreeDataReadRows'] AS merge_read_rows,
-    ProfileEvents['MergeTreeDataReadBytes'] AS merge_read_bytes
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND event_time > now() - INTERVAL 1 DAY
+    read_rows,
+    read_bytes,
+    written_rows,
+    peak_memory_usage
+FROM system.query_thread_log
+WHERE event_time > now() - INTERVAL 1 DAY
   AND query_duration_ms > 1000
 ORDER BY query_duration_ms DESC
 LIMIT 20;
@@ -190,57 +194,40 @@ LIMIT 20;
 --
 
 -- 诊断：使用 demangle 解析堆栈
-SELECT
-    arrayStringConcat(
-        arrayMap(
-            x -> demangle(addressToSymbol(x)),
-            trace
-        ),
-        '; '
-    ) AS readable_stack,
-    count() AS samples
-FROM system.trace_log
-WHERE trace_type = 'CPU'
-  AND event_time > now() - INTERVAL 1 HOUR
-GROUP BY trace
-ORDER BY samples DESC
-LIMIT 30;
+-- 【坑】依赖 system.trace_log（本环境未启用），以下查询在启用 <trace_log> 后可用：
+-- SELECT
+--     arrayStringConcat(arrayMap(x -> demangle(addressToSymbol(x)), trace), '; ') AS readable_stack,
+--     count() AS samples
+-- FROM system.trace_log
+-- WHERE trace_type = 'CPU' AND event_time > now() - INTERVAL 1 HOUR
+-- GROUP BY trace ORDER BY samples DESC LIMIT 30;
 
--- 诊断：分析特定函数的调用频率
-SELECT
-    demangle(addressToSymbol(trace[1])) AS top_function,
-    count() AS call_count
-FROM system.trace_log
-WHERE trace_type = 'CPU'
-  AND event_time > now() - INTERVAL 1 HOUR
-GROUP BY top_function
-ORDER BY call_count DESC
-LIMIT 20;
+-- 诊断：分析特定函数的调用频率（启用 <trace_log> 后可用）
+-- SELECT
+--     demangle(addressToSymbol(trace[1])) AS top_function,
+--     count() AS call_count
+-- FROM system.trace_log
+-- WHERE trace_type = 'CPU' AND event_time > now() - INTERVAL 1 HOUR
+-- GROUP BY top_function ORDER BY call_count DESC LIMIT 20;
 
--- 诊断：分析 MergeTree 读取热点
-SELECT
-    demangle(addressToSymbol(trace[1])) AS top_function,
-    count() AS samples
-FROM system.trace_log
-WHERE trace_type = 'CPU'
-  AND event_time > now() - INTERVAL 1 HOUR
-  AND arrayExists(x -> addressToSymbol(x) LIKE '%MergeTree%', trace)
-GROUP BY top_function
-ORDER BY samples DESC
-LIMIT 20;
+-- 诊断：分析 MergeTree 读取热点（启用 <trace_log> 后可用）
+-- SELECT
+--     demangle(addressToSymbol(trace[1])) AS top_function,
+--     count() AS samples
+-- FROM system.trace_log
+-- WHERE trace_type = 'CPU' AND event_time > now() - INTERVAL 1 HOUR
+--   AND arrayExists(x -> addressToSymbol(x) LIKE '%MergeTree%', trace)
+-- GROUP BY top_function ORDER BY samples DESC LIMIT 20;
 
--- 诊断：分析内存分配热点
-SELECT
-    demangle(addressToSymbol(trace[1])) AS top_function,
-    sum(size) AS total_bytes,
-    formatReadableSize(sum(size)) AS total_readable,
-    count() AS allocation_count
-FROM system.trace_log
-WHERE trace_type = 'MemorySample'
-  AND event_time > now() - INTERVAL 1 HOUR
-GROUP BY top_function
-ORDER BY total_bytes DESC
-LIMIT 20;
+-- 诊断：分析内存分配热点（启用 <trace_log> 后可用）
+-- SELECT
+--     demangle(addressToSymbol(trace[1])) AS top_function,
+--     sum(size) AS total_bytes,
+--     formatReadableSize(sum(size)) AS total_readable,
+--     count() AS allocation_count
+-- FROM system.trace_log
+-- WHERE trace_type = 'MemorySample' AND event_time > now() - INTERVAL 1 HOUR
+-- GROUP BY top_function ORDER BY total_bytes DESC LIMIT 20;
 
 -- 修复：生成火焰图数据
 -- 在 shell 中执行:
@@ -299,64 +286,59 @@ FROM system.tables
 WHERE database = 'system';
 
 -- 诊断：查看查询级别的详细事件
+-- 【坑】演示集群 config.xml 禁用了 system.query_log（<query_log remove="1"/>），
+--       改用 system.query_thread_log（线程级，含 read_rows/read_bytes/peak_memory_usage）
 SELECT
     query_id,
     query,
-    ProfileEvents['SelectedRows'] AS selected_rows,
-    ProfileEvents['SelectedBytes'] AS selected_bytes,
-    ProfileEvents['ReadCompressedBytes'] AS read_compressed,
-    ProfileEvents['WriteBufferFromFileDescriptorWriteBytes'] AS write_bytes,
-    ProfileEvents['MergeTreeDataReadRows'] AS merge_rows,
-    ProfileEvents['MergeTreeDataReadBytes'] AS merge_bytes,
-    ProfileEvents['RejectedInserts'] AS rejected_inserts,
-    ProfileEvents['InsertedRows'] AS inserted_rows
-FROM system.query_log
-WHERE type = 'QueryFinish'
-  AND event_time > now() - INTERVAL 1 DAY
+    query_duration_ms,
+    read_rows,
+    read_bytes,
+    written_rows,
+    peak_memory_usage
+FROM system.query_thread_log
+WHERE event_time > now() - INTERVAL 1 DAY
   AND query_duration_ms > 1000
 ORDER BY query_duration_ms DESC
 LIMIT 20;
 
 -- 诊断：查看异步指标中的系统负载
+-- 【坑】system.asynchronous_metrics 用 metric 列（name 是别名），指标名不带单位后缀
 SELECT
-    name,
+    metric,
     value,
     description
 FROM system.asynchronous_metrics
-WHERE name IN (
-    'OSMemoryUsageBytes',
-    'OSCPUVirtualTimeMS',
+WHERE metric IN (
+    'LoadAverage1',
+    'LoadAverage5',
+    'LoadAverage15',
     'OSUserTimeNormalized',
-    'OSIOWaitMicroseconds',
-    'OSReadBytes',
-    'OSWriteBytes',
-    'OSNetInBytes',
-    'OSNetOutBytes',
-    'LoadAverage1m',
-    'LoadAverage5m',
-    'LoadAverage15m'
+    'OSSystemTimeNormalized',
+    'OSMemoryAvailable',
+    'MemoryResident'
 )
-ORDER BY name;
+ORDER BY metric;
 
 -- 诊断：分析线程池使用情况
 SELECT
-    name,
+    metric,
     value,
     description
 FROM system.metrics
-WHERE name LIKE '%Thread%'
-   OR name LIKE '%Pool%'
-ORDER BY name;
+WHERE metric LIKE '%Thread%'
+   OR metric LIKE '%Pool%'
+ORDER BY metric;
 
 -- 诊断：查看后台任务状态
+-- 【坑】system.merges 没有 create_time 列，改用 elapsed 表示合并已进行时间
 SELECT
     database,
     table,
     count() AS merge_count,
     sum(rows_read) AS total_rows_read,
     sum(rows_written) AS total_rows_written,
-    min(create_time) AS oldest_merge,
-    max(create_time) AS newest_merge
+    max(elapsed) AS longest_running_seconds
 FROM system.merges
 WHERE database NOT IN ('system')
 GROUP BY database, table
@@ -364,6 +346,21 @@ ORDER BY merge_count DESC;
 
 -- 修复：使用采样优化查询
 -- 对于大表，可以使用采样来快速评估数据分布:
+-- 【坑】SAMPLE BY 列必须出现在 ORDER BY/主键中（报 BAD_ARGUMENTS 即此原因），
+--       这里把 user_id 加入 ORDER BY 作为采样键
+DROP TABLE IF EXISTS troubleshooting_test.sample_table;
+CREATE TABLE troubleshooting_test.sample_table
+(
+    user_id UInt32,
+    event_time DateTime
+) ENGINE = MergeTree()
+ORDER BY (event_time, user_id)
+SAMPLE BY user_id;
+
+INSERT INTO troubleshooting_test.sample_table
+SELECT number % 100000, toDateTime('2024-01-01') + number
+FROM numbers(1000000);
+
 SELECT
     count() AS total_rows_estimate,
     uniqCombined(user_id) AS approx_users

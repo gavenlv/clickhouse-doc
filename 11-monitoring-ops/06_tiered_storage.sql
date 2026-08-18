@@ -80,9 +80,12 @@ SELECT
     volume_name,
     volume_priority,
     disks,
+    volume_type,
     max_data_part_size,
     move_factor,
-    preferred_max_data_part_size_bytes
+    prefer_not_to_merge,
+    perform_ttl_move_on_insert,
+    load_balancing
 FROM system.storage_policies
 ORDER BY policy_name, volume_priority;
 
@@ -92,13 +95,13 @@ ORDER BY policy_name, volume_priority;
 SELECT
     name,
     path,
-    formatReadableSize(free_space) AS free_space,
-    formatReadableSize(total_space) AS total_space,
-    formatReadableSize(keep_free_space) AS keep_free_space,
+    formatReadableSize(free_space) AS free_space_hr,
+    formatReadableSize(total_space) AS total_space_hr,
+    formatReadableSize(keep_free_space) AS keep_free_space_hr,
     round((total_space - free_space) / total_space * 100, 1) AS used_percent,
     type,
     is_read_only,
-    is_writeable
+    is_write_once
 FROM system.disks
 ORDER BY name;
 
@@ -109,8 +112,8 @@ SELECT
     name AS table_name,
     engine,
     formatReadableSize(total_bytes) AS total_size,
-    formatReadableSize(total_rows) AS total_rows,
-    settings['storage_policy'] AS storage_policy,
+    total_rows,
+    storage_policy,
     create_table_query
 FROM system.tables
 WHERE database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
@@ -387,8 +390,8 @@ ORDER BY event;
 SELECT
     name,
     path,
-    formatReadableSize(free_space) AS free_space,
-    formatReadableSize(total_space) AS total_space,
+    formatReadableSize(free_space) AS free_space_hr,
+    formatReadableSize(total_space) AS total_space_hr,
     round((total_space - free_space) / total_space * 100, 1) AS used_percent,
     type,
     is_read_only
@@ -409,7 +412,7 @@ SELECT
     path,
     type,
     is_read_only,
-    is_writeable
+    is_write_once
 FROM system.disks
 WHERE type = 's3'
 ORDER BY name;
@@ -523,8 +526,8 @@ ORDER BY total_bytes DESC;
 SELECT
     name,
     path,
-    formatReadableSize(free_space) AS free_space,
-    formatReadableSize(total_space) AS total_space,
+    formatReadableSize(free_space) AS free_space_hr,
+    formatReadableSize(total_space) AS total_space_hr,
     round((total_space - free_space) / total_space * 100, 1) AS used_percent,
     CASE
         WHEN (total_space - free_space) / total_space > 0.9 THEN 'CRITICAL'

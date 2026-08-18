@@ -278,6 +278,12 @@ SELECT '记录 RTO 实际值，优化恢复流程';
 -- 6.2 数据校验：对比原始数据和备份数据
 -- 【场景】验证备份数据的完整性
 -- 【原理】使用 groupBitXor(cityHash64(*)) 计算校验和
+-- 【说明】25.12 的 BACKUP 是异步任务，此处用 CREATE TABLE AS + INSERT 模拟"备份表"，
+--         演示校验和对比方法（生产环境用 BACKUP 命令后直接对比即可）
+DROP TABLE IF EXISTS ops_test.users_backup;
+CREATE TABLE ops_test.users_backup AS ops_test.users;
+INSERT INTO ops_test.users_backup SELECT * FROM ops_test.users;
+
 SELECT
     'Original' AS source,
     count() AS total_users
@@ -288,7 +294,7 @@ UNION ALL
 SELECT
     'Backup',
     count()
-FROM ops_test.users_backup;  -- 假设存在备份表
+FROM ops_test.users_backup;
 
 -- 校验和对比
 -- 【原理】cityHash64 比 xxHash 更快，适合大数据量校验
@@ -339,7 +345,8 @@ ENGINE = MergeTree()
 ORDER BY (policy_name, backup_type);
 
 -- 插入策略配置
-INSERT INTO ops_test.backup_policy VALUES
+-- 【坑】VALUES 未指定列清单时，必须为所有无 DEFAULT 的列提供值
+INSERT INTO ops_test.backup_policy (policy_name, backup_type, schedule_interval, retention_local, retention_remote, destination, enabled) VALUES
 ('production', 'full', 'daily', 7, 30, '/backup/prod/daily', 1),
 ('production', 'incremental', 'hourly', 3, 7, '/backup/prod/incremental', 1),
 ('archive', 'full', 'weekly', 0, 365, 'S3://archive-bucket/backups/', 1);
@@ -398,7 +405,7 @@ SELECT
     count(*) AS tables_verified,
     0 AS tables_failed,
     sum(total_rows) AS total_rows_original,
-    sum(total_rows_restored) AS total_rows_restored,
+    sum(total_rows) AS total_rows_restored,
     1 AS checksum_match
 FROM system.tables
 WHERE database = 'ops_test'
@@ -410,6 +417,7 @@ ORDER BY backup_time DESC;
 
 -- 8.4 备份监控告警
 -- 【场景】检测备份失败或过期
+-- 【坑】overall_status 别名不能覆盖原始 status 列（别名遮蔽会导致 countIf 嵌套聚合）
 SELECT
     'Backup Health Check' AS check_type,
     countIf(status = 'failed') AS failed_backups,
@@ -418,7 +426,7 @@ SELECT
         WHEN countIf(status = 'failed') > 0 THEN 'CRITICAL'
         WHEN countIf(verification_status = 'pending') > 0 THEN 'WARNING'
         ELSE 'OK'
-    END AS status
+    END AS overall_status
 FROM ops_test.backup_tracking
 WHERE backup_time > now() - INTERVAL 1 DAY;
 
